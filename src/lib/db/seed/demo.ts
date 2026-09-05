@@ -11,6 +11,15 @@ import { createAuth } from "@/lib/auth/create-auth";
 import type { Database } from "@/lib/db/_types/database";
 import * as s from "@/lib/db/schema";
 import { customerRows, productRows } from "@/lib/db/seed/demo-data";
+import {
+  BACKORDER_QUOTE_IDS,
+  consumeFulfilledHardwareStock,
+  demoStockRows,
+  ensureFulfilledHardwareQuote,
+  FULFILLED_HARDWARE_QUOTE_ID,
+  fulfilledHardwareLines,
+  insertDemoFulfillmentFacts,
+} from "@/lib/db/seed/demo-fulfillment";
 import type { QuoteStatus, Role } from "@/lib/domain/_types/domain";
 
 export async function seedDemo(database: Database) {
@@ -77,7 +86,8 @@ export async function seedDemo(database: Database) {
   ];
   let repId = "",
     managerId = "",
-    financeId = "";
+    financeId = "",
+    opsId = "";
   for (const entry of users) {
     let [u] = await database.select().from(s.user).where(eq(s.user.email, entry.email));
     if (!u) {
@@ -93,12 +103,19 @@ export async function seedDemo(database: Database) {
     if (entry.role === "rep" && !repId) repId = u!.id;
     if (entry.role === "manager") managerId = u!.id;
     if (entry.role === "finance") financeId = u!.id;
+    if (entry.role === "ops") opsId = u!.id;
   }
+  if (!opsId) throw new Error("Ops demo user is required to seed shipment movements");
   await database.transaction(async (tx) => {
-    const [existing] = await tx.select().from(s.quotes).where(eq(s.quotes.id, "Q-1042"));
-    if (existing) return;
     const now = new Date();
     const ago = (days: number) => new Date(now.getTime() - days * 86400000);
+    const [existing] = await tx.select().from(s.quotes).where(eq(s.quotes.id, "Q-1042"));
+    if (existing) {
+      if ((await ensureFulfilledHardwareQuote(tx, { now, repId })) === "created")
+        await consumeFulfilledHardwareStock(tx);
+      await insertDemoFulfillmentFacts(tx, opsId, ago(8));
+      return;
+    }
     const quoteFixtures: {
       id: string;
       customerId: string;
@@ -149,6 +166,12 @@ export async function seedDemo(database: Database) {
         customerId: "delta",
         status: "UNDER_NEGOTIATION",
         lines: [{ productId: "setup", quantity: 1, discountBps: 2200 }],
+      },
+      {
+        id: FULFILLED_HARDWARE_QUOTE_ID,
+        customerId: "zenith",
+        status: "CONFIRMED",
+        lines: [...fulfilledHardwareLines],
       },
       {
         id: "Q-1026",
@@ -306,9 +329,8 @@ export async function seedDemo(database: Database) {
             lines: values.lines,
             createdAt: ago(10),
             promisedDate: quote!.promisedDate,
-            fulfillmentStatus: ["Q-1024", "Q-1022"].includes(fixture.id)
-              ? "BACKORDER"
-              : "FULFILLED",
+            fulfillmentStatus: BACKORDER_QUOTE_IDS.has(fixture.id) ? "BACKORDER" : "FULFILLED",
+            acceptedAt: fixture.id === FULFILLED_HARDWARE_QUOTE_ID ? ago(8) : null,
           })
           .returning();
         await createOrderBilling(tx, order!, ago(10));
@@ -322,51 +344,8 @@ export async function seedDemo(database: Database) {
           .where(eq(s.subscriptions.orderId, order!.id));
       }
     }
-    await tx
-      .insert(s.stocks)
-      .values([
-        { id: "main-laptop", warehouseId: "main", productId: "laptop", onHand: 40, reserved: 18 },
-        { id: "east-laptop", warehouseId: "east", productId: "laptop", onHand: 10, reserved: 6 },
-        { id: "west-laptop", warehouseId: "west", productId: "laptop", onHand: 4, reserved: 0 },
-        { id: "east-laptop13", warehouseId: "east", productId: "laptop13", onHand: 4, reserved: 4 },
-        { id: "main-mouse", warehouseId: "main", productId: "mouse", onHand: 200, reserved: 0 },
-        { id: "main-dock", warehouseId: "main", productId: "dock", onHand: 65, reserved: 0 },
-        { id: "east-dock", warehouseId: "east", productId: "dock", onHand: 8, reserved: 0 },
-        {
-          id: "main-laptop16",
-          warehouseId: "main",
-          productId: "laptop16",
-          onHand: 12,
-          reserved: 0,
-        },
-      ])
-      .onConflictDoNothing();
-    await tx
-      .insert(s.reservations)
-      .values([
-        {
-          id: "harbor-main",
-          orderId: "order-Q-1024",
-          productId: "laptop",
-          warehouseId: "main",
-          quantity: 18,
-        },
-        {
-          id: "harbor-east",
-          orderId: "order-Q-1024",
-          productId: "laptop",
-          warehouseId: "east",
-          quantity: 6,
-        },
-        {
-          id: "northwind-east",
-          orderId: "order-Q-1022",
-          productId: "laptop13",
-          warehouseId: "east",
-          quantity: 4,
-        },
-      ])
-      .onConflictDoNothing();
+    await tx.insert(s.stocks).values(demoStockRows()).onConflictDoNothing();
+    await insertDemoFulfillmentFacts(tx, opsId, ago(8));
     const paid = await tx.select().from(s.invoices).where(eq(s.invoices.customerId, "orion"));
     for (const invoice of paid) {
       await tx.insert(s.payments).values({

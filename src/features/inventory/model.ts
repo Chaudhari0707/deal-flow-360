@@ -36,7 +36,15 @@ export const fulfillmentDetailModel = t.Object({
   order: orderModel,
   allocations: t.Array(allocationModel),
   backorders: t.Array(t.Intersect([demandModel, t.Object({ product: t.String() })])),
-  movements: t.Array(stockMovementModel),
+  movements: t.Array(
+    t.Intersect([
+      stockMovementModel,
+      t.Object({
+        product: t.String(),
+        warehouse: t.String(),
+      }),
+    ]),
+  ),
   shipmentCount: t.Integer(),
   shippingScore: t.Number(),
 });
