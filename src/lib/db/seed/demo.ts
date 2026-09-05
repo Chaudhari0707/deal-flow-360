@@ -13,6 +13,8 @@ import * as s from "@/lib/db/schema";
 import { customerRows, productRows } from "@/lib/db/seed/demo-data";
 import type { QuoteStatus, Role } from "@/lib/domain/_types/domain";
 
+
+//
 export async function seedDemo(database: Database) {
   const password =
     Bun.env.DEMO_PASSWORD ?? Bun.env.SEED_AUTH_PASSWORD ?? Bun.env.PLAYWRIGHT_USER_PASSWORD;
