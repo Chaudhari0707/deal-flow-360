@@ -91,9 +91,19 @@ export function PortalDetail({ id }: { id: string }) {
       />
     );
   const quote = data.quote;
-  const recurring = [1, 3, 12]
+  const recurring = [
+    ...new Set(quote.lines.map((line) => line.intervalMonths).filter((months) => months > 0)),
+  ]
+    .sort((a, b) => a - b)
     .map((months) => ({
-      label: months === 1 ? "Monthly" : months === 3 ? "Quarterly" : "Yearly",
+      label:
+        months === 1
+          ? "Monthly"
+          : months === 3
+            ? "Quarterly"
+            : months === 12
+              ? "Yearly"
+              : `Every ${months} months`,
       cents: quote.lines
         .filter((line) => line.intervalMonths === months)
         .reduce((sum, line) => sum + line.totalCents, 0),

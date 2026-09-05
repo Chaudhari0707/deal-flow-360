@@ -5,6 +5,10 @@
 - Mount Better Auth exactly once at `/api/auth/[...all]` and return its response/cookies unchanged.
 - Use the Drizzle PostgreSQL adapter with the complete canonical schema object. Better Auth CLI may
   generate schema; Drizzle Kit alone owns migration generation/execution.
+- Use the pinned `auth` CLI matching the Better Auth runtime. The legacy `@better-auth/cli` generator
+  omits required modern account identity fields; credential integration must verify the migration.
+- Credential forms use `method="post"` and wait for hydration before client submission, so a native
+  fallback cannot put passwords in a GET URL.
 - Keep `BETTER_AUTH_SECRET` server-only and at least 32 bytes. `BETTER_AUTH_URL`, trusted origins,
   Playwright base URL, and cookie host must use the same canonical origin.
 - Protected server actions and Elysia handlers validate the session server-side. Hiding UI is never

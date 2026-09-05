@@ -22,3 +22,8 @@ rely on remembered APIs when local docs differ.
   host is needed.
 - Better Auth credentials and Resend are selected. Social login, deployment, image hosting,
   analytics, payments, storage, and email-verification policy remain unselected until approved.
+- Keep `postcss.config.ts` canonical and use native Turbopack, which discovers it directly. Verify
+  compiled styles in the browser; a successful build alone does not prove Tailwind was processed.
+- Preserve the document-package bundling in `next.config.ts`; Bun's first cold request cannot
+  resolve Turbopack's newly generated external aliases. See `docs/architecture/runtime.md` and
+  verify cold API, stylesheet, PDF, and XLSX behavior when changing the bundler or package layout.

@@ -7,5 +7,5 @@ import type { Workspace } from "@/lib/domain/_types/workspace";
 export const workspaceKey = "/api/v1/workspace";
 
 export function useWorkspace() {
-  return useSWR<Workspace>(workspaceKey);
+  return useSWR<Workspace>(workspaceKey, { refreshInterval: 30_000 });
 }
