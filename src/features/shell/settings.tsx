@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { NumberInput } from "@/components/ui/number-input";
+import { InventoryScreen } from "@/features/inventory/inventory-screen";
 import { displayStatus } from "@/features/shell/format";
 import { PageHeader } from "@/features/shell/page-header";
 import { useWorkspace } from "@/features/shell/use-workspace";
@@ -152,6 +153,7 @@ export function Settings() {
           <PolicyForm key={setting.id} setting={setting} saved={mutate} />
         ))}
       </div>
+      {data.actor.role === "admin" && <InventoryScreen />}
       {!data.settings.length && (
         <Alert>
           <AlertDescription>

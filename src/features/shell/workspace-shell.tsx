@@ -98,8 +98,8 @@ const navigation = [
         icon: BarChart3,
         roles: permissions.reports,
       },
-      { title: "Product catalog", href: "/catalog", icon: Boxes, roles: ["admin", "manager"] },
-      { title: "Settings", href: "/settings", icon: Settings2, roles: ["admin", "manager"] },
+      { title: "Product catalog", href: "/catalog", icon: Boxes, roles: permissions.catalog },
+      { title: "Settings", href: "/settings", icon: Settings2, roles: permissions.settings },
     ],
   },
 ];
