@@ -47,6 +47,8 @@ flowchart LR
 - The `(workspace)` route group provides the shared sidebar, account sign-out, breadcrumb,
   responsive header, loading state, and error recovery. An authenticated server leaf under Suspense chooses the correct
   destination and passes the actor to the shell; API handlers independently authorize every operation.
+- Managers and administrators can edit the ordered approval chain in Workspace settings. HIGH-risk
+  submissions use every configured step; lower-risk submissions use the first configured step.
 - Interactive internal screens share the `/api/v1/workspace` SWR key and configured JSON fetcher.
   Mutations revalidate their affected collection. This bounded hackathon snapshot simplifies
   navigation; growth requires paginated resource endpoints as documented in the system decision.

@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import { createOrderBilling } from "@/features/billing/creation";
 import { reserveOrderStock } from "@/features/inventory/stock";
 import type { QuoteInput } from "@/features/quotes/_types/quotes";
+import { requiredApprovalChain } from "@/features/quotes/approval-policy";
 import { calculateQuote, defaultDiscounts, priceLines } from "@/features/quotes/rules";
 import { db } from "@/lib/db/connection";
 import { customers, orders, products, quoteRevisions, quotes, settings } from "@/lib/db/schema";
@@ -89,6 +90,10 @@ export async function submitQuote(id: string, revision: number, actor: Actor) {
       throw new DomainError("Only a draft or returned quote can be submitted", 409);
     const [customer] = await tx.select().from(customers).where(eq(customers.id, quote.customerId));
     const [policy] = await tx.select().from(settings).where(eq(settings.id, "discounts"));
+    const [approvalPolicy] = await tx
+      .select()
+      .from(settings)
+      .where(eq(settings.id, "approvalChain"));
     const amounts = calculateQuote(
       quote.lines,
       quote.orderDiscountBps,
@@ -110,7 +115,10 @@ export async function submitQuote(id: string, revision: number, actor: Actor) {
         revision: revisionNext,
         status: amounts.risk === "NONE" ? "APPROVED" : "PENDING_APPROVAL",
         approvedRevision: amounts.risk === "NONE" ? revisionNext : null,
-        approvalStep: amounts.risk === "NONE" ? null : "manager",
+        approvalStep:
+          amounts.risk === "NONE"
+            ? null
+            : (requiredApprovalChain(amounts.risk, approvalPolicy?.value)[0] ?? null),
         updatedAt: new Date(),
       })
       .where(eq(quotes.id, id))
@@ -141,15 +149,24 @@ export async function approvalAction(
       throw new DomainError("Approval is stale. Reload current quotation.", 409);
     if (actor.role !== quote.approvalStep && actor.role !== "admin")
       throw new DomainError("Only the current approval role can act", 403);
+    const [approvalPolicy] = await tx
+      .select()
+      .from(settings)
+      .where(eq(settings.id, "approvalChain"));
+    const chain = requiredApprovalChain(quote.risk, approvalPolicy?.value);
+    const stepIndex = chain.indexOf(quote.approvalStep as (typeof chain)[number]);
+    if (stepIndex < 0) throw new DomainError("Approval chain configuration is invalid", 503);
     const next =
       action === "approve"
-        ? quote.approvalStep === "manager" && quote.risk === "HIGH"
-          ? "finance"
-          : null
-        : null;
+        ? (chain[stepIndex + 1] ?? null)
+        : action === "return" && stepIndex > 0
+          ? chain[stepIndex - 1]
+          : null;
     const status =
       action === "return"
-        ? "RETURNED"
+        ? next
+          ? "PENDING_APPROVAL"
+          : "RETURNED"
         : action === "reject"
           ? "REJECTED"
           : next
@@ -201,6 +218,10 @@ export async function counterQuote(
     }));
     const [customer] = await tx.select().from(customers).where(eq(customers.id, quote.customerId));
     const [policy] = await tx.select().from(settings).where(eq(settings.id, "discounts"));
+    const [approvalPolicy] = await tx
+      .select()
+      .from(settings)
+      .where(eq(settings.id, "approvalChain"));
     const amounts = calculateQuote(
       lines,
       quote.orderDiscountBps,
@@ -222,7 +243,10 @@ export async function counterQuote(
         revision: nextRevision,
         approvedRevision: amounts.risk === "NONE" ? nextRevision : null,
         status: amounts.risk === "NONE" ? "APPROVED" : "PENDING_APPROVAL",
-        approvalStep: amounts.risk === "NONE" ? null : "manager",
+        approvalStep:
+          amounts.risk === "NONE"
+            ? null
+            : (requiredApprovalChain(amounts.risk, approvalPolicy?.value)[0] ?? null),
         promisedDate: promisedDate ?? quote.promisedDate,
         updatedAt: new Date(),
       })

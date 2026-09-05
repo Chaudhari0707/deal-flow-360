@@ -133,6 +133,7 @@ export const catalogRoutes = new Elysia({ name: "catalog" })
         health: ["staleDays", "approvalDays", "overdueDays", "anomalyBps", "historyDays"],
         pricelists: ["Bronze", "Silver", "Gold"],
         upsell: ["minimumMarginBps"],
+        approvalChain: ["manager", "finance"],
       };
       if (
         !allowed[params.id] ||
@@ -161,6 +162,20 @@ export const catalogRoutes = new Elysia({ name: "catalog" })
         ((body.value.highLineBps ?? 1) < 1 || (body.value.highTotalBps ?? 1) < 1)
       )
         throw new DomainError("Risk thresholds must be positive");
+      if (params.id === "approvalChain") {
+        const roles = Object.entries(body.value).filter(([role]) =>
+          ["manager", "finance"].includes(role),
+        );
+        const activeRanks = roles.map(([, rank]) => rank).filter((rank) => rank > 0);
+        if (
+          !activeRanks.length ||
+          roles.some(([, rank]) => rank < 0) ||
+          new Set(activeRanks).size !== activeRanks.length
+        )
+          throw new DomainError(
+            "Approval chain needs one or more unique positive ranks; use 0 to disable a role",
+          );
+      }
       return db.transaction(async (tx) => {
         const [current] = await tx
           .select()
