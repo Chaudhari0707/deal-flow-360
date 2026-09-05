@@ -5,12 +5,14 @@ Linear phase contracts. Read them in this order:
 
 1. [System design and product decisions](001-local-delivery.md): component diagram, money/risk rules,
    transaction boundaries, authorization and the growth path.
-2. [Interface and portal](ui.md): shadcn/tweakcn choices, authentication, client state and customer flows.
-3. [Inventory](inventory.md): reservations, warehouse splitting, concurrent updates and realtime delivery.
-4. [Billing](billing.md): schedules, proration, invoice/payment/credit ledgers and reporting.
-5. [Native runtime compatibility](runtime.md): TypeScript PostCSS, Turbopack and Bun package loading.
-6. [Implemented data model](data-model.md): actual relationships, snapshots and integrity constraints.
-7. [Quotation recommendations](quotation-recommendations.md): last-purchase suggestions and best-seller fallback.
+2. [Application API](application-api.md): Elysia feature boundaries, contracts, authorization, Eden,
+   and the Next.js adapter.
+3. [Interface and portal](ui.md): shadcn/tweakcn choices, authentication, client state and customer flows.
+4. [Inventory](inventory.md): reservations, warehouse splitting, concurrent updates and realtime delivery.
+5. [Billing](billing.md): schedules, proration, invoice/payment/credit ledgers and reporting.
+6. [Native runtime compatibility](runtime.md): TypeScript PostCSS, Turbopack and Bun package loading.
+7. [Implemented data model](data-model.md): actual relationships, snapshots and integrity constraints.
+8. [Quotation recommendations](quotation-recommendations.md): last-purchase suggestions and best-seller fallback.
 
 The core invariant is simple: a customer confirms an **approved revision**, and one database
 transaction creates the order, reserves available stock and records initial billing. Email and live

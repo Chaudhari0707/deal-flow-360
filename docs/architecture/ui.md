@@ -49,9 +49,10 @@ flowchart LR
   destination and passes the actor to the shell; API handlers independently authorize every operation.
 - Managers and administrators can edit the ordered approval chain in Workspace settings. HIGH-risk
   submissions use every configured step; lower-risk submissions use the first configured step.
-- Interactive internal screens share the `/api/v1/workspace` SWR key and configured JSON fetcher.
-  Mutations revalidate their affected collection. This bounded hackathon snapshot simplifies
-  navigation; growth requires paginated resource endpoints as documented in the system decision.
+- Interactive internal screens share the `/api/v1/workspace` SWR key and use route-specific typed
+  Eden Treaty fetchers. Mutations revalidate their affected collection. This bounded hackathon
+  snapshot simplifies navigation; growth requires paginated resource endpoints as documented in
+  the system decision.
 - The separate portal is a consumer-only surface. Customer credential accounts and valid scoped
   quotation-link sessions can use it; Admin, Finance, Manager, Ops and Rep sessions are redirected
   to their workspace and receive `403` from every portal endpoint. Costs, margins, internal notes,
