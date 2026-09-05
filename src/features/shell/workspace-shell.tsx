@@ -5,7 +5,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Activity,
-  ArrowUpRight,
   BarChart3,
   Boxes,
   CircleCheck,
@@ -143,14 +142,6 @@ function WorkspaceSidebar({ actor, pathname }: { actor: Actor; pathname: string 
         ))}
       </SidebarContent>
       <SidebarFooter className="gap-3 p-4">
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton render={<Link href="/portal" />}>
-              <ArrowUpRight />
-              <span>Customer portal</span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
         <Separator />
         <div className="flex items-center gap-2.5">
           <Avatar>

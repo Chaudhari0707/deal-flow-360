@@ -349,14 +349,6 @@ export function QuoteDetail({ isNew = false }: { isNew?: boolean }) {
                         <Mail />
                         Send quotation email
                       </Button>
-                      <Button
-                        className="w-full"
-                        variant="outline"
-                        nativeButton={false}
-                        render={<Link href={`/portal/${quote.id}`} />}
-                      >
-                        Open customer portal
-                      </Button>
                     </>
                   )}
                   {quote.status === "CONFIRMED" && (
@@ -380,13 +372,6 @@ export function QuoteDetail({ isNew = false }: { isNew?: boolean }) {
                   {!detail.data?.messages.length && (
                     <p className="text-sm text-muted-foreground">No messages yet.</p>
                   )}
-                  <Button
-                    variant="outline"
-                    nativeButton={false}
-                    render={<Link href={`/portal/${quote.id}`} />}
-                  >
-                    Reply in portal
-                  </Button>
                 </CardContent>
               </Card>
             </div>

@@ -41,9 +41,10 @@ flowchart LR
 - Interactive internal screens share the `/api/v1/workspace` SWR key and configured JSON fetcher.
   Mutations revalidate their affected collection. This bounded hackathon snapshot simplifies
   navigation; growth requires paginated resource endpoints as documented in the system decision.
-- The separate portal exposes public quotation fields, line-specific messages, counterproposals,
-  and approval-aware confirmation. Costs, margins, internal notes, and risk snapshots are absent
-  from the public quotation contract.
+- The separate portal is a consumer-only surface. Customer credential accounts and valid scoped
+  quotation-link sessions can use it; Admin, Finance, Manager, Ops and Rep sessions are redirected
+  to their workspace and receive `403` from every portal endpoint. Costs, margins, internal notes,
+  and risk snapshots are absent from the public quotation contract.
 - The email token is redeemed once for an HttpOnly scoped session, then removed from browser
   history. Portal sign-out revokes that session. Confirmation sends the reviewed revision;
   the server rejects stale or unapproved terms.
@@ -51,10 +52,12 @@ flowchart LR
 ## Verification
 
 `playwright/e2e/identity.spec.ts` exercises real sign-in, invalid credentials, signup, logout,
-protected navigation, and a 390px mobile sidebar. `playwright/e2e/portal.spec.ts` follows a customer
-through a line-specific conversation, counterproposal, and order confirmation. `test/integration/portal.regression.test.ts`
-checks cross-customer isolation, single-use redemption concurrency, public-field redaction,
-confirmation idempotency, and session revocation against the real API and test database.
+protected navigation, staff denial of the customer portal, and a 390px mobile sidebar.
+`playwright/e2e/portal.spec.ts` follows a customer through a line-specific conversation,
+counterproposal, and order confirmation. `test/integration/portal.regression.test.ts` checks
+cross-customer isolation, all staff-role portal denial, single-use redemption concurrency,
+public-field redaction, confirmation idempotency, and session revocation against the real API and
+test database.
 `playwright/e2e/catalog.spec.ts` verifies create, search, and edit through the real catalog UI.
 `playwright/e2e/quotation-journey.spec.ts` covers the hero pricing scenario, upsell, two sequential
 approval rounds, customer confirmation, and exact invoice/warehouse outcomes.

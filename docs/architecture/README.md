@@ -19,8 +19,9 @@ Internal access is explicit: representatives own their quotations and linked fin
 manager/finance/admin roles can read their operational scope; Ops has fulfillment access without
 billing datasets. Representatives share customer/product/stock reference catalogs, including costs
 needed for sales margin calculations. Customers see only their records and no internal margin/audit.
-Only customers or the explicit Admin demo proxy can accept/counter customer terms. See the real
-workspace-access regression suite for direct endpoint and token isolation evidence.
+Only customer identities and scoped quotation-link sessions can use customer-portal actions. The
+explicit Admin demo proxy remains a service-fixture capability and cannot access `/portal` routes.
+See the real workspace-access regression suite for direct endpoint and token isolation evidence.
 
 Local planning drafts under `docs/product/` remain background input. The documents above and the
 implemented contracts supersede their unresolved architecture options.
