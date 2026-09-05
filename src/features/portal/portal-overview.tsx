@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { DataTable, DataTableDefaultToolbar } from "@/components/ui/data-table";
 import type { PortalWorkspace } from "@/features/portal/_types/portal";
+import { PortalForbidden } from "@/features/portal/portal-forbidden";
 import { displayDate, displayStatus, money } from "@/features/shell/format";
 import { PageHeader } from "@/features/shell/page-header";
 import { WorkspaceState } from "@/features/shell/workspace-state";
@@ -67,7 +68,8 @@ const columns: ColumnDef<DataTableFeatures, PortalWorkspace["quotes"][number]>[]
 export function PortalOverview() {
   const { data, error, mutate } = useSWR<PortalWorkspace>("/api/v1/portal");
   const router = useRouter();
-  if (error instanceof HttpResponseError && [401, 403].includes(error.status))
+  if (error instanceof HttpResponseError && error.status === 403) return <PortalForbidden />;
+  if (error instanceof HttpResponseError && error.status === 401)
     return (
       <Alert>
         <AlertTitle>Welcome to your customer portal</AlertTitle>

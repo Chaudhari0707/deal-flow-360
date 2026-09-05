@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { DataTable } from "@/components/ui/data-table";
 import type { InventorySnapshot, StockRow } from "@/features/inventory/_types/ui";
-import { RestockForm } from "@/features/inventory/restock-form";
+import { RestockDialog } from "@/features/inventory/restock-form";
 import { StockSetup } from "@/features/inventory/stock-setup";
 import { useStockFeed } from "@/features/inventory/use-stock-feed";
 import { WarehouseSettings } from "@/features/inventory/warehouse-settings";
@@ -161,7 +161,15 @@ export function InventoryScreen() {
         </CardContent>
       </Card>
       {stock && canOperate && (
-        <RestockForm key={stock.id} stock={stock} refresh={() => void mutate()} />
+        <RestockDialog
+          key={stock.id}
+          stock={stock}
+          open
+          onOpenChange={(open) => {
+            if (!open) setSelected(undefined);
+          }}
+          refresh={() => void mutate()}
+        />
       )}
     </>
   );

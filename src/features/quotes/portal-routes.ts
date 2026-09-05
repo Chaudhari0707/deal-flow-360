@@ -58,11 +58,7 @@ export const portalRoutes = new Elysia({ name: "portal" })
           ]),
           identity.quoteId
             ? eq(quotes.id, identity.quoteId)
-            : identity.actor.role === "customer"
-              ? eq(quotes.customerId, identity.actor.customerId ?? "")
-              : identity.actor.role === "rep"
-                ? eq(quotes.ownerId, identity.actor.id)
-                : undefined,
+            : eq(quotes.customerId, identity.actor.customerId ?? ""),
         ),
       )
       .orderBy(desc(quotes.createdAt), desc(quotes.id))
@@ -95,8 +91,6 @@ export const portalRoutes = new Elysia({ name: "portal" })
     "/portal/:id/message",
     async ({ request, params: p, body }) => {
       const { actor, quote } = await permittedPortalQuote(request, p.id);
-      if (!["customer", "rep", "manager", "admin"].includes(actor.role))
-        throw new DomainError("Your role cannot post customer messages", 403);
       if (!body.body.trim()) throw new DomainError("Write a message before sending");
       if (body.lineId && !quote.lines.some((l) => l.id === body.lineId))
         throw new DomainError("Unknown line");

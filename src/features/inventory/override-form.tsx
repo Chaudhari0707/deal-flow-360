@@ -9,6 +9,7 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -71,7 +72,7 @@ export function OverrideForm({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger render={<Button variant="outline" />}>Manual override</DialogTrigger>
-      <DialogContent className="max-h-[85vh] overflow-y-auto">
+      <DialogContent>
         <DialogHeader>
           <DialogTitle>Adjust warehouse allocations</DialogTitle>
           <DialogDescription>
@@ -136,10 +137,12 @@ export function OverrideForm({
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
             )}
+          </FieldGroup>
+          <DialogFooter showCloseButton={!form.formState.isSubmitting}>
             <Button type="submit" disabled={!form.formState.isValid || form.formState.isSubmitting}>
               Save audited override
             </Button>
-          </FieldGroup>
+          </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>

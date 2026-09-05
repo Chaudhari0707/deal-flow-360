@@ -10,7 +10,16 @@ the repository's Base UI / `base-nova` primitives. The maintainer selected shadc
 depend on a font download.
 
 Feature components compose these native primitives; they do not introduce a competing button,
-dialog, input, table, or navigation system. List screens use the existing shared DataTable.
+dialog, input, table, or navigation system. List screens use the existing shared DataTable. Its
+TanStack mechanics are aligned with the reviewed CRAzy Collection implementation: one horizontal
+scroll ancestor, `border-separate` sticky cells, table-row grouping for hover actions, and a visible
+sticky-column container. DealFlow360 retains its own Base UI Checkbox and Lucide dependencies.
+
+The shared shadcn Dialog and AlertDialog primitives use a sticky action footer by default. The
+dialog viewport scrolls when needed while Close, Cancel and write actions remain visible. Invoice,
+subscription, inventory and fulfillment table rows open their selected detail in a dialog rather
+than rendering a second pane below the table. Direct quotation, portal and fulfillment URLs remain
+available for links and browser navigation.
 The official sidebar source is split into shell, context, and menu files to retain the repository's
 500-line file limit. Mobile state subscribes to the browser's media query through React's external
 store API; the server snapshot is stable for hydration.
@@ -41,9 +50,10 @@ flowchart LR
 - Interactive internal screens share the `/api/v1/workspace` SWR key and configured JSON fetcher.
   Mutations revalidate their affected collection. This bounded hackathon snapshot simplifies
   navigation; growth requires paginated resource endpoints as documented in the system decision.
-- The separate portal exposes public quotation fields, line-specific messages, counterproposals,
-  and approval-aware confirmation. Costs, margins, internal notes, and risk snapshots are absent
-  from the public quotation contract.
+- The separate portal is a consumer-only surface. Customer credential accounts and valid scoped
+  quotation-link sessions can use it; Admin, Finance, Manager, Ops and Rep sessions are redirected
+  to their workspace and receive `403` from every portal endpoint. Costs, margins, internal notes,
+  and risk snapshots are absent from the public quotation contract.
 - The email token is redeemed once for an HttpOnly scoped session, then removed from browser
   history. Portal sign-out revokes that session. Confirmation sends the reviewed revision;
   the server rejects stale or unapproved terms.
@@ -51,10 +61,12 @@ flowchart LR
 ## Verification
 
 `playwright/e2e/identity.spec.ts` exercises real sign-in, invalid credentials, signup, logout,
-protected navigation, and a 390px mobile sidebar. `playwright/e2e/portal.spec.ts` follows a customer
-through a line-specific conversation, counterproposal, and order confirmation. `test/integration/portal.regression.test.ts`
-checks cross-customer isolation, single-use redemption concurrency, public-field redaction,
-confirmation idempotency, and session revocation against the real API and test database.
+protected navigation, staff denial of the customer portal, and a 390px mobile sidebar.
+`playwright/e2e/portal.spec.ts` follows a customer through a line-specific conversation,
+counterproposal, and order confirmation. `test/integration/portal.regression.test.ts` checks
+cross-customer isolation, all staff-role portal denial, single-use redemption concurrency,
+public-field redaction, confirmation idempotency, and session revocation against the real API and
+test database.
 `playwright/e2e/catalog.spec.ts` verifies create, search, and edit through the real catalog UI.
 `playwright/e2e/quotation-journey.spec.ts` covers the hero pricing scenario, upsell, two sequential
 approval rounds, customer confirmation, and exact invoice/warehouse outcomes.

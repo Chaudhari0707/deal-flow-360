@@ -81,7 +81,7 @@ export function PortalConversation({
             </p>
           )}
         </div>
-        {["customer", "rep", "manager", "admin"].includes(data.actor.role) && (
+        {data.actor.role === "customer" && (
           <form method="post" onSubmit={submit}>
             <FieldGroup>
               <Field>

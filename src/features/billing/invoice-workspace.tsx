@@ -6,6 +6,14 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { DataTable } from "@/components/ui/data-table";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import {
@@ -112,118 +120,135 @@ export function InvoiceWorkspace({ initialId }: { initialId?: string }) {
         </CardContent>
       </Card>
       {invoice && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <ReceiptTextIcon className="size-4" />
-              {invoice.number}
-            </CardTitle>
-            <CardDescription>
-              {data.customers.find((customer) => customer.id === invoice.customerId)?.name} ·{" "}
-              {data.orders.find((order) => order.id === invoice.orderId)?.number} ·{" "}
-              {displayStatus(invoice.kind)}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-5">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Description</TableHead>
-                  <TableHead>Quantity</TableHead>
-                  <TableHead className="text-right">Total</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {invoice.lines.map((line) => (
-                  <TableRow key={line.id}>
-                    <TableCell>
-                      {line.name} · {line.variant}
-                    </TableCell>
-                    <TableCell>{line.quantity}</TableCell>
-                    <TableCell className="text-right">{money(line.totalCents)}</TableCell>
+        <Dialog
+          open
+          onOpenChange={(open) => {
+            if (!open) setSelected(null);
+          }}
+        >
+          <DialogContent className="sm:max-w-3xl">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <ReceiptTextIcon className="size-4" />
+                {invoice.number}
+              </DialogTitle>
+              <DialogDescription>
+                {data.customers.find((customer) => customer.id === invoice.customerId)?.name} ·{" "}
+                {data.orders.find((order) => order.id === invoice.orderId)?.number} ·{" "}
+                {displayStatus(invoice.kind)}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-5">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Description</TableHead>
+                    <TableHead>Quantity</TableHead>
+                    <TableHead className="text-right">Total</TableHead>
                   </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {invoice.lines.map((line) => (
+                    <TableRow key={line.id}>
+                      <TableCell>
+                        {line.name} · {line.variant}
+                      </TableCell>
+                      <TableCell>{line.quantity}</TableCell>
+                      <TableCell className="text-right">{money(line.totalCents)}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+              <div className="flex flex-wrap gap-6 text-sm">
+                <span>Subtotal {money(invoice.subtotalCents)}</span>
+                <span>Tax {money(invoice.taxCents)}</span>
+                <span>Payments {money(invoice.paidCents)}</span>
+                <span>Applied credits {money(invoice.creditedCents)}</span>
+                <strong>Outstanding {money(invoiceOutstanding(invoice))}</strong>
+              </div>
+              {canPay && invoiceOutstanding(invoice) > 0 && (
+                <form
+                  id="invoice-payment"
+                  method="post"
+                  className="max-w-sm"
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    if (reference.trim().length >= 3)
+                      void action.run(
+                        `/invoices/${invoice.id}/pay`,
+                        { operationKey: crypto.randomUUID(), reference: reference.trim() },
+                        "Payment recorded and balance reconciled.",
+                      );
+                  }}
+                >
+                  <Field className="max-w-sm">
+                    <FieldLabel htmlFor="payment-reference">Payment reference</FieldLabel>
+                    <Input
+                      id="payment-reference"
+                      required
+                      minLength={3}
+                      maxLength={100}
+                      value={reference}
+                      onChange={(event) => setReference(event.target.value)}
+                      placeholder="Bank transfer or receipt reference"
+                    />
+                    {reference.length > 0 && reference.trim().length < 3 && (
+                      <FieldError>Use at least 3 characters.</FieldError>
+                    )}
+                  </Field>
+                </form>
+              )}
+              {data.payments
+                .filter((payment) => payment.invoiceId === invoice.id)
+                .map((payment) => (
+                  <Alert key={payment.id}>
+                    <AlertTitle>
+                      Payment {money(payment.amountCents)} · {displayDate(payment.createdAt)}
+                    </AlertTitle>
+                    <AlertDescription>Reference: {payment.reference}</AlertDescription>
+                  </Alert>
                 ))}
-              </TableBody>
-            </Table>
-            <div className="flex flex-wrap gap-6 text-sm">
-              <span>Subtotal {money(invoice.subtotalCents)}</span>
-              <span>Tax {money(invoice.taxCents)}</span>
-              <span>Payments {money(invoice.paidCents)}</span>
-              <span>Applied credits {money(invoice.creditedCents)}</span>
-              <strong>Outstanding {money(invoiceOutstanding(invoice))}</strong>
+              {data.credits
+                .filter((credit) => credit.invoiceId === invoice.id)
+                .map((credit) => (
+                  <Alert key={credit.id}>
+                    <AlertTitle>
+                      {credit.number} · Credit {money(credit.amountCents)}
+                    </AlertTitle>
+                    <AlertDescription>
+                      {credit.reason}. Applied {money(credit.appliedCents)}; available credit{" "}
+                      {money(credit.amountCents - credit.appliedCents)}. No cash refund was
+                      recorded.
+                    </AlertDescription>
+                  </Alert>
+                ))}
             </div>
-            <Button
-              variant="outline"
-              nativeButton={false}
-              render={
-                <a
-                  aria-label="Download invoice PDF"
-                  href={`/api/v1/invoices/${encodeURIComponent(invoice.id)}/pdf`}
-                />
-              }
-            >
-              <DownloadIcon />
-              Download PDF
-            </Button>
-            {canPay && invoiceOutstanding(invoice) > 0 && (
-              <form
-                method="post"
-                className="flex flex-col items-start gap-3 sm:flex-row sm:items-end"
-                onSubmit={(event) => {
-                  event.preventDefault();
-                  if (reference.trim().length >= 3)
-                    void action.run(
-                      `/invoices/${invoice.id}/pay`,
-                      { operationKey: crypto.randomUUID(), reference: reference.trim() },
-                      "Payment recorded and balance reconciled.",
-                    );
-                }}
-              >
-                <Field className="max-w-sm">
-                  <FieldLabel htmlFor="payment-reference">Payment reference</FieldLabel>
-                  <Input
-                    id="payment-reference"
-                    required
-                    minLength={3}
-                    maxLength={100}
-                    value={reference}
-                    onChange={(event) => setReference(event.target.value)}
-                    placeholder="Bank transfer or receipt reference"
+            <DialogFooter showCloseButton>
+              <Button
+                variant="outline"
+                nativeButton={false}
+                render={
+                  <a
+                    aria-label="Download invoice PDF"
+                    href={`/api/v1/invoices/${encodeURIComponent(invoice.id)}/pdf`}
                   />
-                  {reference.length > 0 && reference.trim().length < 3 && (
-                    <FieldError>Use at least 3 characters.</FieldError>
-                  )}
-                </Field>
-                <Button type="submit" disabled={action.pending || reference.trim().length < 3}>
+                }
+              >
+                <DownloadIcon />
+                Download PDF
+              </Button>
+              {canPay && invoiceOutstanding(invoice) > 0 && (
+                <Button
+                  type="submit"
+                  form="invoice-payment"
+                  disabled={action.pending || reference.trim().length < 3}
+                >
                   Record full payment {money(invoiceOutstanding(invoice))}
                 </Button>
-              </form>
-            )}
-            {data.payments
-              .filter((payment) => payment.invoiceId === invoice.id)
-              .map((payment) => (
-                <Alert key={payment.id}>
-                  <AlertTitle>
-                    Payment {money(payment.amountCents)} · {displayDate(payment.createdAt)}
-                  </AlertTitle>
-                  <AlertDescription>Reference: {payment.reference}</AlertDescription>
-                </Alert>
-              ))}
-            {data.credits
-              .filter((credit) => credit.invoiceId === invoice.id)
-              .map((credit) => (
-                <Alert key={credit.id}>
-                  <AlertTitle>
-                    {credit.number} · Credit {money(credit.amountCents)}
-                  </AlertTitle>
-                  <AlertDescription>
-                    {credit.reason}. Applied {money(credit.appliedCents)}; available credit{" "}
-                    {money(credit.amountCents - credit.appliedCents)}. No cash refund was recorded.
-                  </AlertDescription>
-                </Alert>
-              ))}
-          </CardContent>
-        </Card>
+              )}
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       )}
     </>
   );

@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import type { ColumnDef, PaginationState } from "@tanstack/react-table";
 import useSWR from "swr";
 
@@ -10,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { DataTable } from "@/components/ui/data-table";
 import type { FulfillmentList } from "@/features/inventory/_types/ui";
+import { FulfillmentDetailDialog } from "@/features/inventory/fulfillment-detail";
 import { useStockFeed } from "@/features/inventory/use-stock-feed";
 import { PageHeader } from "@/features/shell/page-header";
 import { WorkspaceState } from "@/features/shell/workspace-state";
@@ -43,14 +43,15 @@ const columns: ColumnDef<DataTableFeatures, FulfillmentList["items"][number]>[] 
 ];
 
 export function FulfillmentScreen() {
-  const router = useRouter();
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 20 });
+  const [selected, setSelected] = useState<string>();
   const { data, error, mutate } = useSWR<FulfillmentList>(
     `/api/v1/fulfillment/orders?page=${pagination.pageIndex}&pageSize=${pagination.pageSize}`,
     { keepPreviousData: true },
   );
   const live = useStockFeed();
   if (!data) return <WorkspaceState error={error} retry={() => void mutate()} />;
+  const selectedOrder = data.items.find((item) => item.id === selected);
   return (
     <>
       <PageHeader
@@ -74,11 +75,18 @@ export function FulfillmentScreen() {
             pagination={pagination}
             pageCount={Math.ceil(data.total / pagination.pageSize)}
             onPaginationChange={setPagination}
-            onRowClick={(row) => router.push(`/fulfillment/${encodeURIComponent(row.id)}`)}
+            onRowClick={(row) => setSelected(row.id)}
             emptyMessage="Confirmed quotes will appear here automatically."
           />
         </CardContent>
       </Card>
+      {selectedOrder && (
+        <FulfillmentDetailDialog
+          id={selectedOrder.id}
+          title={selectedOrder.number}
+          onClose={() => setSelected(undefined)}
+        />
+      )}
     </>
   );
 }

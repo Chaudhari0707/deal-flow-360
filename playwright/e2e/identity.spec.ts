@@ -18,6 +18,9 @@ test("credentials sign-in, responsive navigation and logout @regression", async 
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
   await expect(page).toHaveURL(/\/dashboard$/);
   await expect(page.getByRole("heading", { name: "Overview", exact: true })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Customer portal", exact: true })).toHaveCount(0);
+  await page.goto("/portal");
+  await expect(page).toHaveURL(/\/dashboard$/);
 
   await page.setViewportSize({ width: 390, height: 844 });
   await page.getByRole("button", { name: "Toggle Sidebar" }).click();

@@ -8,7 +8,7 @@ function securityHeaders() {
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: blob:",
     "font-src 'self' data:",
-    "connect-src 'self' ws://127.0.0.1:3101 ws://127.0.0.1:3102",
+    "connect-src 'self' ws://127.0.0.1:3101 ws://127.0.0.1:3102 ws://localhost:3101 ws://localhost:3102",
     "frame-src 'self'",
     "object-src 'none'",
     "base-uri 'self'",

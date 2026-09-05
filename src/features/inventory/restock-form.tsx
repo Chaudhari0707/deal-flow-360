@@ -5,13 +5,30 @@ import { useForm } from "react-hook-form";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import type { StockRow } from "@/features/inventory/_types/ui";
 import { fetchJson } from "@/lib/swr/fetcher";
 
-export function RestockForm({ stock, refresh }: { stock: StockRow; refresh: () => void }) {
+export function RestockDialog({
+  stock,
+  refresh,
+  open,
+  onOpenChange,
+}: {
+  stock: StockRow;
+  refresh: () => void;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
   const [message, setMessage] = useState("");
   const [error, setError] = useState(false);
   const [operation, setOperation] = useState({ key: "", payload: "" });
@@ -22,15 +39,15 @@ export function RestockForm({ stock, refresh }: { stock: StockRow; refresh: () =
     shouldFocusError: true,
   });
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Restock {stock.name}</CardTitle>
-        <CardDescription>
-          {stock.warehouse} · {stock.available} available · {stock.reserved} reserved. A receipt
-          updates both live views.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Restock {stock.name}</DialogTitle>
+          <DialogDescription>
+            {stock.warehouse} · {stock.available} available · {stock.reserved} reserved. A receipt
+            updates both live views.
+          </DialogDescription>
+        </DialogHeader>
         <form
           onSubmit={form.handleSubmit(async (values) => {
             setMessage("");
@@ -59,7 +76,7 @@ export function RestockForm({ stock, refresh }: { stock: StockRow; refresh: () =
             }
           })}
         >
-          <FieldGroup className="sm:grid sm:grid-cols-3 sm:items-end">
+          <FieldGroup className="sm:grid sm:grid-cols-2 sm:items-end">
             <Field>
               <FieldLabel htmlFor="restock-quantity">Quantity received</FieldLabel>
               <Input
@@ -87,17 +104,19 @@ export function RestockForm({ stock, refresh }: { stock: StockRow; refresh: () =
                 {form.formState.errors.reason && "Add a note of 3–500 characters"}
               </FieldError>
             </Field>
+          </FieldGroup>
+          {message && (
+            <Alert className="mt-4" variant={error ? "destructive" : "default"}>
+              <AlertDescription>{message}</AlertDescription>
+            </Alert>
+          )}
+          <DialogFooter showCloseButton={!form.formState.isSubmitting}>
             <Button type="submit" disabled={form.formState.isSubmitting || !form.formState.isValid}>
               Receive stock
             </Button>
-          </FieldGroup>
+          </DialogFooter>
         </form>
-        {message && (
-          <Alert className="mt-4" variant={error ? "destructive" : "default"}>
-            <AlertDescription>{message}</AlertDescription>
-          </Alert>
-        )}
-      </CardContent>
-    </Card>
+      </DialogContent>
+    </Dialog>
   );
 }

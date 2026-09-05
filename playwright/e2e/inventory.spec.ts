@@ -52,10 +52,23 @@ test("Ops restock reaches another live tab, then consolidates and ships Northwin
   const observerRow = observer.getByRole("row").filter({ hasText: "Laptop Pro 13" });
   await expect(observerRow.getByRole("cell").nth(4)).toHaveText(String(before!.available));
 
-  await page.getByRole("row").filter({ hasText: "Laptop Pro 13" }).click();
-  await page.getByLabel("Quantity received", { exact: true }).fill("8");
-  await page.getByLabel("Receipt note", { exact: true }).fill("Browser acceptance receipt");
-  await page.getByRole("button", { name: "Receive stock", exact: true }).click();
+  const restockRow = page.getByRole("row").filter({ hasText: "Laptop Pro 13" });
+  await restockRow.press("Enter");
+  const restockDialog = page.getByRole("dialog", { name: "Restock Laptop Pro 13", exact: true });
+  await expect(restockDialog).toBeVisible();
+  await expect(restockDialog.locator("[data-slot='dialog-footer']")).toHaveCSS(
+    "position",
+    "sticky",
+  );
+  await restockDialog.getByRole("button", { name: "Close", exact: true }).click();
+  await expect(restockDialog).toHaveCount(0);
+  await restockRow.click();
+  await expect(restockDialog).toBeVisible();
+  await restockDialog.getByLabel("Quantity received", { exact: true }).fill("8");
+  await restockDialog
+    .getByLabel("Receipt note", { exact: true })
+    .fill("Browser acceptance receipt");
+  await restockDialog.getByRole("button", { name: "Receive stock", exact: true }).click();
   await expect(
     page.getByText("Stock received. Backorders can now be consolidated.", { exact: true }),
   ).toBeVisible();
@@ -72,22 +85,34 @@ test("Ops restock reaches another live tab, then consolidates and ships Northwin
   await expect(observerRow.getByRole("cell").nth(2)).toHaveText(String(before!.onHand + 8));
   await expect(observerRow.getByRole("cell").nth(4)).toHaveText(String(before!.available + 8));
 
-  await page.goto("/fulfillment/order-Q-1022");
-  await expect(page.getByRole("heading", { name: "SO-1022", exact: true })).toBeVisible();
-  await page.getByRole("button", { name: "Consolidate remaining backorder", exact: true }).click();
+  await page.goto("/fulfillment");
+  await page.getByRole("row").filter({ hasText: "SO-1022" }).click();
+  const fulfillmentDialog = page.getByRole("dialog", { name: "SO-1022", exact: true });
+  await expect(fulfillmentDialog).toBeVisible();
+  await expect(fulfillmentDialog.locator("[data-slot='dialog-footer']")).toHaveCSS(
+    "position",
+    "sticky",
+  );
+  await fulfillmentDialog
+    .getByRole("button", { name: "Consolidate remaining backorder", exact: true })
+    .click();
   await expect(
-    page.getByRole("button", { name: "Consolidate remaining backorder", exact: true }),
+    fulfillmentDialog.getByRole("button", { name: "Consolidate remaining backorder", exact: true }),
   ).toHaveCount(0);
   await expect(observerRow.getByRole("cell").nth(3)).toHaveText(String(before!.reserved + 4));
   await expect(observerRow.getByRole("cell").nth(4)).toHaveText(String(before!.available + 4));
-  await page.getByRole("button", { name: "Accept suggested split", exact: true }).click();
-  await expect(page.getByRole("button", { name: "Split accepted", exact: true })).toBeDisabled();
+  await fulfillmentDialog
+    .getByRole("button", { name: "Accept suggested split", exact: true })
+    .click();
+  await expect(
+    fulfillmentDialog.getByRole("button", { name: "Split accepted", exact: true }),
+  ).toBeDisabled();
   await expect(observerRow.getByRole("cell").nth(3)).toHaveText(String(before!.reserved + 4));
-  await page
+  await fulfillmentDialog
     .getByRole("button", { name: "Ship 8 Laptop Pro 13 · East Depot", exact: true })
     .click();
-  await expect(page.getByText("FULFILLED", { exact: true })).toBeVisible();
-  await expect(page.getByRole("button", { name: /^Ship 8 Laptop/ })).toHaveCount(0);
+  await expect(fulfillmentDialog.getByText("FULFILLED", { exact: true })).toBeVisible();
+  await expect(fulfillmentDialog.getByRole("button", { name: /^Ship 8 Laptop/ })).toHaveCount(0);
   await expect(observerRow.getByRole("cell").nth(2)).toHaveText(String(before!.onHand));
   await expect(observerRow.getByRole("cell").nth(3)).toHaveText(String(before!.reserved - 4));
   const after = (await (

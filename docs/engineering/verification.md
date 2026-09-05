@@ -6,21 +6,27 @@ successfully on Bun 1.4.0. Nothing was hosted or deployed externally.
 
 ## Configured checks
 
-`bun run check:full` passed against the integrated code:
+`bun run check:full` passed against the integrated code, including loopback-origin compatibility:
 
 | Check | Result |
 | --- | --- |
 | Formatting, Oxlint, strict TypeScript, file-size and instruction checks | Passed |
-| Unit tests | 43 passed |
-| Regression selection | 60 passed |
-| PostgreSQL integration tests | 40 passed |
+| Unit tests | 52 passed |
+| Regression selection | 71 passed |
+| PostgreSQL integration tests | 42 passed |
 | Native Turbopack production build | Passed |
-| Playwright authentication setup and browser checks | 10 passed |
+| Playwright authentication setup and browser checks | 11 passed |
 
-Regression is a purpose across unit/integration layers, so those 60 selections overlap the other
-counts; they are not an additional 60 unique tests. Browser scenarios cover credentials, mobile
+Regression is a purpose across unit/integration layers, so those 71 selections overlap the other
+counts; they are not an additional 71 unique tests. Browser scenarios cover credentials, mobile
 navigation, catalog configuration, customer negotiation, the HIGH approval journey, inventory
 restock/consolidation/shipment, billing/documents and compiled styles.
+
+Loopback compatibility coverage verifies same-scheme, same-port `localhost` / `127.0.0.1`
+origins with separate host-scoped sign-ins. The alias browser scenario passed real login, an actual
+customer mutation, live stock and logout; foreign and wrong-port sign-in attempts returned 403.
+Unit and real HTTP/WebSocket integration checks also cover missing, `null` and unrelated origins,
+plus malformed configured URLs. The complete 11-check browser run passed in 51 seconds without retries.
 
 The HIGH journey verifies $26,805.24 one-time plus $46 recurring, one subscription and 22 Main / 2 East
 reservations. Real database tests include simultaneous operations, rollback, role/customer isolation,

@@ -35,6 +35,7 @@ import { Separator } from "@/components/ui/separator";
 import type { PortalDetail as PortalDetailData } from "@/features/portal/_types/portal";
 import { PortalConversation } from "@/features/portal/portal-conversation";
 import { PortalCounter } from "@/features/portal/portal-counter";
+import { PortalForbidden } from "@/features/portal/portal-forbidden";
 import { displayDate, displayStatus, money } from "@/features/shell/format";
 import { PageHeader } from "@/features/shell/page-header";
 import { WorkspaceState } from "@/features/shell/workspace-state";
@@ -81,6 +82,7 @@ export function PortalDetail({ id }: { id: string }) {
   const [pending, setPending] = useState(false);
   const [failure, setFailure] = useState("");
   const [notice, setNotice] = useState("");
+  if (error instanceof HttpResponseError && error.status === 403) return <PortalForbidden />;
   if (error || !data)
     return (
       <WorkspaceState

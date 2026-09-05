@@ -11,10 +11,11 @@ import {
   messages,
   orders,
   products,
+  profiles,
   quoteAccess,
   quotes,
 } from "@/lib/db/schema";
-import type { QuoteLine } from "@/lib/domain/_types/domain";
+import type { QuoteLine, Role } from "@/lib/domain/_types/domain";
 import { api } from "@/server/api";
 
 let ownerId: string;
@@ -111,6 +112,20 @@ async function access(token: string) {
   return cookie!;
 }
 
+async function authenticatedCookie(role: Role, customerId: string | null = null) {
+  const id = crypto.randomUUID();
+  const email = `portal-${role}-${id}@example.com`;
+  const password = `Portal-${id}`;
+  const auth = createAuth(db);
+  const result = await auth.api.signUpEmail({ body: { email, name: `Portal ${role}`, password } });
+  await db.insert(profiles).values({ customerId, role, userId: result.user.id });
+  const session = await auth.api.signInEmail({ asResponse: true, body: { email, password } });
+  return session.headers
+    .getSetCookie()
+    .map((value) => value.split(";")[0])
+    .join("; ");
+}
+
 describe("portal scoped access regressions", () => {
   test("single-use token redemption is atomic under concurrent requests", async () => {
     const item = await fixture();
@@ -145,6 +160,44 @@ describe("portal scoped access regressions", () => {
       await db.select().from(messages).where(eq(messages.quoteId, other.quoteId)),
     ).toHaveLength(0);
     expect(await db.select().from(orders).where(eq(orders.quoteId, other.quoteId))).toHaveLength(0);
+  });
+
+  test("real customer sessions stay scoped while every staff role is denied portal access", async () => {
+    const item = await fixture();
+    const customerCookie = await authenticatedCookie("customer", item.customerId);
+    const customerList = await request("/portal", "GET", customerCookie);
+    expect(customerList.status).toBe(200);
+    expect(((await customerList.json()) as { quotes: { id: string }[] }).quotes).toEqual([
+      expect.objectContaining({ id: item.quoteId }),
+    ]);
+
+    for (const role of ["admin", "finance", "manager", "ops", "rep"] as const) {
+      const cookie = await authenticatedCookie(role);
+      expect((await request("/portal", "GET", cookie)).status).toBe(403);
+      expect((await request(`/portal/${item.quoteId}`, "GET", cookie)).status).toBe(403);
+      expect(
+        (
+          await request(`/portal/${item.quoteId}/message`, "POST", cookie, {
+            body: "Staff cannot post through a customer portal.",
+          })
+        ).status,
+      ).toBe(403);
+      expect(
+        (
+          await request(`/portal/${item.quoteId}/counter`, "POST", cookie, {
+            lines: [{ discountBps: 0, id: item.line.id }],
+            revision: 1,
+          })
+        ).status,
+      ).toBe(403);
+      expect(
+        (await request(`/portal/${item.quoteId}/confirm`, "POST", cookie, { revision: 1 })).status,
+      ).toBe(403);
+    }
+    expect(await db.select().from(messages).where(eq(messages.quoteId, item.quoteId))).toHaveLength(
+      0,
+    );
+    expect(await db.select().from(orders).where(eq(orders.quoteId, item.quoteId))).toHaveLength(0);
   });
 
   test("public quotation excludes internal costs, margins, risk and notes", async () => {

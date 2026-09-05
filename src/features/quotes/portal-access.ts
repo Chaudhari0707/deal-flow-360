@@ -85,6 +85,8 @@ export async function portalIdentity(
     }
   }
   const actor = await requireActor(request);
+  if (actor.role !== "customer")
+    throw new DomainError("The customer portal is available only to customer accounts.", 403);
   return { actor };
 }
 
@@ -93,8 +95,7 @@ export async function permittedPortalQuote(request: Request, id: string) {
   const [quote] = await db.select().from(quotes).where(eq(quotes.id, id));
   if (
     !quote ||
-    (actor.role === "customer" && actor.customerId !== quote.customerId) ||
-    (actor.role === "rep" && actor.id !== quote.ownerId) ||
+    actor.customerId !== quote.customerId ||
     ["DRAFT", "RETURNED", "REJECTED"].includes(quote.status)
   )
     throw new DomainError("Quotation not found", 404);

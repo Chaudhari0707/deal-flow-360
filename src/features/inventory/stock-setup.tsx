@@ -8,6 +8,7 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -77,6 +78,8 @@ export function StockSetup({ workspace, refresh }: { workspace: Workspace; refre
               <AlertDescription>{error}</AlertDescription>
             </Alert>
           )}
+        </FieldGroup>
+        <DialogFooter showCloseButton>
           <Button
             disabled={pending || !warehouseId || !productId}
             onClick={async () => {
@@ -99,7 +102,7 @@ export function StockSetup({ workspace, refresh }: { workspace: Workspace; refre
           >
             Configure location
           </Button>
-        </FieldGroup>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

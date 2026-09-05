@@ -240,13 +240,9 @@ export function DataTable<TData extends RowData, TValue>({
       ) : (
         <DataTableDefaultToolbar table={table} actions={bulkRemoveAction} />
       )}
-      <div
-        className={cn(
-          "overflow-y-hidden rounded-md border",
-          hasPinnedColumns ? "overflow-x-auto" : "overflow-x-auto",
-        )}
-      >
+      <div className="overflow-x-auto overflow-y-hidden rounded-md border">
         <UITable
+          containerClassName={hasPinnedColumns ? "overflow-visible" : undefined}
           style={{
             width: "100%",
             ...(enableColumnResizing || hasPinnedColumns ? { minWidth: table.getTotalSize() } : {}),
