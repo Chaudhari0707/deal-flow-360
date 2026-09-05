@@ -38,6 +38,11 @@ export function QuoteList({ approvals = false }: { approvals?: boolean }) {
         .includes(search.toLowerCase()),
   );
   const canCreate = ["rep", "manager", "admin"].includes(data.actor.role);
+  const tableRows = visible.map((quote) => ({
+    ...quote,
+    customerName:
+      data.customers.find((customer) => customer.id === quote.customerId)?.name ?? "Customer",
+  }));
   return (
     <>
       <PageHeader
@@ -157,7 +162,7 @@ export function QuoteList({ approvals = false }: { approvals?: boolean }) {
             <CardContent>
               <DataTable
                 columns={quoteColumns}
-                data={visible}
+                data={tableRows}
                 getRowId={(q) => q.id}
                 onRowClick={(q) => router.push(`/quotations/${q.id}`)}
               />

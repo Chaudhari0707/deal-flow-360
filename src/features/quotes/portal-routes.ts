@@ -12,6 +12,7 @@ import {
 import { confirmQuote, counterQuote } from "@/features/quotes/service";
 import { db } from "@/lib/db/connection";
 import { customers, messages, quoteAccess, quotes } from "@/lib/db/schema";
+import { requireMutationOrigin } from "@/server/access";
 import { DomainError } from "@/server/errors";
 
 const id = t.String({ minLength: 1, maxLength: 100 }),
@@ -19,13 +20,7 @@ const id = t.String({ minLength: 1, maxLength: 100 }),
   revision = t.Integer({ minimum: 1 });
 
 export const portalRoutes = new Elysia({ name: "portal" })
-  .onBeforeHandle(({ request }) => {
-    if (!["GET", "HEAD", "OPTIONS"].includes(request.method)) {
-      const origin = request.headers.get("origin");
-      if (origin && origin !== Bun.env.BETTER_AUTH_URL)
-        throw new DomainError("Request origin not allowed", 403);
-    }
-  })
+  .onBeforeHandle(({ request }) => requireMutationOrigin(request))
   .post(
     "/portal/redeem",
     async ({ body, set }) => {

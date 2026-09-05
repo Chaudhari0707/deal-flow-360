@@ -1,8 +1,11 @@
+import type { Workspace } from "@/lib/domain/_types/workspace";
+
 export interface LineInput {
   discountBps: number;
   id?: string;
   productId: string;
   quantity: number;
+  upsell?: boolean;
 }
 
 export interface PricingProduct {
@@ -11,6 +14,7 @@ export interface PricingProduct {
   id: string;
   intervalMonths: number;
   name: string;
+  pairedProductIds?: string[];
   priceCents: number;
   stockable: boolean;
   taxBps: number;
@@ -25,3 +29,5 @@ export interface QuoteInput {
   promisedDate?: string;
   revision?: number;
 }
+
+export type QuoteRow = Workspace["quotes"][number] & { customerName: string };

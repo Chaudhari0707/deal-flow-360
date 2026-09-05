@@ -38,5 +38,5 @@ export async function seedDatabase(database: Database) {
     for (const seed of seeders) await seed(transaction);
   });
   await seedCredentialUser(database);
-  await seedDemo(database);
+  if (Bun.env.DEMO_PASSWORD) await seedDemo(database);
 }

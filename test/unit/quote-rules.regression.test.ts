@@ -24,6 +24,32 @@ function line(id: string, discountBps: number): QuoteLine {
 }
 
 describe("quote pricing and governance regressions", () => {
+  test("configured tier prices and valid upsell provenance are reflected in snapshots", () => {
+    const base = {
+      ...line("base", 0),
+      id: "base",
+      category: "Hardware",
+      pairedProductIds: ["addon"],
+    };
+    const addon = { ...line("addon", 0), id: "addon", category: "Services" };
+    const result = priceLines(
+      [base, addon],
+      "Gold",
+      [
+        { productId: "base", quantity: 1, discountBps: 0 },
+        { productId: "addon", quantity: 1, discountBps: 0, upsell: true },
+      ],
+      { Gold: 8000 },
+    );
+    expect(result[0]!.priceCents).toBe(8000);
+    expect(result[1]!.priceCents).toBe(10000);
+    expect(result[1]!.upsell).toBe(true);
+    expect(
+      priceLines([base, addon], "Gold", [
+        { productId: "addon", quantity: 1, discountBps: 0, upsell: true },
+      ])[0]!.upsell,
+    ).toBe(false);
+  });
   test("HIGH hero matches independently calculated one-time and recurring invoice values", () => {
     const products = [
       {

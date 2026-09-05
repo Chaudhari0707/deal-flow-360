@@ -79,12 +79,15 @@ export const catalogRoutes = new Elysia({ name: "catalog" })
   .post(
     "/customers",
     async ({ request, body }) => {
-      await requireActor(request, ["rep", "manager", "admin"]);
-      const [customer] = await db
-        .insert(customers)
-        .values({ id: crypto.randomUUID(), ...body })
-        .returning();
-      return customer;
+      const actor = await requireActor(request, ["rep", "manager", "admin"]);
+      return db.transaction(async (tx) => {
+        const [customer] = await tx
+          .insert(customers)
+          .values({ id: crypto.randomUUID(), ...body })
+          .returning();
+        await audit(tx, actor, customer!.id, "CUSTOMER_CREATED", "Customer record created", body);
+        return customer;
+      });
     },
     { body: customerBody },
   )
@@ -127,7 +130,8 @@ export const catalogRoutes = new Elysia({ name: "catalog" })
           "highLineBps",
           "highTotalBps",
         ],
-        health: ["stallDays", "anomalyBps", "historyDays"],
+        health: ["staleDays", "approvalDays", "overdueDays", "anomalyBps", "historyDays"],
+        pricelists: ["Bronze", "Silver", "Gold"],
         upsell: ["minimumMarginBps"],
       };
       if (
@@ -141,6 +145,17 @@ export const catalogRoutes = new Elysia({ name: "catalog" })
         )
       )
         throw new DomainError("Settings must be integers from 0 to 10,000");
+      if (params.id === "health") {
+        const maxima: Record<string, number> = {
+          staleDays: 90,
+          approvalDays: 60,
+          overdueDays: 60,
+          historyDays: 365,
+        };
+        for (const [key, max] of Object.entries(maxima))
+          if (body.value[key] !== undefined && (body.value[key]! < 1 || body.value[key]! > max))
+            throw new DomainError(`${key} must be from 1 to ${max}`);
+      }
       if (
         params.id === "discounts" &&
         ((body.value.highLineBps ?? 1) < 1 || (body.value.highTotalBps ?? 1) < 1)

@@ -18,5 +18,6 @@ export async function audit(
     action,
     reason,
     detail,
+    revision: typeof detail?.revision === "number" ? detail.revision : null,
   });
 }

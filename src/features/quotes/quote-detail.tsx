@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, Check, Mail, Pencil, ShieldCheck, X } from "lucide-react";
 import useSWR from "swr";
 
@@ -30,6 +30,7 @@ import { WorkspaceState } from "@/features/shell/workspace-state";
 import type { Workspace } from "@/lib/domain/_types/workspace";
 
 export function QuoteDetail({ isNew = false }: { isNew?: boolean }) {
+  const router = useRouter();
   const params = useParams<{ id: string }>(),
     { data, error, mutate } = useWorkspace();
   const detail = useSWR<{ activity: Workspace["activity"]; messages: Workspace["messages"] }>(
@@ -63,6 +64,32 @@ export function QuoteDetail({ isNew = false }: { isNew?: boolean }) {
     await mutate();
     await detail.mutate();
   };
+  async function duplicate() {
+    if (!quote) return;
+    setPending(true);
+    setFailure("");
+    try {
+      const saved = await quoteRequest<{ id: string }>("/quotes", {
+        customerId: quote.customerId,
+        lines: quote.lines.map((line) => ({
+          id: crypto.randomUUID(),
+          productId: line.productId,
+          quantity: line.quantity,
+          discountBps: line.discountBps,
+          upsell: line.upsell,
+        })),
+        orderDiscountBps: quote.orderDiscountBps,
+        notes: quote.notes,
+        ...(quote.promisedDate ? { promisedDate: quote.promisedDate } : {}),
+      });
+      await mutate();
+      router.push(`/quotations/${saved.id}`);
+    } catch (error) {
+      setFailure(error instanceof Error ? error.message : "Unable to copy quotation");
+    } finally {
+      setPending(false);
+    }
+  }
   async function act(action: "approve" | "return" | "reject" | "send" | "submit") {
     if (!quote) return;
     setPending(true);
@@ -72,7 +99,7 @@ export function QuoteDetail({ isNew = false }: { isNew?: boolean }) {
       const result = await quoteRequest<{ status?: string; message?: string }>(
         `/quotes/${quote.id}/${["approve", "return", "reject"].includes(action) ? "approval" : action}`,
         action === "send"
-          ? {}
+          ? { renew: quote.status === "SENT" || quote.status === "UNDER_NEGOTIATION" }
           : action === "submit"
             ? { revision: quote.revision }
             : { revision: quote.revision, action, reason },
@@ -110,6 +137,11 @@ export function QuoteDetail({ isNew = false }: { isNew?: boolean }) {
           quote ? (
             <div className="flex flex-wrap items-center gap-2">
               <Badge variant="secondary">{quote.status.replaceAll("_", " ")}</Badge>
+              {canEdit && ["CONFIRMED", "REJECTED"].includes(quote.status) && (
+                <Button variant="outline" disabled={pending} onClick={() => void duplicate()}>
+                  Copy to new draft
+                </Button>
+              )}
               {canEdit && !["CONFIRMED", "REJECTED"].includes(quote.status) && (
                 <Button variant="outline" onClick={() => setEditing((v) => !v)}>
                   <Pencil />

@@ -41,6 +41,7 @@ export function QuoteEditor({
       productId: l.productId,
       quantity: l.quantity,
       discountBps: l.discountBps,
+      upsell: l.upsell,
     })) ?? [],
   );
   const [orderDiscountBps, setOrderDiscount] = useState(quote?.orderDiscountBps ?? 0),
@@ -52,11 +53,12 @@ export function QuoteEditor({
     [dismissed, setDismissed] = useState<string[]>([]);
   const customer = data.customers.find((c) => c.id === customerId),
     limits = data.settings.find((s) => s.id === "discounts")?.value ?? defaultDiscounts;
+  const pricelists = data.settings.find((setting) => setting.id === "pricelists")?.value;
   let totals: ReturnType<typeof calculateQuote> | undefined,
     validation = "";
   try {
     totals = calculateQuote(
-      priceLines(data.products, customer?.tier ?? "Bronze", lines),
+      priceLines(data.products, customer?.tier ?? "Bronze", lines, pricelists),
       orderDiscountBps,
       customer?.tier ?? "Bronze",
       limits,
@@ -64,7 +66,7 @@ export function QuoteEditor({
   } catch (e) {
     validation = e instanceof Error ? e.message : "Invalid quotation";
   }
-  function add(id: string) {
+  function add(id: string, upsell = false) {
     const p = data.products.find((p) => p.id === id);
     if (!p) return;
     setLines((current) => [
@@ -74,6 +76,7 @@ export function QuoteEditor({
         productId: id,
         quantity: 1,
         discountBps: p.promoted ? p.promotionBps : 0,
+        upsell,
       },
     ]);
   }
@@ -112,6 +115,7 @@ export function QuoteEditor({
   const suggestions = data.products
     .filter(
       (p) =>
+        !validation &&
         p.active &&
         suggestedIds.has(p.id) &&
         !dismissed.includes(p.id) &&
@@ -119,9 +123,12 @@ export function QuoteEditor({
     )
     .map((p) => {
       const amount = calculateQuote(
-        priceLines(data.products, customer?.tier ?? "Bronze", [
-          { productId: p.id, quantity: 1, discountBps: p.promoted ? p.promotionBps : 0 },
-        ]),
+        priceLines(
+          data.products,
+          customer?.tier ?? "Bronze",
+          [{ productId: p.id, quantity: 1, discountBps: p.promoted ? p.promotionBps : 0 }],
+          pricelists,
+        ),
         orderDiscountBps,
         customer?.tier ?? "Bronze",
         limits,
@@ -400,7 +407,7 @@ export function QuoteEditor({
                     size="sm"
                     variant="secondary"
                     aria-label={`Add ${s.product.name} to quote`}
-                    onClick={() => add(s.product.id)}
+                    onClick={() => add(s.product.id, true)}
                   >
                     Add to quote
                   </Button>

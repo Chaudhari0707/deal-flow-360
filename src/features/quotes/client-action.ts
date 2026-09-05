@@ -6,10 +6,17 @@ export async function quoteRequest<T>(path: string, body?: unknown, method = "PO
     headers: { "Content-Type": "application/json" },
     ...(body === undefined ? {} : { body: JSON.stringify(body) }),
   });
-  const data = await response.json();
-  if (!response.ok)
+  let data: unknown = null;
+  try {
+    data = await response.json();
+  } catch {
+    /* An upstream error may contain HTML or no body. */
+  }
+  if (!response.ok || data === null)
     throw new Error(
-      typeof data.error === "string" ? data.error : "The action failed. Refresh and try again.",
+      data && typeof data === "object" && "error" in data && typeof data.error === "string"
+        ? data.error
+        : "The action failed. Refresh and try again.",
     );
   return data as T;
 }

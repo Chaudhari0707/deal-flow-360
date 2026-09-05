@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, desc, eq, sql } from "drizzle-orm";
 import { Resend } from "resend";
 
 import { db } from "@/lib/db/connection";
@@ -12,6 +12,8 @@ export async function tokenDigest(token: string) {
 }
 
 async function payloadKey() {
+  if (!Bun.env.BETTER_AUTH_SECRET || Bun.env.BETTER_AUTH_SECRET.length < 32)
+    throw new DomainError("Email access requires configured authentication", 503);
   const key = await crypto.subtle.digest(
     "SHA-256",
     new TextEncoder().encode(Bun.env.BETTER_AUTH_SECRET!),
@@ -38,7 +40,7 @@ async function open(value: string) {
   );
 }
 
-export async function sendQuotation(id: string, actor: Actor) {
+export async function sendQuotation(id: string, actor: Actor, renew = false) {
   if (!["rep", "manager", "finance", "admin"].includes(actor.role))
     throw new DomainError("Your role cannot send quotations", 403);
   const intent = await db.transaction(async (tx) => {
@@ -56,11 +58,19 @@ export async function sendQuotation(id: string, actor: Actor) {
       .select()
       .from(deliveries)
       .where(and(eq(deliveries.quoteId, id), eq(deliveries.revision, quote.revision)))
-      .orderBy(deliveries.createdAt)
+      .orderBy(desc(deliveries.createdAt), desc(deliveries.id))
       .limit(1);
-    if (existing) return { customer: customer!, delivery: existing, quote };
+    if (existing && (!renew || existing.status !== "SENT"))
+      return { customer: customer!, delivery: existing, quote };
+    if (existing && Date.now() - existing.createdAt.getTime() < 60_000)
+      throw new DomainError(
+        "An email was just sent. Wait one minute before issuing a replacement link.",
+        429,
+      );
+    if (renew)
+      await tx.update(quoteAccess).set({ revoked: true }).where(eq(quoteAccess.quoteId, id));
     const token = crypto.randomUUID() + crypto.randomUUID();
-    const url = `${Bun.env.BETTER_AUTH_URL}/portal/access?token=${encodeURIComponent(token)}`;
+    const url = `${new URL(Bun.env.BETTER_AUTH_URL!).origin}/portal/access?token=${encodeURIComponent(token)}`;
     await tx.insert(quoteAccess).values({
       id: crypto.randomUUID(),
       quoteId: id,
@@ -91,7 +101,13 @@ export async function sendQuotation(id: string, actor: Actor) {
   else if (!Bun.env.RESEND_API_KEY)
     error = "Resend is not configured. Configure RESEND_API_KEY and retry.";
   else {
-    const recipient = Bun.env.EMAIL_TEST_RECIPIENT ?? intent.customer.email;
+    const override = Bun.env.EMAIL_TEST_RECIPIENT;
+    if (
+      override &&
+      !/^(delivered|bounced|complained|suppressed)(\+[a-zA-Z0-9_-]+)?@resend\.dev$/.test(override)
+    )
+      throw new DomainError("EMAIL_TEST_RECIPIENT must be a supported Resend test sink", 503);
+    const recipient = override || intent.customer.email;
     try {
       const result = await new Resend(Bun.env.RESEND_API_KEY).emails.send(
         {
@@ -117,7 +133,7 @@ export async function sendQuotation(id: string, actor: Actor) {
         status: error ? "FAILED" : "SENT",
         error,
         providerId,
-        attempts: intent.delivery.attempts + 1,
+        attempts: sql`${deliveries.attempts} + 1`,
       })
       .where(eq(deliveries.id, intent.delivery.id));
     if (!error)

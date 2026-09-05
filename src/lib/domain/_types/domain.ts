@@ -21,6 +21,7 @@ export interface QuoteLine {
   taxBps: number;
   taxCents: number;
   totalCents: number;
+  upsell?: boolean;
   variant: string;
 }
 
