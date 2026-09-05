@@ -11,8 +11,8 @@ import {
   stockDemand,
 } from "@/features/inventory/stock";
 import { db } from "@/lib/db/connection";
-import { orders } from "@/lib/db/schema/commerce";
-import { reservations, stockMovements, stocks } from "@/lib/db/schema/inventory";
+import { orders, products } from "@/lib/db/schema/commerce";
+import { reservations, stockMovements, stocks, warehouses } from "@/lib/db/schema/inventory";
 import type { Actor } from "@/lib/domain/_types/domain";
 import { audit } from "@/server/audit";
 import { DomainError } from "@/server/errors";
@@ -20,6 +20,8 @@ import { DomainError } from "@/server/errors";
 export async function acceptSplit(orderId: string, actor: Actor) {
   return db.transaction(async (tx) => {
     const order = await lockOrder(tx, orderId);
+    if (order.fulfillmentStatus === "FULFILLED")
+      throw new DomainError("This order is already fulfilled.", 409);
     if (order.acceptedAt) return order;
     const [updated] = await tx
       .update(orders)
@@ -46,6 +48,10 @@ export async function overrideSplit(
 ) {
   return db.transaction(async (tx) => {
     const order = await lockOrder(tx, orderId);
+    if (order.fulfillmentStatus === "FULFILLED")
+      throw new DomainError("This order is already fulfilled.", 409);
+    if (order.fulfillmentStatus === "SPLIT_PENDING")
+      throw new DomainError("Accept the shipment before changing reservations.", 409);
     const demand = stockDemand(order.lines);
     const balances = await lockedStock(
       tx,
@@ -111,34 +117,61 @@ export async function overrideSplit(
 export async function consolidateBackorder(orderId: string, actor: Actor) {
   return db.transaction(async (tx) => {
     const order = await lockOrder(tx, orderId);
+    if (order.fulfillmentStatus === "FULFILLED")
+      throw new DomainError("This order is already fulfilled.", 409);
     const demand = stockDemand(order.lines);
     const balances = await lockedStock(
       tx,
       demand.map((line) => line.productId),
     );
     const existing = await tx.select().from(reservations).where(eq(reservations.orderId, orderId));
-    const remaining = demand.map((line) => ({
-      ...line,
-      quantity:
-        line.quantity -
-        existing
-          .filter((r) => r.productId === line.productId)
-          .reduce((sum, r) => sum + r.quantity, 0),
-    }));
-    const plan = planFulfillment(
-      remaining,
-      balances.filter((b) => b.active),
-    );
-    await addAllocations(tx, orderId, plan.allocations);
-    if (plan.allocations.length)
-      await audit(
-        tx,
-        actor,
-        orderId,
-        "BACKORDER_CONSOLIDATED",
-        "Allocated remaining demand after stock became available",
-        { allocations: plan.allocations },
+    const remaining = demand
+      .map((line) => ({
+        ...line,
+        quantity:
+          line.quantity -
+          existing
+            .filter((r) => r.productId === line.productId)
+            .reduce((sum, r) => sum + r.quantity, 0),
+      }))
+      .filter((line) => line.quantity > 0);
+    const supply = balances.filter((balance) => balance.active && balance.available > 0);
+    if (remaining.length === 0)
+      return {
+        allocations: [],
+        backorders: [],
+        shipmentCount: 0,
+        shippingScore: 0,
+        status: await fulfillmentStatus(tx, order),
+      };
+    if (supply.length === 0)
+      throw new DomainError(
+        "No available stock at active warehouses for the remaining products. Receive stock on Inventory, then try again.",
+        409,
       );
+    let plan;
+    try {
+      plan = planFulfillment(remaining, supply);
+    } catch (error) {
+      throw new DomainError(
+        error instanceof Error ? error.message : "Unable to allocate remaining backorder",
+        409,
+      );
+    }
+    if (plan.allocations.length === 0)
+      throw new DomainError(
+        "No available stock at active warehouses for the remaining products. Receive stock on Inventory, then try again.",
+        409,
+      );
+    await addAllocations(tx, orderId, plan.allocations);
+    await audit(
+      tx,
+      actor,
+      orderId,
+      "BACKORDER_CONSOLIDATED",
+      "Allocated remaining demand after stock became available",
+      { allocations: plan.allocations },
+    );
     return { ...plan, status: await fulfillmentStatus(tx, order) };
   });
 }
@@ -155,13 +188,8 @@ export async function restock(
 ) {
   return db.transaction(async (tx) => {
     await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtextextended(${input.operationKey}, 0))`);
-    const balances = await lockedStock(tx, [input.productId]);
-    const balance = balances.find((b) => b.warehouseId === input.warehouseId);
-    if (!balance)
-      throw new DomainError(
-        "Stock balance not found; configure the product at this warehouse first",
-        404,
-      );
+    let balances = await lockedStock(tx, [input.productId]);
+    let balance = balances.find((b) => b.warehouseId === input.warehouseId);
     const [prior] = await tx
       .select()
       .from(stockMovements)
@@ -176,6 +204,28 @@ export async function restock(
       )
         throw new DomainError("Operation key was already used with different inputs", 409);
       return { movementId: prior.id, repeated: true };
+    }
+    if (!balance) {
+      const [product] = await tx.select().from(products).where(eq(products.id, input.productId));
+      if (!product?.stockable) throw new DomainError("Choose a stockable product", 400);
+      const [location] = await tx
+        .select()
+        .from(warehouses)
+        .where(eq(warehouses.id, input.warehouseId));
+      if (!location) throw new DomainError("Warehouse not found", 404);
+      await tx
+        .insert(stocks)
+        .values({
+          id: crypto.randomUUID(),
+          onHand: 0,
+          productId: input.productId,
+          reserved: 0,
+          warehouseId: input.warehouseId,
+        })
+        .onConflictDoNothing();
+      balances = await lockedStock(tx, [input.productId]);
+      balance = balances.find((b) => b.warehouseId === input.warehouseId);
+      if (!balance) throw new DomainError("Warehouse not found", 404);
     }
     const id = crypto.randomUUID();
     await tx
@@ -201,7 +251,7 @@ export async function shipReservation(
 ) {
   return db.transaction(async (tx) => {
     const order = await lockOrder(tx, orderId);
-    if (!order.acceptedAt) throw new DomainError("Accept the split before shipping", 409);
+    if (!order.acceptedAt) throw new DomainError("Accept the shipment before shipping", 409);
     await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtextextended(${input.operationKey}, 0))`);
     await lockedStock(
       tx,
@@ -227,6 +277,8 @@ export async function shipReservation(
         throw new DomainError("Operation key was already used with different inputs", 409);
       return { movementId: prior.id, repeated: true };
     }
+    if (order.fulfillmentStatus === "FULFILLED")
+      throw new DomainError("This order is already fulfilled.", 409);
     if (input.quantity > reservation.quantity - reservation.shipped)
       throw new DomainError("Shipment exceeds unshipped reservation", 409);
     await tx
@@ -262,6 +314,7 @@ export async function shipReservation(
       reservationId: reservation.id,
       quantity: input.quantity,
     });
-    return { movementId: id, repeated: false, status: await fulfillmentStatus(tx, order) };
+    await fulfillmentStatus(tx, order);
+    return { movementId: id, repeated: false };
   });
 }

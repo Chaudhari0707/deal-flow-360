@@ -119,12 +119,17 @@ interface DataTableProps<TData extends RowData, TValue> {
     table: Table<DataTableFeatures, TData>,
     extras: DataTableToolbarExtras,
   ) => React.ReactNode;
+  /** Shown on the same row as the View control when using the default toolbar. */
+  title?: React.ReactNode;
+  description?: React.ReactNode;
 }
 
 export function DataTable<TData extends RowData, TValue>({
   columns,
   data,
   toolbar,
+  title,
+  description,
   emptyMessage = "No results.",
   enableSelection = false,
   enableBulkRemove,
@@ -238,7 +243,12 @@ export function DataTable<TData extends RowData, TValue>({
       {toolbar ? (
         toolbar(table, toolbarExtras)
       ) : (
-        <DataTableDefaultToolbar table={table} actions={bulkRemoveAction} />
+        <DataTableDefaultToolbar
+          table={table}
+          actions={bulkRemoveAction}
+          title={title}
+          description={description}
+        />
       )}
       <div className="overflow-x-auto overflow-y-hidden rounded-md border">
         <UITable

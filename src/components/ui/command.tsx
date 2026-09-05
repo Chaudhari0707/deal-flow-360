@@ -52,8 +52,8 @@ function CommandDialog({
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
-        {children}
-        <DialogFooter showCloseButton />
+        <div className="min-h-0 flex-1 overflow-hidden">{children}</div>
+        <DialogFooter showCloseButton className="mx-0 mb-0" />
       </DialogContent>
     </Dialog>
   );

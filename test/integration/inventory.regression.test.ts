@@ -15,6 +15,7 @@ import {
 import { fulfillmentDetail } from "@/features/inventory/queries";
 import { inventoryRoutes } from "@/features/inventory/routes";
 import { reserveOrderStock } from "@/features/inventory/stock";
+import { saveWarehouse } from "@/features/inventory/warehouse";
 import { createAuth } from "@/lib/auth/create-auth";
 import { db } from "@/lib/db/connection";
 import * as schema from "@/lib/db/schema";
@@ -28,7 +29,7 @@ const authIds: string[] = [];
 afterAll(async () => {
   const productIds = fixtureIds.map((id) => `product-${id}`);
   const locationIds = fixtureIds.flatMap((id) =>
-    [0, 1, 2].map((index) => `warehouse-${index}-${id}`),
+    [0, 1, 2, 3].map((index) => `warehouse-${index}-${id}`),
   );
   const userIds = [...fixtureIds, ...authIds];
   if (fixtureIds.length)
@@ -206,9 +207,13 @@ describe("inventory transaction regressions", () => {
       quantity: 8,
       reservationId: detail.allocations[0]!.id,
     };
-    await Promise.all([
+    const [first, retry] = await Promise.all([
       shipReservation(f.order.id, shipment, f.actor),
       shipReservation(f.order.id, shipment, f.actor),
+    ]);
+    expect([first, retry].map((row) => Object.keys(row).toSorted())).toEqual([
+      ["movementId", "repeated"],
+      ["movementId", "repeated"],
     ]);
     expect(
       (await balances(f.productId)).find((s) => s.warehouseId === f.warehouses[1]!.id)?.reserved,
@@ -216,9 +221,122 @@ describe("inventory transaction regressions", () => {
     expect((await fulfillmentDetail(f.order.id)).order.fulfillmentStatus).toBe("FULFILLED");
   });
 
+  test("sold-out restock increases available and does not auto-consolidate", async () => {
+    const f = await fixture(5, [0, 0, 0]);
+    await db.transaction((tx) => reserveOrderStock(tx, f.order, f.actor));
+    expect((await fulfillmentDetail(f.order.id)).backorders[0]?.quantity).toBe(5);
+    const receipt = {
+      operationKey: crypto.randomUUID(),
+      productId: f.productId,
+      quantity: 5,
+      reason: "Sold-out receipt",
+      warehouseId: f.warehouses[0]!.id,
+    };
+    await restock(receipt, f.actor);
+    const [main] = await balances(f.productId);
+    expect([main!.onHand, main!.reserved, main!.onHand - main!.reserved]).toEqual([5, 0, 5]);
+    expect((await fulfillmentDetail(f.order.id)).backorders[0]?.quantity).toBe(5);
+    await consolidateBackorder(f.order.id, f.actor);
+    expect((await fulfillmentDetail(f.order.id)).backorders).toEqual([]);
+    expect((await balances(f.productId))[0]?.reserved).toBe(5);
+  });
+
+  test("restock creates a balance when the product is new at that warehouse", async () => {
+    const f = await fixture(1, [1, 0, 0]);
+    const west = f.warehouses[2]!;
+    await db.delete(schema.stocks).where(eq(schema.stocks.warehouseId, west.id));
+    const receipt = {
+      operationKey: crypto.randomUUID(),
+      productId: f.productId,
+      quantity: 4,
+      reason: "First receipt at West",
+      warehouseId: west.id,
+    };
+    await restock(receipt, f.actor);
+    expect((await balances(f.productId)).find((s) => s.warehouseId === west.id)?.onHand).toBe(4);
+  });
+
+  test("consolidate fills remaining demand from warehouses that have available stock", async () => {
+    const f = await fixture(10, [0, 0, 0]);
+    await db.transaction((tx) => reserveOrderStock(tx, f.order, f.actor));
+    expect((await fulfillmentDetail(f.order.id)).backorders[0]?.quantity).toBe(10);
+    await expect(consolidateBackorder(f.order.id, f.actor)).rejects.toThrow(
+      "No available stock at active warehouses",
+    );
+    await restock(
+      {
+        operationKey: crypto.randomUUID(),
+        productId: f.productId,
+        quantity: 6,
+        reason: "Partial receipt at East",
+        warehouseId: f.warehouses[1]!.id,
+      },
+      f.actor,
+    );
+    const plan = await consolidateBackorder(f.order.id, f.actor);
+    expect(plan.allocations).toEqual([
+      { productId: f.productId, quantity: 6, warehouseId: f.warehouses[1]!.id },
+    ]);
+    expect(plan.backorders).toEqual([{ productId: f.productId, quantity: 4 }]);
+    const east = (await balances(f.productId)).find(
+      (row) => row.warehouseId === f.warehouses[1]!.id,
+    );
+    expect([east!.onHand, east!.reserved]).toEqual([6, 6]);
+  });
+
+  test("fourth active warehouse is blocked until one is paused", async () => {
+    const f = await fixture();
+    const snapshot = await db.select().from(schema.warehouses);
+    const values = {
+      id: `warehouse-3-${f.actor.id}`,
+      name: `North-${f.actor.id}`,
+      replenishmentThreshold: 5,
+      shippingWeight: 160,
+    };
+    async function restore() {
+      for (const warehouse of snapshot)
+        await db
+          .update(schema.warehouses)
+          .set({ active: warehouse.active })
+          .where(eq(schema.warehouses.id, warehouse.id));
+    }
+    try {
+      await db.update(schema.warehouses).set({ active: false });
+      const activeThree = snapshot.filter((warehouse) => warehouse.active).slice(0, 3);
+      expect(activeThree).toHaveLength(3);
+      for (const warehouse of activeThree)
+        await db
+          .update(schema.warehouses)
+          .set({ active: true })
+          .where(eq(schema.warehouses.id, warehouse.id));
+      await expect(saveWarehouse(undefined, { ...values, active: true }, f.actor)).rejects.toThrow(
+        "Pause an existing warehouse first. The demo planner supports three active warehouses.",
+      );
+      const paused = await saveWarehouse(undefined, { ...values, active: false }, f.actor);
+      await expect(saveWarehouse(paused.id, { ...paused, active: true }, f.actor)).rejects.toThrow(
+        "Pause an existing warehouse first",
+      );
+      await saveWarehouse(activeThree[2]!.id, { ...activeThree[2]!, active: false }, f.actor);
+      expect((await saveWarehouse(paused.id, { ...paused, active: true }, f.actor)).active).toBe(
+        true,
+      );
+    } finally {
+      await restore();
+    }
+  });
+
   test("failed override rolls back all ledger changes and shipped units never move", async () => {
     const f = await fixture(8, [8, 8, 0]);
     await db.transaction((tx) => reserveOrderStock(tx, f.order, f.actor));
+    await expect(
+      overrideSplit(
+        f.order.id,
+        [{ productId: f.productId, quantity: 8, warehouseId: f.warehouses[1]!.id }],
+        "Too early",
+        f.actor,
+      ),
+    ).rejects.toThrow("Accept the shipment before changing reservations");
+    await acceptSplit(f.order.id, f.actor);
     const snapshot = await balances(f.productId);
     await expect(
       overrideSplit(
@@ -235,7 +353,6 @@ describe("inventory transaction regressions", () => {
       "Customer delivery preference",
       f.actor,
     );
-    await acceptSplit(f.order.id, f.actor);
     const allocation = (await fulfillmentDetail(f.order.id)).allocations.find(
       (a) => a.quantity > 0,
     )!;
@@ -341,7 +458,7 @@ describe("inventory transaction regressions", () => {
     expect(malformed.status).toBe(400);
     await db
       .update(schema.profiles)
-      .set({ role: "ops" })
+      .set({ role: "admin" })
       .where(eq(schema.profiles.userId, signup.user.id));
     const receipt = {
       operationKey: crypto.randomUUID(),

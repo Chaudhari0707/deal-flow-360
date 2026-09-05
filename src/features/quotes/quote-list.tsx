@@ -106,6 +106,7 @@ export function QuoteList({ approvals = false }: { approvals?: boolean }) {
           <Card>
             <CardContent>
               <DataTable
+                title="Quotations"
                 columns={quoteColumns}
                 data={tableRows}
                 getRowId={(q) => q.id}

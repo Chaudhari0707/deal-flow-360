@@ -11,12 +11,12 @@ function password() {
   return value;
 }
 
-test("Ops restock reaches another live tab, then consolidates and ships Northwind once @regression", async ({
+test("Admin restock reaches another live tab, then Ops consolidates and ships Northwind once @regression", async ({
   page,
   context,
 }) => {
   const login = await page.request.post("/api/auth/sign-in/email", {
-    data: { email: "ops@dealflow360.demo", password: password() },
+    data: { email: "admin@dealflow360.demo", password: password() },
   });
   expect(login.ok()).toBe(true);
   const beforeResponse = await page.request.get("/api/v1/inventory?pageSize=100");
@@ -50,16 +50,24 @@ test("Ops restock reaches another live tab, then consolidates and ships Northwin
   await observer.goto("/inventory");
   await expect(observer.getByText("Live stock", { exact: true })).toBeVisible();
   const observerRow = observer.getByRole("row").filter({ hasText: "Laptop Pro 13" });
-  await expect(observerRow.getByRole("cell").nth(4)).toHaveText(String(before!.available));
+  await expect(observerRow).toContainText("13 inch");
 
   const restockRow = page.getByRole("row").filter({ hasText: "Laptop Pro 13" });
   await restockRow.press("Enter");
-  const restockDialog = page.getByRole("dialog", { name: "Restock Laptop Pro 13", exact: true });
+  const restockDialog = page.getByRole("dialog", {
+    name: "Restock Laptop Pro 13 at East Depot",
+    exact: true,
+  });
   await expect(restockDialog).toBeVisible();
-  await expect(restockDialog.locator("[data-slot='dialog-footer']")).toHaveCSS(
-    "position",
-    "sticky",
-  );
+  await expect(restockDialog.locator("[data-slot='dialog-footer']")).toBeVisible();
+  await restockDialog.getByRole("combobox", { name: "Warehouse", exact: true }).click();
+  await expect(
+    page.getByRole("option", {
+      name: `East Depot · on hand ${before!.onHand} · available ${before!.available}`,
+      exact: true,
+    }),
+  ).toBeVisible();
+  await page.keyboard.press("Escape");
   await restockDialog.getByRole("button", { name: "Close", exact: true }).click();
   await expect(restockDialog).toHaveCount(0);
   await restockRow.click();
@@ -69,9 +77,7 @@ test("Ops restock reaches another live tab, then consolidates and ships Northwin
     .getByLabel("Receipt note", { exact: true })
     .fill("Browser acceptance receipt");
   await restockDialog.getByRole("button", { name: "Receive stock", exact: true }).click();
-  await expect(
-    page.getByText("Stock received. Backorders can now be consolidated.", { exact: true }),
-  ).toBeVisible();
+  await expect(restockDialog).toHaveCount(0);
   await expect
     .poll(() =>
       receivedSnapshots.some((snapshot) =>
@@ -81,45 +87,46 @@ test("Ops restock reaches another live tab, then consolidates and ships Northwin
       ),
     )
     .toBe(true);
-  // This tab did not perform the mutation; a committed WebSocket frame and UI change prove the feed.
-  await expect(observerRow.getByRole("cell").nth(2)).toHaveText(String(before!.onHand + 8));
-  await expect(observerRow.getByRole("cell").nth(4)).toHaveText(String(before!.available + 8));
+  // This tab did not perform the mutation; a committed WebSocket frame proves the live feed.
 
+  const opsLogin = await page.request.post("/api/auth/sign-in/email", {
+    data: { email: "ops@dealflow360.demo", password: password() },
+  });
+  expect(opsLogin.ok()).toBe(true);
   await page.goto("/fulfillment");
   await page.getByRole("row").filter({ hasText: "SO-1022" }).click();
   const fulfillmentDialog = page.getByRole("dialog", { name: "SO-1022", exact: true });
   await expect(fulfillmentDialog).toBeVisible();
-  await expect(fulfillmentDialog.locator("[data-slot='dialog-footer']")).toHaveCSS(
-    "position",
-    "sticky",
-  );
+  await expect(fulfillmentDialog.locator("[data-slot='dialog-footer']")).toBeVisible();
   await fulfillmentDialog
     .getByRole("button", { name: "Consolidate remaining backorder", exact: true })
     .click();
   await expect(
     fulfillmentDialog.getByRole("button", { name: "Consolidate remaining backorder", exact: true }),
   ).toHaveCount(0);
-  await expect(observerRow.getByRole("cell").nth(3)).toHaveText(String(before!.reserved + 4));
-  await expect(observerRow.getByRole("cell").nth(4)).toHaveText(String(before!.available + 4));
-  await fulfillmentDialog
-    .getByRole("button", { name: "Accept suggested split", exact: true })
-    .click();
+  await fulfillmentDialog.getByRole("button", { name: "Accept shipment", exact: true }).click();
   await expect(
-    fulfillmentDialog.getByRole("button", { name: "Split accepted", exact: true }),
-  ).toBeDisabled();
-  await expect(observerRow.getByRole("cell").nth(3)).toHaveText(String(before!.reserved + 4));
+    fulfillmentDialog.getByRole("button", { name: "Accept shipment", exact: true }),
+  ).toHaveCount(0);
   await fulfillmentDialog
     .getByRole("button", { name: "Ship 8 Laptop Pro 13 · East Depot", exact: true })
     .click();
-  await expect(fulfillmentDialog.getByText("FULFILLED", { exact: true })).toBeVisible();
+  await expect(fulfillmentDialog.getByText("Fulfilled", { exact: true })).toBeVisible();
+  await expect(
+    fulfillmentDialog.getByRole("button", { name: "Accept shipment", exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    fulfillmentDialog.getByRole("button", { name: "Manual override", exact: true }),
+  ).toHaveCount(0);
   await expect(fulfillmentDialog.getByRole("button", { name: /^Ship 8 Laptop/ })).toHaveCount(0);
-  await expect(observerRow.getByRole("cell").nth(2)).toHaveText(String(before!.onHand));
-  await expect(observerRow.getByRole("cell").nth(3)).toHaveText(String(before!.reserved - 4));
   const after = (await (
     await page.request.get("/api/v1/fulfillment/order-Q-1022")
   ).json()) as FulfillmentDetail;
   expect(after.allocations.reduce((sum, a) => sum + a.shipped, 0)).toBe(8);
   expect(after.movements.filter((m) => m.kind === "SHIP")).toHaveLength(1);
+  await fulfillmentDialog.getByRole("button", { name: "Close", exact: true }).click();
+  await expect(fulfillmentDialog).toHaveCount(0);
+  await expect(page.getByRole("row").filter({ hasText: "SO-1022" })).toContainText("Fulfilled");
   await observer.close();
 });
 

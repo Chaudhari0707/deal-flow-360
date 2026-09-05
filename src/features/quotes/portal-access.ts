@@ -59,8 +59,6 @@ export async function portalIdentity(
   if (session) {
     if (session.role !== "customer" || !session.customerId)
       throw new DomainError("The customer portal is available only to customer accounts.", 403);
-    if (session.mustChangePassword)
-      throw new DomainError("Change your temporary password before continuing.", 403);
     return { actor: session };
   }
   const token = portalCookie(request);

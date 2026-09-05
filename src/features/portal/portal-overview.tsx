@@ -10,7 +10,7 @@ import type { DataTableFeatures } from "@/components/ui/_types/data-table";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { DataTable, DataTableDefaultToolbar } from "@/components/ui/data-table";
 import type { PortalWorkspace } from "@/features/portal/_types/portal";
 import { PortalForbidden } from "@/features/portal/portal-forbidden";
@@ -105,18 +105,14 @@ export function PortalOverview() {
         }
       />
       <Card>
-        <CardHeader>
-          <CardTitle>Your quotations</CardTitle>
-          <CardDescription>
-            Open a quotation to review line items, discuss changes, or confirm your order.
-          </CardDescription>
-        </CardHeader>
         <CardContent>
           {data.quotes.length ? (
             <DataTable
               toolbar={(table, extras) => (
                 <DataTableDefaultToolbar
                   table={table}
+                  title="Your quotations"
+                  description="Open a quotation to review line items, discuss changes, or confirm your order."
                   searchColumn="number"
                   searchPlaceholder="Search quotations…"
                   actions={extras.bulkRemove}

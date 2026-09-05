@@ -24,3 +24,9 @@ enabled = true
 command = "bunx"
 args = ["shadcn@4.21.0", "mcp"]
 startup_timeout_ms = 20000
+
+[mcp_servers.shadcn.tools.get_item_examples_from_registries]
+approval_mode = "approve"
+
+[mcp_servers.shadcn.tools.search_items_in_registries]
+approval_mode = "approve"

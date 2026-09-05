@@ -1,10 +1,11 @@
 import { describe, expect, test } from "bun:test";
 
 import ExcelJS from "exceljs";
-import { decodePDFRawStream, PDFArray, PDFDocument, type PDFRawStream } from "pdf-lib";
+import { decodePDFRawStream, PDFArray, PDFDocument, type PDFRawStream, StandardFonts } from "pdf-lib";
 
 import type { InvoiceDocument, ReportRow } from "@/features/billing/_types/documents";
 import { invoicePdf, reportPdf, reportSpreadsheet } from "@/features/billing/documents";
+import { wrapText } from "@/features/billing/pdf-layout";
 
 const invoice: InvoiceDocument = {
   creditedCents: 0,
@@ -146,12 +147,46 @@ describe("financial export artifacts", () => {
     expect(pdf.getTitle()).toBe("DealFlow360 | Invoice INV-TEST");
     expect(pdf.getCreator()).toBe("DealFlow360");
   });
+  test("credit notes keep a distinct document title", async () => {
+    const bytes = await invoicePdf({ ...invoice, kind: "credit" });
+    const pdf = await PDFDocument.load(bytes);
+    expect(pdf.getTitle()).toBe("DealFlow360 | Credit Note INV-TEST");
+    expect(pdf.getPageCount()).toBe(1);
+  });
+  test("wrapped invoice descriptions stay inside the description column", async () => {
+    const pdf = await PDFDocument.create();
+    const font = await pdf.embedFont(StandardFonts.Helvetica);
+    const width = 247;
+    const lines = wrapText(font, `Premium managed ${"support ".repeat(18)}retainer`, 9, width);
+    expect(lines.length).toBeGreaterThan(1);
+    for (const line of lines) expect(font.widthOfTextAtSize(line, 9)).toBeLessThanOrEqual(width);
+  });
+  test("invoices with many line items paginate instead of clipping", async () => {
+    const bytes = await invoicePdf({
+      ...invoice,
+      lines: Array.from({ length: 40 }, (_, index) => ({
+        description: `Line ${index} ${"extended service description ".repeat(4)}`,
+        quantity: 1,
+        totalCents: 100,
+        unitPriceCents: 100,
+      })),
+      subtotalCents: 4000,
+      taxCents: 320,
+      totalCents: 4320,
+    });
+    expect(new TextDecoder().decode(bytes.slice(0, 5))).toBe("%PDF-");
+    const pdf = await PDFDocument.load(bytes);
+    expect(pdf.getPageCount()).toBeGreaterThan(1);
+    expect(pdf.getTitle()).toBe("DealFlow360 | Invoice INV-TEST");
+  });
   test("long financial reports paginate rather than clipping rows", async () => {
     const bytes = await reportPdf(
       Array.from({ length: 80 }, (_, index) => ({ ...rows[0]!, number: `INV-${index}` })),
       "All dates",
     );
+    expect(new TextDecoder().decode(bytes.slice(0, 5))).toBe("%PDF-");
     const pdf = await PDFDocument.load(bytes);
+    expect(pdf.getTitle()).toBe("DealFlow360 | Sales and financial report");
     expect(pdf.getPageCount()).toBeGreaterThan(2);
   });
   test("spreadsheet preserves numeric cents and treats customer input as a plain string", async () => {

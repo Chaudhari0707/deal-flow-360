@@ -99,14 +99,14 @@ export const billingRoutes = new Elysia({ name: "billing", tags: ["Billing"] })
     "/invoices/:id/pdf",
     async ({ actor, params }) => {
       const [record] = await db
-        .select({ customer: customers, invoice: invoices, quote: quotes })
+        .select({ customer: customers, invoice: invoices, order: orders, quote: quotes })
         .from(invoices)
         .innerJoin(customers, eq(invoices.customerId, customers.id))
         .innerJoin(orders, eq(invoices.orderId, orders.id))
         .innerJoin(quotes, eq(orders.quoteId, quotes.id))
         .where(eq(invoices.id, params.id));
       if (!record) throw new DomainError("Invoice not found", 404);
-      const { invoice, customer, quote } = record;
+      const { invoice, customer, order, quote } = record;
       if (
         (actor.role === "customer" && actor.customerId !== customer.id) ||
         (actor.role === "rep" && quote.ownerId !== actor.id)
@@ -126,7 +126,10 @@ export const billingRoutes = new Elysia({ name: "billing", tags: ["Billing"] })
         })),
         number: invoice.number,
         paidCents: invoice.paidCents,
+        sourceNumber: `${order.number} · ${quote.number}`,
         status: invoice.status,
+        subtotalCents: invoice.subtotalCents,
+        taxCents: invoice.taxCents,
         totalCents: invoice.totalCents,
       });
       return download(bytes, `${invoice.number}.pdf`, "application/pdf");

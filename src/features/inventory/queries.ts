@@ -1,4 +1,4 @@
-import { asc, count, desc, eq } from "drizzle-orm";
+import { asc, count, desc, eq, inArray } from "drizzle-orm";
 
 import { stockDemand } from "@/features/inventory/stock";
 import { db } from "@/lib/db/connection";
@@ -7,30 +7,42 @@ import { reservations, stockMovements, stocks, warehouses } from "@/lib/db/schem
 import { DomainError } from "@/server/errors";
 
 export async function inventorySnapshot(page = 0, pageSize = 100) {
-  const [locations, balances, [total]] = await Promise.all([
-    db.select().from(warehouses).orderBy(warehouses.name).limit(100),
+  const [productRows, [total]] = await Promise.all([
     db
-      .select({
-        id: stocks.id,
-        warehouseId: stocks.warehouseId,
-        productId: stocks.productId,
-        onHand: stocks.onHand,
-        reserved: stocks.reserved,
-        version: stocks.version,
-        name: products.name,
-        variant: products.variant,
-        warehouse: warehouses.name,
-        replenishmentThreshold: warehouses.replenishmentThreshold,
-      })
-      .from(stocks)
-      .innerJoin(products, eq(products.id, stocks.productId))
-      .innerJoin(warehouses, eq(warehouses.id, stocks.warehouseId))
-      .orderBy(stocks.id)
+      .select({ id: products.id, name: products.name, variant: products.variant })
+      .from(products)
+      .where(eq(products.stockable, true))
+      .orderBy(asc(products.name), asc(products.id))
       .limit(pageSize)
       .offset(page * pageSize),
-    db.select({ count: count() }).from(stocks),
+    db.select({ count: count() }).from(products).where(eq(products.stockable, true)),
+  ]);
+  const productIds = productRows.map((product) => product.id);
+  const [locations, balances] = await Promise.all([
+    db.select().from(warehouses).orderBy(warehouses.name).limit(100),
+    productIds.length
+      ? db
+          .select({
+            id: stocks.id,
+            warehouseId: stocks.warehouseId,
+            productId: stocks.productId,
+            onHand: stocks.onHand,
+            reserved: stocks.reserved,
+            version: stocks.version,
+            name: products.name,
+            variant: products.variant,
+            warehouse: warehouses.name,
+            replenishmentThreshold: warehouses.replenishmentThreshold,
+          })
+          .from(stocks)
+          .innerJoin(products, eq(products.id, stocks.productId))
+          .innerJoin(warehouses, eq(warehouses.id, stocks.warehouseId))
+          .where(inArray(stocks.productId, productIds))
+          .orderBy(stocks.productId, stocks.id)
+      : Promise.resolve([]),
   ]);
   return {
+    products: productRows,
     warehouses: locations,
     stocks: balances.map((s) => ({ ...s, available: s.onHand - s.reserved })),
     total: total?.count ?? 0,

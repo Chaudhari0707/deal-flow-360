@@ -23,9 +23,7 @@ export function DataTableViewOptions<TData extends RowData>({
   "use no memo";
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger
-        render={<Button variant="outline" size="sm" className="ml-auto hidden h-8 lg:flex" />}
-      >
+      <DropdownMenuTrigger render={<Button variant="outline" size="sm" className="h-8" />}>
         <Settings2 aria-hidden="true" className="size-4" />
         View
       </DropdownMenuTrigger>

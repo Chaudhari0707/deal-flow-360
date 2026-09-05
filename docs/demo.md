@@ -51,6 +51,8 @@ exact invoice values, reservation quantities and single subscription.
   reserving twice, then ship. The ledger retains other orders' stock.
 - In Finance, change a subscription quantity and inspect its prorated adjustment. Cancel it, inspect
   the credit and confirm that future billing stops. Repeat the due run to demonstrate idempotency.
+- Invoice status matrix: search Invoices for `INV-SEED-*` (unpaid, overdue, paid, free, hybrid,
+  credits, adjustment). Full checklist: [invoice manual test](engineering/invoice-manual-test.md).
 - Open Deal Health: stalled quotes, unusually high discounts versus the same rep's history, approval
   delay and real delivery slippage link to their source records. Record a nudge and show its audit.
 - Filter Reports by dates, representative, approval status and category/product. Export PDF and XLSX.

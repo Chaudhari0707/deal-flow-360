@@ -178,8 +178,11 @@ for (const role of ["manager", "finance", "admin", "rep", "ops", "customer"]) {
     await expect(
       page.getByText("Start date must be before the end date.", { exact: true }),
     ).toBeVisible();
-    for (const format of ["PDF", "Excel"])
-      await expect(page.getByRole("button", { name: `Download report ${format}` })).toBeDisabled();
+    await expect(page.getByRole("button", { name: "Download sales report PDF" })).toBeDisabled();
+    await page.getByRole("tab", { name: "Financial report", exact: true }).click();
+    await expect(
+      page.getByRole("button", { name: "Download financial report Excel" }),
+    ).toBeDisabled();
     for (const format of ["", "&format=pdf", "&format=xlsx"]) {
       expect(
         (await page.request.get(`${reportPath}?from=2199-01-01&to=2198-12-31${format}`)).status(),
@@ -191,25 +194,28 @@ for (const role of ["manager", "finance", "admin", "rep", "ops", "customer"]) {
     await expect(
       page.getByText(`${initial.rows.length} financial records`, { exact: true }),
     ).toBeVisible();
-    for (const format of ["Excel", "PDF"]) {
-      const event = page.waitForEvent("download");
-      await page.getByRole("button", { name: `Download report ${format}`, exact: true }).click();
-      const download = await event;
-      expect(download.suggestedFilename()).toBe(
-        format === "Excel" ? "dealflow-report.xlsx" : "dealflow-report.pdf",
-      );
-      const bytes = await Bun.file((await download.path())!).arrayBuffer();
-      if (format === "Excel") {
-        const workbook = new ExcelJS.Workbook();
-        await workbook.xlsx.load(bytes);
-        expect(workbook.getWorksheet("Financial report")!.rowCount).toBe(initial.rows.length + 1);
-        expect(workbook.getWorksheet("Quotations")!.rowCount).toBe(initial.sales.quotes.length + 1);
-        expect(workbook.getWorksheet("Orders")!.rowCount).toBe(initial.sales.orders.length + 1);
-        expect(workbook.getWorksheet("Sales metrics")!.getCell("B2").value).toBe(
-          initial.sales.metrics.quotesCreated,
-        );
-      } else expect((await PDFDocument.load(bytes)).getPageCount()).toBeGreaterThan(0);
-    }
+    await page.getByRole("tab", { name: "Sales report", exact: true }).click();
+    const pdfEvent = page.waitForEvent("download");
+    await page.getByRole("button", { name: "Download sales report PDF", exact: true }).click();
+    const pdfDownload = await pdfEvent;
+    expect(pdfDownload.suggestedFilename()).toBe("dealflow-report.pdf");
+    const pdfBytes = await Bun.file((await pdfDownload.path())!).arrayBuffer();
+    expect((await PDFDocument.load(pdfBytes)).getPageCount()).toBeGreaterThan(0);
+    await page.getByRole("tab", { name: "Financial report", exact: true }).click();
+    const event = page.waitForEvent("download");
+    await page
+      .getByRole("button", { name: "Download financial report Excel", exact: true })
+      .click();
+    const download = await event;
+    expect(download.suggestedFilename()).toBe("dealflow-report.xlsx");
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(await Bun.file((await download.path())!).arrayBuffer());
+    expect(workbook.getWorksheet("Financial report")!.rowCount).toBe(initial.rows.length + 1);
+    expect(workbook.getWorksheet("Quotations")!.rowCount).toBe(initial.sales.quotes.length + 1);
+    expect(workbook.getWorksheet("Orders")!.rowCount).toBe(initial.sales.orders.length + 1);
+    expect(workbook.getWorksheet("Sales metrics")!.getCell("B2").value).toBe(
+      initial.sales.metrics.quotesCreated,
+    );
 
     // Expire the real session while the report remains cached, then change a filter.
     expect(
@@ -228,8 +234,9 @@ for (const role of ["manager", "finance", "admin", "rep", "ops", "customer"]) {
     await deniedRefresh;
     await expect(page.getByText("Unable to load your workspace", { exact: true })).toBeVisible();
     await expect(page.getByText("Net billed", { exact: true })).toHaveCount(0);
-    for (const format of ["PDF", "Excel"])
-      await expect(page.getByRole("button", { name: `Download report ${format}` })).toBeDisabled();
+    await expect(
+      page.getByRole("button", { name: "Download financial report Excel" }),
+    ).toBeDisabled();
   });
 }
 

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import type { ColumnDef, PaginationState } from "@tanstack/react-table";
-import { Package, RefreshCw, Warehouse } from "lucide-react";
+import { RefreshCw } from "lucide-react";
 import useSWR from "swr";
 
 import type { DataTableFeatures } from "@/components/ui/_types/data-table";
@@ -10,9 +10,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { DataTable } from "@/components/ui/data-table";
-import type { StockRow } from "@/features/inventory/_types/ui";
+import type { InventoryProductRow } from "@/features/inventory/_types/ui";
 import { RestockDialog } from "@/features/inventory/restock-form";
-import { StockSetup } from "@/features/inventory/stock-setup";
+import { restockLocations } from "@/features/inventory/restock-locations";
 import { useStockFeed } from "@/features/inventory/use-stock-feed";
 import { WarehouseSettings } from "@/features/inventory/warehouse-settings";
 import { PageHeader } from "@/features/shell/page-header";
@@ -20,7 +20,7 @@ import { useWorkspace } from "@/features/shell/use-workspace";
 import { WorkspaceState } from "@/features/shell/workspace-state";
 import { apiClient, apiData } from "@/lib/api/client";
 
-const columns: ColumnDef<DataTableFeatures, StockRow>[] = [
+const columns: ColumnDef<DataTableFeatures, InventoryProductRow>[] = [
   {
     accessorKey: "name",
     header: "Product",
@@ -31,37 +31,11 @@ const columns: ColumnDef<DataTableFeatures, StockRow>[] = [
       </div>
     ),
   },
-  { accessorKey: "warehouse", header: "Warehouse" },
-  { accessorKey: "onHand", header: "On hand" },
-  { accessorKey: "reserved", header: "Reserved" },
-  {
-    accessorKey: "available",
-    header: "Available",
-    cell: ({ row }) => (
-      <Badge
-        variant={
-          row.original.available <= row.original.replenishmentThreshold
-            ? "destructive"
-            : "secondary"
-        }
-      >
-        {row.original.available}
-      </Badge>
-    ),
-  },
-  {
-    id: "health",
-    header: "Replenishment",
-    cell: ({ row }) =>
-      row.original.available <= row.original.replenishmentThreshold
-        ? "Restock suggested"
-        : "Healthy",
-  },
 ];
 
 export function InventoryScreen() {
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 20 });
-  const [selected, setSelected] = useState<string>();
+  const [selectedProductId, setSelectedProductId] = useState<string>();
   const { data, error, mutate } = useSWR(
     `/api/v1/inventory?page=${pagination.pageIndex}&pageSize=${pagination.pageSize}`,
     async () =>
@@ -75,32 +49,29 @@ export function InventoryScreen() {
   const workspace = useWorkspace();
   const live = useStockFeed();
   if (!data) return <WorkspaceState error={error} retry={() => void mutate()} />;
-  const canOperate = workspace.data?.actor.role === "ops";
-  const stock = data.stocks.find((s) => s.id === selected);
+  const canRestock = workspace.data?.actor.role === "admin" || workspace.data?.actor.role === "ops";
+  const locations = selectedProductId ? restockLocations(data, selectedProductId) : [];
+  const stock = locations[0];
   return (
     <>
       <PageHeader
         title="Inventory"
-        description="Every unit accounted for, across every warehouse. Select a stock row to receive a delivery."
+        description={
+          canRestock
+            ? "Select a product to receive stock. Choose the warehouse in the receipt dialog; its current quantity is shown there."
+            : "Review stockable products and select one to receive stock at a warehouse."
+        }
         actions={
           <>
-            <Badge variant="outline">{live}</Badge>
+            {live ? <Badge variant="outline">{live}</Badge> : null}
             {workspace.data?.actor.role === "admin" && (
-              <>
-                <WarehouseSettings
-                  refresh={() => {
-                    void mutate();
-                    void workspace.mutate();
-                  }}
-                />
-                <StockSetup
-                  workspace={workspace.data}
-                  refresh={() => {
-                    void mutate();
-                    void workspace.mutate();
-                  }}
-                />
-              </>
+              <WarehouseSettings
+                warehouses={data.warehouses}
+                refresh={() => {
+                  void mutate();
+                  void workspace.mutate();
+                }}
+              />
             )}
             <Button
               variant="outline"
@@ -117,63 +88,55 @@ export function InventoryScreen() {
         {data.warehouses.map((warehouse) => (
           <Card key={warehouse.id}>
             <CardHeader>
-              <CardDescription className="flex items-center gap-2">
-                <Warehouse className="size-4" />
-                WAREHOUSE
-              </CardDescription>
-              <CardTitle className="flex items-center justify-between">
+              <CardTitle className="flex items-center justify-between gap-2">
                 {warehouse.name}
                 <Badge variant={warehouse.active ? "secondary" : "outline"}>
                   {warehouse.active ? "Active" : "Paused"}
                 </Badge>
               </CardTitle>
+              <CardDescription>
+                Low-stock alert below {warehouse.replenishmentThreshold} units
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <p className="text-sm text-muted-foreground">
-                Shipping score{" "}
-                <strong className="text-foreground">
-                  {(warehouse.shippingWeight / 100).toFixed(1)}
-                </strong>{" "}
-                · Alert below {warehouse.replenishmentThreshold} units
-              </p>
-              {workspace.data?.actor.role === "admin" && (
-                <WarehouseSettings warehouse={warehouse} refresh={() => void mutate()} />
+              {canRestock && workspace.data && (
+                <div className="flex flex-wrap gap-2">
+                  <WarehouseSettings
+                    warehouse={warehouse}
+                    warehouses={data.warehouses}
+                    refresh={() => void mutate()}
+                  />
+                </div>
               )}
             </CardContent>
           </Card>
         ))}
       </div>
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Package className="size-5" />
-            Stock balances
-          </CardTitle>
-          <CardDescription>
-            Available = on hand − reserved. Confirmed orders keep their units protected.
-          </CardDescription>
-        </CardHeader>
         <CardContent>
           <DataTable
+            title="Products"
+            description="Select a product to receive stock at any warehouse."
             columns={columns}
-            data={data.stocks}
+            data={data.products}
             getRowId={(row) => row.id}
             manualPagination
             pagination={pagination}
             pageCount={Math.ceil(data.total / pagination.pageSize)}
             onPaginationChange={setPagination}
-            onRowClick={canOperate ? (row) => setSelected(row.id) : undefined}
-            emptyMessage="No stock configured at these warehouses."
+            onRowClick={canRestock ? (row) => setSelectedProductId(row.id) : undefined}
+            emptyMessage="No stockable products are available."
           />
         </CardContent>
       </Card>
-      {stock && canOperate && (
+      {stock && selectedProductId && canRestock && (
         <RestockDialog
-          key={stock.id}
+          key={selectedProductId}
+          locations={locations}
           stock={stock}
           open
           onOpenChange={(open) => {
-            if (!open) setSelected(undefined);
+            if (!open) setSelectedProductId(undefined);
           }}
           refresh={() => void mutate()}
         />

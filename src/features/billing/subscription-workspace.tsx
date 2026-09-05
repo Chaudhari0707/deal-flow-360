@@ -4,10 +4,11 @@ import { CalendarSyncIcon } from "lucide-react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { DataTable } from "@/components/ui/data-table";
+import { Card, CardContent } from "@/components/ui/card";
+import { DataTable, DataTableDefaultToolbar } from "@/components/ui/data-table";
 import {
   Dialog,
+  DialogBody,
   DialogContent,
   DialogDescription,
   DialogFooter,
@@ -92,21 +93,19 @@ export function SubscriptionWorkspace() {
         </Alert>
       )}
       <Card>
-        <CardHeader>
-          <CardTitle>Recurring contracts</CardTitle>
-          <Input
-            aria-label="Search subscriptions"
-            placeholder="Search plan, customer or order"
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-          />
-          <CardDescription>
-            Monthly, quarterly and yearly cadences. Period end is exclusive and uses UTC calendar
-            days.
-          </CardDescription>
-        </CardHeader>
         <CardContent>
           <DataTable
+            toolbar={(table, extras) => (
+              <DataTableDefaultToolbar
+                table={table}
+                title="Recurring contracts"
+                description="Monthly, quarterly, and yearly plans."
+                searchValue={search}
+                onSearchValueChange={setSearch}
+                searchPlaceholder="Search plan, customer or order"
+                actions={extras.bulkRemove}
+              />
+            )}
             columns={subscriptionColumns}
             data={data.subscriptions
               .map((entry) => ({
@@ -149,7 +148,7 @@ export function SubscriptionWorkspace() {
                 cancellation.
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-5">
+            <DialogBody className="space-y-5">
               {canManage && subscription.status === "ACTIVE" ? (
                 <form
                   id="subscription-change"
@@ -217,7 +216,15 @@ export function SubscriptionWorkspace() {
                         onValueChange={(value) => setQuantity(value ?? Number.NaN)}
                       />
                       {(!Number.isInteger(quantity) || quantity < 1 || quantity > 10000) && (
-                        <FieldError>Enter 1 to 10,000 whole units.</FieldError>
+                        <FieldError>
+                          {!Number.isFinite(quantity)
+                            ? "Enter a quantity."
+                            : !Number.isInteger(quantity)
+                              ? "Use a whole number (no decimals)."
+                              : quantity < 1
+                                ? "Enter at least 1."
+                                : "Enter at most 10,000."}
+                        </FieldError>
                       )}
                     </Field>
                     <Field>
@@ -279,7 +286,7 @@ export function SubscriptionWorkspace() {
                     ))}
                 </TableBody>
               </Table>
-            </div>
+            </DialogBody>
             <DialogFooter showCloseButton>
               {canManage && subscription.status === "ACTIVE" && (
                 <>

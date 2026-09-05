@@ -5,6 +5,7 @@ Load only what the task touches.
 | Trigger | Playbook |
 | --- | --- |
 | Linear issue, worktree, parallel device, branch handoff | `.agents/coordination.md` |
+| DF-41 / DF-42 / DF-43 continuation, fulfillment dialog, PDF layout, warehouse restock | `docs/engineering/session-df-41-42-43.md` |
 | Next.js, React Server Components, routes, caching | `.agents/nextjs.md` |
 | Elysia API composition, feature routes, Eden, OpenAPI, Next API adapter | `.agents/elysia.md` |
 | Better Auth, sessions, login, password, account access | `.agents/auth.md` |

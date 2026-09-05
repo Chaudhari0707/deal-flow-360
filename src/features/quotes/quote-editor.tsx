@@ -444,8 +444,11 @@ export function QuoteEditor({
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">A better fit for this deal</CardTitle>
-            <CardDescription>Relevant add-ons that meet your minimum margin.</CardDescription>
+            <CardTitle className="text-base">Suggested pairings</CardTitle>
+            <CardDescription>
+              Add-ons linked to products already on this quote. Add one to include it in the
+              quotation.
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             {suggestions.map((s) => (
@@ -480,7 +483,7 @@ export function QuoteEditor({
             ))}
             {!suggestions.length && (
               <p className="text-sm text-muted-foreground">
-                Suggestions appear as you add matching products.
+                Pairings appear here after you add a product that has suggested add-ons.
               </p>
             )}
           </CardContent>

@@ -7,7 +7,7 @@ import { Plus } from "lucide-react";
 import type { DataTableFeatures } from "@/components/ui/_types/data-table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { DataTable, DataTableDefaultToolbar } from "@/components/ui/data-table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CatalogEditor } from "@/features/shell/catalog-editor";
@@ -128,32 +128,30 @@ export function Catalog({ customersOnly = false }: { customersOnly?: boolean }) 
         )}
         <TabsContent value="products">
           <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between gap-4">
-                <div>
-                  <CardTitle>Products & services</CardTitle>
-                  <CardDescription>
-                    {canEdit
-                      ? "Select a row to edit its pricing and availability."
-                      : "Your current product and service price book."}
-                  </CardDescription>
-                </div>
-                {canEdit && (
-                  <Button onClick={() => setEditor({ kind: "product" })}>
-                    <Plus />
-                    Add product
-                  </Button>
-                )}
-              </div>
-            </CardHeader>
             <CardContent>
               <DataTable
                 toolbar={(table, extras) => (
                   <DataTableDefaultToolbar
                     table={table}
+                    title="Products & services"
+                    description={
+                      canEdit
+                        ? "Select a row to edit its pricing and availability."
+                        : "Your current product and service price book."
+                    }
                     searchColumn="name"
                     searchPlaceholder="Search products…"
-                    actions={extras.bulkRemove}
+                    actions={
+                      <>
+                        {extras.bulkRemove}
+                        {canEdit ? (
+                          <Button onClick={() => setEditor({ kind: "product" })}>
+                            <Plus />
+                            Add product
+                          </Button>
+                        ) : null}
+                      </>
+                    }
                   />
                 )}
                 columns={productColumns}
@@ -169,32 +167,26 @@ export function Catalog({ customersOnly = false }: { customersOnly?: boolean }) 
         </TabsContent>
         <TabsContent value="customers">
           <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between gap-4">
-                <div>
-                  <CardTitle>Customer directory</CardTitle>
-                  <CardDescription>
-                    {canEditCustomer
-                      ? "Edit a customer to update details, change their tier, or delete an unused record."
-                      : "You can add customers. Existing customer details are read-only; ask a manager to update them."}
-                  </CardDescription>
-                </div>
-                {["admin", "manager", "rep"].includes(data.actor.role) && (
-                  <Button onClick={() => setEditor({ kind: "customer" })}>
-                    <Plus />
-                    Add customer
-                  </Button>
-                )}
-              </div>
-            </CardHeader>
             <CardContent>
               <DataTable
                 toolbar={(table, extras) => (
                   <DataTableDefaultToolbar
                     table={table}
+                    title="Customer directory"
+                    description="Customer tiers guide your discount policy."
                     searchColumn="name"
                     searchPlaceholder="Search customers…"
-                    actions={extras.bulkRemove}
+                    actions={
+                      <>
+                        {extras.bulkRemove}
+                        {["admin", "manager", "rep"].includes(data.actor.role) ? (
+                          <Button onClick={() => setEditor({ kind: "customer" })}>
+                            <Plus />
+                            Add customer
+                          </Button>
+                        ) : null}
+                      </>
+                    }
                   />
                 )}
                 columns={directoryColumns}
