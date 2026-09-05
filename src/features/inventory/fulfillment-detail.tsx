@@ -20,6 +20,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import type { FulfillmentDetail as Detail } from "@/features/inventory/_types/ui";
+import { fulfillmentSplitEmptyMessage } from "@/features/inventory/fulfillment-copy";
 import { OverrideForm } from "@/features/inventory/override-form";
 import { PageHeader } from "@/features/shell/page-header";
 import { useWorkspace } from "@/features/shell/use-workspace";
@@ -80,6 +81,21 @@ export function FulfillmentDetail({
         id: "pending",
         header: "Ready to ship",
         cell: ({ row }) => row.original.quantity - row.original.shipped,
+      },
+    ],
+    [],
+  );
+  const movementColumns = useMemo<ColumnDef<DataTableFeatures, Detail["movements"][number]>[]>(
+    () => [
+      { accessorKey: "kind", header: "Kind" },
+      { accessorKey: "product", header: "Product" },
+      { accessorKey: "warehouse", header: "Warehouse" },
+      { accessorKey: "quantity", header: "Quantity" },
+      { accessorKey: "reason", header: "Reason" },
+      {
+        accessorKey: "createdAt",
+        header: "When",
+        cell: ({ row }) => new Date(row.original.createdAt).toLocaleString(),
       },
     ],
     [],
@@ -170,7 +186,9 @@ export function FulfillmentDetail({
         <CardHeader>
           <CardTitle>Warehouse split</CardTitle>
           <CardDescription>
-            Stock was reserved at customer confirmation. Accepting the split reserves nothing twice.
+            {data.order.lines.some((line) => line.stockable)
+              ? "Stock was reserved at customer confirmation. Accepting the split reserves nothing twice."
+              : "This order has no stockable lines, so no warehouse split is required."}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -179,9 +197,9 @@ export function FulfillmentDetail({
             data={data.allocations}
             getRowId={(row) => row.id}
             pageSize={20}
-            emptyMessage="No stock allocation yet. Receive stock, then consolidate the backorder."
+            emptyMessage={fulfillmentSplitEmptyMessage(data.order.lines)}
           />
-          {canOperate && (
+          {canOperate && data.order.lines.some((line) => line.stockable) && (
             <div className="flex flex-wrap gap-2">
               <Button
                 disabled={pending || Boolean(data.order.acceptedAt)}
@@ -240,6 +258,23 @@ export function FulfillmentDetail({
             </CardContent>
           </Card>
         )}
+      <Card>
+        <CardHeader>
+          <CardTitle>Movement history</CardTitle>
+          <CardDescription>
+            Warehouse ledger entries for this order, including seeded and live dispatches.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <DataTable
+            columns={movementColumns}
+            data={data.movements}
+            getRowId={(row) => row.id}
+            pageSize={20}
+            emptyMessage="No warehouse movements recorded for this order."
+          />
+        </CardContent>
+      </Card>
     </>
   );
 }

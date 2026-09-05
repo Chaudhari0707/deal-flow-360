@@ -9,3 +9,5 @@
 - `db:reset` and `db:push` require explicit force, print only host/port/database, reject system DBs,
   and are limited to local databases ending `_dev`. Test commands require a database ending `_test`.
 - Multiple devices use separate local/test databases. Never automatically reset a shared remote DB.
+- Do not mark a stockable seed order FULFILLED unless reservations, acceptedAt, shipped quantities,
+  and SHIP movements exist, and on-hand/reserved still match unshipped reservations.

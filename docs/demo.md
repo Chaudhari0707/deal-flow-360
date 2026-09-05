@@ -46,6 +46,10 @@ exact invoice values, reservation quantities and single subscription.
 
 ## Supporting demonstrations
 
+- In Ops, open fulfilled **SO-1021** (Zenith). The split shows 2 Docking Stations and 4 Wireless
+  Mice at Main, all shipped, with matching SHIP movement history. Harbor **SO-1024** and Northwind
+  **SO-1022** stay backorders. Service-only fulfilled rows such as Orion **SO-1026** show
+  **No stockable lines**, not a missing warehouse split.
 - Open two Ops inventory tabs. Restock eight Laptop Pro 13 units at East; both tabs update over an
   authenticated socket. Consolidate Northwind's remaining four backordered units, accept without
   reserving twice, then ship. The ledger retains other orders' stock.

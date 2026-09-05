@@ -91,8 +91,23 @@ export async function fulfillmentDetail(id: string) {
         }))
         .filter((line) => line.quantity > 0);
       const movements = await tx
-        .select()
+        .select({
+          id: stockMovements.id,
+          operationKey: stockMovements.operationKey,
+          warehouseId: stockMovements.warehouseId,
+          productId: stockMovements.productId,
+          orderId: stockMovements.orderId,
+          actorId: stockMovements.actorId,
+          quantity: stockMovements.quantity,
+          kind: stockMovements.kind,
+          reason: stockMovements.reason,
+          createdAt: stockMovements.createdAt,
+          product: products.name,
+          warehouse: warehouses.name,
+        })
         .from(stockMovements)
+        .innerJoin(warehouses, eq(warehouses.id, stockMovements.warehouseId))
+        .innerJoin(products, eq(products.id, stockMovements.productId))
         .where(eq(stockMovements.orderId, id))
         .orderBy(desc(stockMovements.createdAt))
         .limit(100);
