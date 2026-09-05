@@ -1,10 +1,26 @@
-# Architecture Decisions
+# Architecture guide
 
-The implementation stack is selected: Next.js, Elysia/Eden, Better Auth credentials,
-Drizzle/PostgreSQL, Resend, and shadcn/ui. Product/domain architecture remains intentionally
-undecided until an explicit maintainer request or approved Linear task defines it. Local planning
-drafts under `docs/product/` are not architecture policy.
+The maintainer authorized these implementation decisions through the local delivery request and
+Linear phase contracts. Read them in this order:
 
-When a task requires a durable decision, add a focused document that records context, constraints,
-the approved decision, alternatives, consequences, verification, and rollback/supersession path.
-Do not convert product requirements or mockups directly into architecture policy.
+1. [System design and product decisions](001-local-delivery.md): component diagram, money/risk rules,
+   transaction boundaries, authorization and the growth path.
+2. [Interface and portal](ui.md): shadcn/tweakcn choices, authentication, client state and customer flows.
+3. [Inventory](inventory.md): reservations, warehouse splitting, concurrent updates and realtime delivery.
+4. [Billing](billing.md): schedules, proration, invoice/payment/credit ledgers and reporting.
+5. [Native runtime compatibility](runtime.md): TypeScript PostCSS, Turbopack and Bun package loading.
+6. [Implemented data model](data-model.md): actual relationships, snapshots and integrity constraints.
+
+The core invariant is simple: a customer confirms an **approved revision**, and one database
+transaction creates the order, reserves available stock and records initial billing. Email and live
+screen updates describe committed facts. They do not authorize financial or stock changes.
+
+Internal access is explicit: representatives own their quotations and linked financial records;
+manager/finance/admin roles can read their operational scope; Ops has fulfillment access without
+billing datasets. Representatives share customer/product/stock reference catalogs, including costs
+needed for sales margin calculations. Customers see only their records and no internal margin/audit.
+Only customers or the explicit Admin demo proxy can accept/counter customer terms. See the real
+workspace-access regression suite for direct endpoint and token isolation evidence.
+
+Local planning drafts under `docs/product/` remain background input. The documents above and the
+implemented contracts supersede their unresolved architecture options.

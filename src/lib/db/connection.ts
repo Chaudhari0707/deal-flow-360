@@ -21,7 +21,7 @@ const client =
       statement_timeout: 15_000,
     },
     idle_timeout: 20,
-    max: Bun.env.NODE_ENV === "test" ? 1 : 5,
+    max: 5,
     max_lifetime: 1_800,
     onnotice: () => {},
     prepare: Bun.env.POSTGRES_PREPARE !== "false",

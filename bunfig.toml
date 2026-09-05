@@ -1,2 +1,5 @@
 [run]
 bun = true
+
+[install]
+linker = "hoisted"
