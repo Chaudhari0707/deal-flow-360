@@ -6,9 +6,9 @@ import type { ColumnDef } from "@tanstack/react-table";
 import {
   ArrowRight,
   ArrowUpRight,
-  CircleDollarSign,
   Clock3,
   FileCheck2,
+  IndianRupee,
   Plus,
   RefreshCw,
 } from "lucide-react";
@@ -102,7 +102,7 @@ export function Dashboard() {
       label: "One-time pipeline",
       value: money(openQuotes.reduce((sum, quote) => sum + quote.totalCents, 0)),
       detail: `${openQuotes.length} active quotations`,
-      icon: CircleDollarSign,
+      icon: IndianRupee,
       href: "/quotations",
     },
     {

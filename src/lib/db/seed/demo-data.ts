@@ -89,7 +89,7 @@ export const productRows = [
     taxBps: 1500,
     stockable: true,
     intervalMonths: 0,
-    variant: "16 inch (+$80)",
+    variant: "16 inch (+₹80)",
   },
   {
     id: "dock",

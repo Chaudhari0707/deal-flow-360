@@ -181,7 +181,7 @@ export function PortalDetail({ id }: { id: string }) {
             A clear breakdown of the products and services in your proposal.
           </CardDescription>
           <CardAction>
-            <Badge variant="outline">USD</Badge>
+            <Badge variant="outline">INR</Badge>
           </CardAction>
         </CardHeader>
         <CardContent>

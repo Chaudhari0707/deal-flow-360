@@ -23,7 +23,7 @@ terms बदलता है तो नया revision फिर approve हो�
 4. In Ops, accept the suggested split and record shipment. In Finance, open the one-time invoice,
    enter a payment reference and record the outstanding amount. Download its real PDF.
 
-Expected sample one-time total is **$78.66** with the unchanged seeded pricing. All figures come from
+Expected sample one-time total is **₹78.66** with the unchanged seeded pricing. All figures come from
 application rules, not hardcoded display values.
 
 ## Flow 2 — governed hybrid deal and customer counter
@@ -38,7 +38,7 @@ application rules, not hardcoded display values.
    the new revision goes through Manager and Finance again. A plain message alone does not invalidate
    an approval.
 5. After reapproval, Acme confirms. In Ops show **22 Main + 2 East** reservations. In Finance show
-   **$26,805.24 one-time** and **$46 recurring**, then record payment/download PDF.
+   **₹26,805.24 one-time** and **₹46 recurring**, then record payment/download PDF.
 
 The 22/2 split assumes the initial seed or equivalent availability; another confirmed order may
 legitimately change it. The automated HERO browser test uses freshly reset test data and asserts the

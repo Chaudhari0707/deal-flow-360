@@ -14,6 +14,7 @@ Linear phase contracts. Read them in this order:
 7. [Implemented data model](data-model.md): actual relationships, snapshots and integrity constraints.
 8. [Quotation recommendations](quotation-recommendations.md): last-purchase suggestions and best-seller fallback.
 9. [Customer management](customer-management.md): directory permissions, safe deletion, login email synchronization, and tier policy.
+10. [Workspace currency](currency.md): INR presentation, paise storage compatibility, and PDF/XLS labels.
 
 The core invariant is simple: a customer confirms an **approved revision**, and one database
 transaction creates the order, reserves available stock and records initial billing. Email and live
