@@ -1,22 +1,15 @@
 "use client";
 
-import { type FormEvent, useRef, useState, useSyncExternalStore } from "react";
+import { type FormEvent, useState, useSyncExternalStore } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, Eye, EyeOff, LoaderCircle } from "lucide-react";
+import { ArrowRight, LoaderCircle } from "lucide-react";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { ThemeToggle } from "@/features/shell/theme-toggle";
 import { apiClient, apiData } from "@/lib/api/client";
 import { authClient } from "@/lib/auth/client";
@@ -31,37 +24,11 @@ function serverSnapshot() {
   return false;
 }
 
-const reviewerAccounts = [
-  { email: "rep@dealflow360.demo", label: "Sales Representative" },
-  { email: "manager@dealflow360.demo", label: "Sales Manager" },
-  { email: "finance@dealflow360.demo", label: "Finance" },
-  { email: "ops@dealflow360.demo", label: "Operations" },
-  { email: "admin@dealflow360.demo", label: "Administrator" },
-  { email: "acme@dealflow360.demo", label: "Customer portal" },
-] as const;
-
-export function AuthForm({
-  mode,
-  reviewerPassword,
-}: {
-  mode: "login" | "signup";
-  reviewerPassword?: string;
-}) {
+export function AuthForm({ mode }: { mode: "login" | "signup" }) {
   const hydrated = useSyncExternalStore(subscribeHydration, hydratedSnapshot, serverSnapshot);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const emailInput = useRef<HTMLInputElement>(null);
-  const passwordInput = useRef<HTMLInputElement>(null);
-  const [reviewerAccount, setReviewerAccount] = useState<string | null>(null);
-  const [passwordVisible, setPasswordVisible] = useState(false);
   const signup = mode === "signup";
-  function chooseReviewer(email: string | null) {
-    if (!email) return;
-    if (emailInput.current) emailInput.current.value = email;
-    if (reviewerPassword && passwordInput.current) passwordInput.current.value = reviewerPassword;
-    setReviewerAccount(email);
-    setError(null);
-  }
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -152,62 +119,20 @@ export function AuthForm({
                     required
                     maxLength={254}
                     placeholder="you@company.com"
-                    ref={emailInput}
                   />
                 </Field>
-                {!signup && (
-                  <Field>
-                    <FieldLabel htmlFor="reviewer-account">Reviewer account</FieldLabel>
-                    <Select value={reviewerAccount} onValueChange={chooseReviewer}>
-                      <SelectTrigger
-                        id="reviewer-account"
-                        aria-label="Reviewer account"
-                        className="w-full"
-                      >
-                        <SelectValue placeholder="Choose a demo account" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {reviewerAccounts.map((account) => (
-                          <SelectItem key={account.email} value={account.email}>
-                            {account.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FieldDescription>
-                      {reviewerPassword
-                        ? "Selecting an account fills its UAT email and password."
-                        : "Selecting an account fills its UAT email. Enter the configured demo password."}
-                    </FieldDescription>
-                  </Field>
-                )}
                 <Field>
                   <FieldLabel htmlFor="password">Password</FieldLabel>
-                  <div className="relative">
-                    <Input
-                      id="password"
-                      name="password"
-                      type={passwordVisible ? "text" : "password"}
-                      autoComplete={signup ? "new-password" : "current-password"}
-                      required
-                      minLength={8}
-                      maxLength={128}
-                      placeholder={signup ? "At least 8 characters" : "Enter your password"}
-                      ref={passwordInput}
-                      className="pr-10"
-                    />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon-sm"
-                      className="absolute top-1/2 right-1 -translate-y-1/2"
-                      aria-label={passwordVisible ? "Hide password" : "Show password"}
-                      aria-pressed={passwordVisible}
-                      onClick={() => setPasswordVisible((visible) => !visible)}
-                    >
-                      {passwordVisible ? <EyeOff /> : <Eye />}
-                    </Button>
-                  </div>
+                  <Input
+                    id="password"
+                    name="password"
+                    type="password"
+                    autoComplete={signup ? "new-password" : "current-password"}
+                    required
+                    minLength={8}
+                    maxLength={128}
+                    placeholder={signup ? "At least 8 characters" : "Enter your password"}
+                  />
                 </Field>
                 {error && (
                   <Alert variant="destructive">
