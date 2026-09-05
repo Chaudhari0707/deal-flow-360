@@ -1,6 +1,6 @@
 import { afterAll, expect, test } from "bun:test";
 
-import { quoteRequest } from "@/features/quotes/client-action";
+import { assertQuoteAction, quoteRequest } from "@/features/quotes/client-action";
 
 const originalFetch = globalThis.fetch;
 afterAll(() => {
@@ -25,4 +25,15 @@ test("quote actions report useful errors for HTML, empty and null responses", as
     { preconnect: originalFetch.preconnect },
   );
   await expect(quoteRequest("/quotes")).rejects.toThrow("Terms changed");
+});
+
+test("HTTP 200 with FAILED status is treated as a failed board action", () => {
+  expect(() =>
+    assertQuoteAction({
+      message:
+        "Email provider rejected the send. Check the configured sender and recipient, then retry.",
+      status: "FAILED",
+    }),
+  ).toThrow("Email provider rejected the send");
+  expect(assertQuoteAction({ status: "SENT" })).toEqual({ status: "SENT" });
 });

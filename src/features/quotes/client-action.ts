@@ -20,3 +20,10 @@ export async function quoteRequest<T>(path: string, body?: unknown, method = "PO
     );
   return data as T;
 }
+
+/** Send can return HTTP 200 with `{ status: "FAILED" }` when Resend rejects. */
+export function assertQuoteAction<T extends { message?: string; status?: string }>(result: T): T {
+  if (result.status === "FAILED")
+    throw new Error(result.message ?? "Email delivery failed. Check sender configuration.");
+  return result;
+}
