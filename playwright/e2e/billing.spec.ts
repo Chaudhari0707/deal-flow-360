@@ -9,6 +9,7 @@ function demoPassword() {
 }
 
 test("finance records a full payment, downloads real documents and cancels recurring service @regression", async ({
+  baseURL,
   page,
   request,
 }) => {
@@ -18,6 +19,7 @@ test("finance records a full payment, downloads real documents and cancels recur
   });
   expect(adminSignIn.ok()).toBe(true);
   const created = await request.post("/api/v1/quotes", {
+    headers: { origin: new URL(baseURL!).origin },
     data: {
       customerId: "acme",
       lines: [
@@ -31,11 +33,13 @@ test("finance records a full payment, downloads real documents and cancels recur
   expect(created.ok()).toBe(true);
   const quote = (await created.json()) as { id: string; revision: number };
   const submitted = await request.post(`/api/v1/quotes/${quote.id}/submit`, {
+    headers: { origin: new URL(baseURL!).origin },
     data: { revision: quote.revision },
   });
   expect(submitted.ok()).toBe(true);
   const approved = (await submitted.json()) as { revision: number };
   const confirmed = await request.post(`/api/v1/quotes/${quote.id}/confirm`, {
+    headers: { origin: new URL(baseURL!).origin },
     data: { revision: approved.revision },
   });
   expect(confirmed.ok()).toBe(true);
@@ -113,6 +117,46 @@ test("finance records a full payment, downloads real documents and cancels recur
 
   await page.goto("/reports");
   await expect(page.getByRole("heading", { name: "Reports", exact: true })).toBeVisible();
+  await expect(page.getByText("Quotes created", { exact: true })).toBeVisible();
+  await expect(page.getByText("Quotations and confirmed orders", { exact: true })).toBeVisible();
+  for (const filter of [
+    {
+      label: "Report representative",
+      option: initial.actor.name,
+      key: "repId",
+      value: initial.actor.id,
+    },
+    {
+      label: "Report team",
+      option: initial.customers.find((customer) => customer.id === "acme")!.team,
+      key: "team",
+      value: initial.customers.find((customer) => customer.id === "acme")!.team,
+    },
+    {
+      label: "Report approval status",
+      option: "Approved current terms",
+      key: "approvalStatus",
+      value: "APPROVED",
+    },
+    {
+      label: "Report product",
+      option: initial.products.find((product) => product.id === "care2")!.name,
+      key: "productId",
+      value: "care2",
+    },
+  ]) {
+    await page.getByRole("combobox", { name: filter.label, exact: true }).click();
+    const filteredResponse = page.waitForResponse(
+      (response) =>
+        response.url().includes("/api/v1/reports/financial?") &&
+        new URL(response.url()).searchParams.get(filter.key) === filter.value,
+    );
+    await page.getByRole("option", { name: filter.option, exact: true }).click();
+    const response = await filteredResponse;
+    expect(response.ok()).toBe(true);
+    const report = await response.json();
+    expect(report.sales.quotes.some((entry: { id: string }) => entry.id === quote.id)).toBe(true);
+  }
   const excelDownload = page.waitForEvent("download");
   await page.getByRole("button", { name: "Download report Excel" }).click();
   const excel = await excelDownload;

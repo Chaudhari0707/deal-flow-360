@@ -3,6 +3,7 @@ import type { ColumnDef } from "@tanstack/react-table";
 import type { DataTableFeatures } from "@/components/ui/_types/data-table";
 import { Badge } from "@/components/ui/badge";
 import type { ReportRow } from "@/features/billing/_types/documents";
+import type { SalesRecord } from "@/features/billing/_types/reports";
 import type { InvoiceRow, SubscriptionRow } from "@/features/billing/_types/tables";
 import { invoiceOutstanding } from "@/features/billing/rules";
 import { displayDate, displayStatus, money } from "@/features/shell/format";
@@ -86,5 +87,24 @@ export const reportColumns: ColumnDef<DataTableFeatures, ReportRow>[] = [
     accessorKey: "outstandingCents",
     cell: ({ row }) => money(row.original.outstandingCents),
     header: "Outstanding",
+  },
+];
+
+export const salesColumns: ColumnDef<DataTableFeatures, SalesRecord>[] = [
+  { accessorKey: "number", header: "Number" },
+  { accessorKey: "kind", header: "Record" },
+  { accessorKey: "date", cell: ({ row }) => displayDate(row.original.date), header: "Created" },
+  { accessorKey: "customer", header: "Customer" },
+  { accessorKey: "representative", header: "Representative" },
+  { accessorKey: "team", header: "Team" },
+  {
+    accessorKey: "status",
+    cell: ({ row }) => displayStatus(row.original.status),
+    header: "Status",
+  },
+  {
+    accessorKey: "amountCents",
+    cell: ({ row }) => money(row.original.amountCents),
+    header: "Amount",
   },
 ];

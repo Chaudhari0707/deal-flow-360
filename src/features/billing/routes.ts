@@ -3,6 +3,7 @@ import { Elysia, t } from "elysia";
 
 import { invoicePdf, reportPdf, reportSpreadsheet } from "@/features/billing/documents";
 import { financialReport } from "@/features/billing/reports";
+import { reportOptions, salesReport } from "@/features/billing/sales-report";
 import { changeSubscription, recordPayment, runDueBilling } from "@/features/billing/service";
 import { db } from "@/lib/db/connection";
 import { invoices } from "@/lib/db/schema/billing";
@@ -14,6 +15,18 @@ const id = t.Object({ id: t.String({ minLength: 1, maxLength: 100 }) });
 const key = t.String({ minLength: 8, maxLength: 100 });
 const reason = t.String({ minLength: 3, maxLength: 500 });
 const reportQuery = t.Object({
+  approvalStatus: t.Optional(
+    t.Union([
+      t.Literal("APPROVED"),
+      t.Literal("PENDING"),
+      t.Literal("NOT_SUBMITTED"),
+      t.Literal("RETURNED"),
+      t.Literal("REJECTED"),
+    ]),
+  ),
+  productId: t.Optional(t.String({ minLength: 1, maxLength: 100 })),
+  repId: t.Optional(t.String({ minLength: 1, maxLength: 100 })),
+  team: t.Optional(t.String({ minLength: 1, maxLength: 100 })),
   category: t.Optional(t.String({ maxLength: 100 })),
   customerId: t.Optional(t.String({ maxLength: 100 })),
   format: t.Optional(t.Union([t.Literal("pdf"), t.Literal("xlsx")])),
@@ -122,17 +135,22 @@ export const billingRoutes = new Elysia({ name: "billing" })
     "/reports/financial",
     async ({ request, query }) => {
       await requireActor(request, ["admin", "finance", "manager"]);
-      const result = await financialReport(query);
-      const description = `Issue dates ${query.from ?? "all"} to ${query.to ?? "all"}; customer ${query.customerId ?? "all"}; category ${query.category ?? "all"}; status ${query.status ?? "all"}. Category selects whole invoices containing that category.`;
+      const [financial, sales, options] = await Promise.all([
+        financialReport(query),
+        salesReport(query),
+        reportOptions(),
+      ]);
+      const result = { ...financial, sales, options };
+      const description = `Date range ${query.from ?? "all"} to ${query.to ?? "all"}; customer ${query.customerId ?? "all"}; category ${query.category ?? "all"}; status ${query.status ?? "all"}. Sales dates use quote/order creation; financial dates use issue. Rep ${query.repId ?? "all"}; team ${query.team ?? "all"}; approval ${query.approvalStatus ?? "all"}; product ${query.productId ?? "all"}. Category/product select whole records with a matching line; payment status only affects financial rows.`;
       if (query.format === "pdf")
         return download(
-          await reportPdf(result.rows, description),
+          await reportPdf(result.rows, description, result.sales),
           "dealflow-report.pdf",
           "application/pdf",
         );
       if (query.format === "xlsx")
         return download(
-          await reportSpreadsheet(result.rows, description),
+          await reportSpreadsheet(result.rows, description, result.sales),
           "dealflow-report.xlsx",
           "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         );

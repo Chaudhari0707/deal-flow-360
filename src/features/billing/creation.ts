@@ -1,7 +1,12 @@
 import { eq } from "drizzle-orm";
 
 import type { BillingCadence } from "@/features/billing/_types/billing";
-import { calendarDate, nextPeriodEnd, roundRatioHalfUp } from "@/features/billing/rules";
+import {
+  calendarDate,
+  invoiceOutstanding,
+  nextPeriodEnd,
+  roundRatioHalfUp,
+} from "@/features/billing/rules";
 import type { DbTransaction } from "@/lib/db/_types/database";
 import { invoices, subscriptions } from "@/lib/db/schema/billing";
 import type { orders } from "@/lib/db/schema/commerce";
@@ -26,7 +31,19 @@ export async function issueInvoice(
   const id = crypto.randomUUID();
   const [invoice] = await tx
     .insert(invoices)
-    .values({ ...data, id, number: `INV-${id.slice(0, 8).toUpperCase()}` })
+    .values({
+      ...data,
+      id,
+      number: `INV-${id.slice(0, 8).toUpperCase()}`,
+      status:
+        invoiceOutstanding({
+          totalCents: data.totalCents,
+          paidCents: data.paidCents ?? 0,
+          creditedCents: data.creditedCents ?? 0,
+        }) === 0
+          ? "PAID"
+          : (data.status ?? "UNPAID"),
+    })
     .onConflictDoNothing({ target: invoices.operationKey })
     .returning();
   if (invoice) return invoice;

@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { useSWRConfig } from "swr";
 
+import { assertBillingResponse } from "@/features/billing/response";
 import { workspaceKey } from "@/features/shell/use-workspace";
 
 export function useBillingAction() {
@@ -19,13 +20,7 @@ export function useBillingAction() {
         headers: { "Content-Type": "application/json" },
         method: "POST",
       });
-      const result = await response.json();
-      if (!response.ok)
-        throw new Error(
-          typeof result.error === "string"
-            ? result.error
-            : (result.error?.message ?? result.message ?? "Request failed. Refresh and try again."),
-        );
+      await assertBillingResponse(response);
       await mutate(workspaceKey);
       setMessage(success);
       return true;

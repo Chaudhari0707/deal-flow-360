@@ -2,6 +2,7 @@ import ExcelJS from "exceljs";
 import { PDFDocument, StandardFonts } from "pdf-lib";
 
 import type { InvoiceDocument, ReportRow } from "@/features/billing/_types/documents";
+import type { SalesReport } from "@/features/billing/_types/reports";
 import { invoiceOutstanding } from "@/features/billing/rules";
 
 function money(cents: number) {
@@ -80,9 +81,26 @@ export function invoicePdf(invoice: InvoiceDocument): Promise<Uint8Array> {
   );
 }
 
-export function reportPdf(rows: ReportRow[], filterDescription: string): Promise<Uint8Array> {
-  return textPdf("DealFlow360 | Financial report", [
+export function reportPdf(
+  rows: ReportRow[],
+  filterDescription: string,
+  sales?: SalesReport,
+): Promise<Uint8Array> {
+  return textPdf("DealFlow360 | Sales and financial report", [
     filterDescription,
+    ...(sales
+      ? [
+          `Quotes created: ${sales.metrics.quotesCreated} | Orders confirmed: ${sales.metrics.ordersConfirmed} | Ordered: ${money(sales.metrics.orderedCents)}`,
+          `Average approval: ${sales.metrics.averageApprovalHours === null ? "No completed cycles" : `${sales.metrics.averageApprovalHours.toFixed(2)} hours`} | Completed cycles: ${sales.metrics.completedApprovalCycles}`,
+          `Top upsold product: ${sales.metrics.topUpsoldProduct ? `${sales.metrics.topUpsoldProduct.name}, ${sales.metrics.topUpsoldProduct.quantity} units` : "No confirmed upsell units"}`,
+          "Sales records (creation dates UTC):",
+          ...[...sales.quotes, ...sales.orders].map(
+            (row) =>
+              `${row.kind} ${row.number} | ${row.date.slice(0, 10)} | ${row.customer} | ${row.representative} | ${row.team} | ${row.status} | ${money(row.amountCents)}`,
+          ),
+          "Financial records (issue dates UTC):",
+        ]
+      : []),
     `Rows: ${rows.length}. Dates use invoice issue date in UTC. Currency: USD.`,
     "",
     ...rows.flatMap((row) => [
@@ -99,6 +117,7 @@ export function reportPdf(rows: ReportRow[], filterDescription: string): Promise
 export async function reportSpreadsheet(
   rows: ReportRow[],
   filterDescription: string,
+  sales?: SalesReport,
 ): Promise<Uint8Array> {
   const workbook = new ExcelJS.Workbook();
   workbook.creator = "DealFlow360";
@@ -126,6 +145,44 @@ export async function reportSpreadsheet(
   for (const column of [7, 8, 9]) sheet.getColumn(column).numFmt = '"$"#,##0.00';
   sheet.autoFilter = "A1:I1";
   sheet.views = [{ state: "frozen", ySplit: 1 }];
+  if (sales) {
+    const summary = workbook.addWorksheet("Sales metrics");
+    summary.addRows([
+      ["Metric", "Value"],
+      ["Quotes created", sales.metrics.quotesCreated],
+      ["Orders confirmed", sales.metrics.ordersConfirmed],
+      ["Ordered USD", sales.metrics.orderedCents / 100],
+      ["Average approval hours", sales.metrics.averageApprovalHours],
+      ["Completed approval cycles", sales.metrics.completedApprovalCycles],
+      ["Top upsold product", sales.metrics.topUpsoldProduct?.name ?? "None"],
+      ["Top upsold units", sales.metrics.topUpsoldProduct?.quantity ?? 0],
+    ]);
+    for (const [name, records] of [
+      ["Quotations", sales.quotes],
+      ["Orders", sales.orders],
+    ] as const) {
+      const salesSheet = workbook.addWorksheet(name);
+      salesSheet.columns = [
+        { header: "Number", key: "number", width: 30 },
+        { header: "Created (UTC)", key: "date", width: 18 },
+        { header: "Customer", key: "customer", width: 25 },
+        { header: "Representative", key: "representative", width: 25 },
+        { header: "Team", key: "team", width: 20 },
+        { header: "Status", key: "status", width: 22 },
+        { header: "Amount USD", key: "amount", width: 18 },
+      ];
+      salesSheet.addRows(
+        records.map((row) => ({
+          ...row,
+          date: row.date.slice(0, 10),
+          amount: row.amountCents / 100,
+        })),
+      );
+      salesSheet.getColumn(7).numFmt = '"$"#,##0.00';
+      salesSheet.views = [{ state: "frozen", ySplit: 1 }];
+      salesSheet.getRow(1).font = { bold: true };
+    }
+  }
   const metadata = workbook.addWorksheet("Filters");
   metadata.addRow(["Filter", filterDescription]);
   metadata.addRow([

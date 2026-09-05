@@ -1,6 +1,6 @@
 import { beforeAll, describe, expect, test } from "bun:test";
 
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 
 import { createOrderBilling } from "@/features/billing/creation";
 import { financialReport } from "@/features/billing/reports";
@@ -56,7 +56,7 @@ beforeAll(async () => {
     .join("; ");
 });
 
-async function fixture() {
+async function fixture(free = false) {
   const id = crypto.randomUUID();
   const customerId = `billing-customer-${id}`,
     productId = `billing-product-${id}`;
@@ -67,14 +67,14 @@ async function fixture() {
     id: `line-${id}`,
     intervalMonths: 1,
     name: "Monthly service",
-    netCents: 4600,
-    priceCents: 4600,
+    netCents: free ? 0 : 4600,
+    priceCents: free ? 0 : 4600,
     productId,
     quantity: 1,
     stockable: false,
     taxBps: 0,
     taxCents: 0,
-    totalCents: 4600,
+    totalCents: free ? 0 : 4600,
     variant: "Standard",
   };
   const physical: QuoteLine = {
@@ -82,10 +82,11 @@ async function fixture() {
     id: `hardware-${id}`,
     intervalMonths: 0,
     name: "Backordered hardware",
-    netCents: 10000,
+    discountBps: free ? 10000 : 0,
+    netCents: free ? 0 : 10000,
     priceCents: 10000,
     stockable: true,
-    totalCents: 10000,
+    totalCents: free ? 0 : 10000,
   };
   await db.insert(customers).values({
     email: `billing-customer-${id}@example.com`,
@@ -98,7 +99,7 @@ async function fixture() {
     id: productId,
     intervalMonths: 1,
     name: "Monthly service",
-    priceCents: 4600,
+    priceCents: free ? 0 : 4600,
   });
   await db.insert(quotes).values({
     customerId,
@@ -129,6 +130,50 @@ async function fixture() {
 }
 
 describe("billing transaction regressions", () => {
+  test("zero balance invoices settle without fictional payments and recurring renewals stay settled", async () => {
+    const data = await fixture(true);
+    expect(data.initial).toHaveLength(2);
+    expect(
+      data.initial.every(
+        (invoice) =>
+          invoice.totalCents === 0 && invoice.status === "PAID" && invoice.paidCents === 0,
+      ),
+    ).toBe(true);
+    expect(
+      await db
+        .select()
+        .from(payments)
+        .where(
+          inArray(
+            payments.invoiceId,
+            data.initial.map((invoice) => invoice.id),
+          ),
+        ),
+    ).toHaveLength(0);
+    await expect(
+      recordPayment(actor, data.initial[0]!.id, crypto.randomUUID(), "FREE-INVOICE"),
+    ).rejects.toThrow("no outstanding balance");
+    await db.transaction((tx) => createOrderBilling(tx, data.order, now));
+    await runDueBilling(actor, new Date("2026-05-01"));
+    const recurring = await db
+      .select()
+      .from(invoices)
+      .where(eq(invoices.subscriptionId, data.subscription.id));
+    expect(recurring).toHaveLength(2);
+    expect(recurring.every((invoice) => invoice.status === "PAID" && invoice.paidCents === 0)).toBe(
+      true,
+    );
+    const paidReport = await financialReport({ customerId: data.customerId, status: "PAID" });
+    expect(paidReport.rows).toHaveLength(3);
+    expect(
+      (await financialReport({ customerId: data.customerId, status: "UNPAID" })).rows,
+    ).toHaveLength(0);
+    const charged = await fixture();
+    expect(
+      charged.initial.every((invoice) => invoice.totalCents > 0 && invoice.status === "UNPAID"),
+    ).toBe(true);
+  });
+
   test("HTTP contracts require a genuine session, finance permission and valid input", async () => {
     const data = await fixture();
     const invoice = data.initial[0]!;
@@ -141,7 +186,11 @@ describe("billing transaction regressions", () => {
     const malformed = await api.handle(
       new Request(`${path}/pay`, {
         method: "POST",
-        headers: { cookie, "content-type": "application/json" },
+        headers: {
+          cookie,
+          origin: new URL(Bun.env.BETTER_AUTH_URL!).origin,
+          "content-type": "application/json",
+        },
         body: JSON.stringify({ operationKey: "short", reference: "x" }),
       }),
     );
@@ -154,7 +203,11 @@ describe("billing transaction regressions", () => {
       const forbidden = await api.handle(
         new Request(`${path}/pay`, {
           method: "POST",
-          headers: { cookie, "content-type": "application/json" },
+          headers: {
+            cookie,
+            origin: new URL(Bun.env.BETTER_AUTH_URL!).origin,
+            "content-type": "application/json",
+          },
           body: JSON.stringify({ operationKey: crypto.randomUUID(), reference: "BANK" }),
         }),
       );
@@ -176,7 +229,11 @@ describe("billing transaction regressions", () => {
     const request = () =>
       new Request(`${Bun.env.BETTER_AUTH_URL}/api/v1/health/nudge`, {
         method: "POST",
-        headers: { cookie, "content-type": "application/json" },
+        headers: {
+          cookie,
+          origin: new URL(Bun.env.BETTER_AUTH_URL!).origin,
+          "content-type": "application/json",
+        },
         body: JSON.stringify(body),
       });
     const responses = await Promise.all([api.handle(request()), api.handle(request())]);
