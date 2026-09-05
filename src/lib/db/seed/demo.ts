@@ -1,7 +1,12 @@
 import { eq } from "drizzle-orm";
 
 import { createOrderBilling } from "@/features/billing/creation";
-import { calculateQuote, defaultDiscounts, priceLines } from "@/features/quotes/rules";
+import {
+  calculateQuote,
+  defaultDiscounts,
+  defaultPricelists,
+  priceLines,
+} from "@/features/quotes/rules";
 import { createAuth } from "@/lib/auth/create-auth";
 import type { Database } from "@/lib/db/_types/database";
 import * as s from "@/lib/db/schema";
@@ -20,10 +25,32 @@ export async function seedDemo(database: Database) {
       .insert(s.settings)
       .values([
         { id: "discounts", value: defaultDiscounts },
-        { id: "health", value: { stallDays: 7, anomalyBps: 1000, historyDays: 90 } },
+        { id: "pricelists", value: defaultPricelists },
+        {
+          id: "health",
+          value: {
+            staleDays: 7,
+            approvalDays: 2,
+            overdueDays: 1,
+            anomalyBps: 1000,
+            historyDays: 90,
+          },
+        },
         { id: "upsell", value: { minimumMarginBps: 2000 } },
       ])
       .onConflictDoNothing();
+    const [health] = await tx.select().from(s.settings).where(eq(s.settings.id, "health"));
+    if (
+      health &&
+      typeof health.value.stallDays === "number" &&
+      health.value.staleDays === undefined
+    ) {
+      const { stallDays, ...retained } = health.value;
+      await tx
+        .update(s.settings)
+        .set({ value: { staleDays: stallDays, approvalDays: 2, overdueDays: 1, ...retained } })
+        .where(eq(s.settings.id, "health"));
+    }
     await tx
       .insert(s.warehouses)
       .values([
@@ -217,9 +244,20 @@ export async function seedDemo(database: Database) {
           reason: `Risk ${values.risk}`,
           revision: 1,
           detail: { risk: values.riskSnapshot },
-          createdAt: ago(12),
+          createdAt: ago(fixture.id.startsWith("Q-H") ? 30 : 12),
         });
-        if (approved || fixture.status === "PENDING_APPROVAL")
+        if (approved && values.risk === "NONE")
+          await tx.insert(s.auditEntries).values({
+            id: crypto.randomUUID(),
+            entityId: fixture.id,
+            actorId: null,
+            actorName: "Automatic approval",
+            action: "AUTO_APPROVED",
+            reason: "All discounts are within policy",
+            revision: 1,
+            createdAt: ago(fixture.id.startsWith("Q-H") ? 30 : 12),
+          });
+        if ((approved || fixture.status === "PENDING_APPROVAL") && values.risk !== "NONE")
           await tx.insert(s.auditEntries).values({
             id: crypto.randomUUID(),
             entityId: fixture.id,
@@ -241,6 +279,20 @@ export async function seedDemo(database: Database) {
             revision: 1,
             createdAt: ago(10),
           });
+        if (fixture.status === "RETURNED" || fixture.status === "REJECTED")
+          await tx.insert(s.auditEntries).values({
+            id: crypto.randomUUID(),
+            entityId: fixture.id,
+            actorId: managerId,
+            actorName: "Morgan Shah",
+            action: fixture.status === "RETURNED" ? "APPROVAL_RETURN" : "APPROVAL_REJECT",
+            reason:
+              fixture.status === "RETURNED"
+                ? "Please provide a margin justification"
+                : "The proposed discount is not justified",
+            revision: 1,
+            createdAt: ago(11),
+          });
       }
       if (fixture.status === "CONFIRMED") {
         const [order] = await tx
@@ -251,6 +303,7 @@ export async function seedDemo(database: Database) {
             number: fixture.id.replace("Q-", "SO-"),
             customerId: customer.id,
             lines: values.lines,
+            createdAt: ago(10),
             promisedDate: quote!.promisedDate,
             fulfillmentStatus: ["Q-1024", "Q-1022"].includes(fixture.id)
               ? "BACKORDER"
@@ -258,6 +311,14 @@ export async function seedDemo(database: Database) {
           })
           .returning();
         await createOrderBilling(tx, order!, ago(10));
+        await tx
+          .update(s.invoices)
+          .set({ createdAt: ago(10) })
+          .where(eq(s.invoices.orderId, order!.id));
+        await tx
+          .update(s.subscriptions)
+          .set({ createdAt: ago(10) })
+          .where(eq(s.subscriptions.orderId, order!.id));
       }
     }
     await tx

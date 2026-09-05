@@ -52,6 +52,14 @@ test("hero quotation: builder, upsell, sequential approvals, customer counter an
     await addProduct(rep.page, "Onsite Setup Service", "1", "18");
     await addProduct(rep.page, "Extended Warranty", "1", "10");
     await rep.page.getByRole("button", { name: "Add Care Plan 2yr to quote", exact: true }).click();
+    await rep.page.getByLabel("Order discount %", { exact: true }).fill("101");
+    await expect(
+      rep.page.getByText("Order discount must be between 0% and 100%", { exact: true }),
+    ).toBeVisible();
+    await expect(
+      rep.page.getByRole("button", { name: "Save and submit", exact: true }),
+    ).toBeDisabled();
+    await rep.page.getByLabel("Order discount %", { exact: true }).fill("0");
     await expect(rep.page.getByText("HIGH", { exact: true })).toBeVisible();
     await expect(rep.page.getByText("$26,815.14", { exact: true })).toBeVisible();
     await rep.page
@@ -61,10 +69,16 @@ test("hero quotation: builder, upsell, sequential approvals, customer counter an
       (response) =>
         response.url().endsWith("/api/v1/quotes") && response.request().method() === "POST",
     );
+    const submittedResponse = rep.page.waitForResponse(
+      (result) =>
+        /\/api\/v1\/quotes\/[^/]+\/submit$/.test(result.url()) &&
+        result.request().method() === "POST",
+    );
     await rep.page.getByRole("button", { name: "Save and submit", exact: true }).click();
     const response = await createdResponse;
     expect(response.ok()).toBe(true);
     const quote = (await response.json()) as { id: string; number: string };
+    expect((await submittedResponse).ok()).toBe(true);
     await expect(rep.page).toHaveURL(new RegExp(`/quotations/${quote.id}$`));
     await expect(rep.page.getByText("Waiting for Sales Manager.", { exact: true })).toBeVisible();
     await approve(manager.page, quote.id, "Manager reviewed the strategic volume discount.");
@@ -132,6 +146,8 @@ test("hero quotation: builder, upsell, sequential approvals, customer counter an
       workspace.subscriptions.filter((subscription) => subscription.orderId === order!.id),
     ).toHaveLength(1);
   } finally {
-    await Promise.all([rep, manager, finance, customer, admin].map((role) => role.context.close()));
+    await Promise.allSettled(
+      [rep, manager, finance, customer, admin].map((role) => role.context.close()),
+    );
   }
 });

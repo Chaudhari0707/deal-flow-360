@@ -4,16 +4,16 @@ import type { ColumnDef } from "@tanstack/react-table";
 
 import type { DataTableFeatures } from "@/components/ui/_types/data-table";
 import { Badge } from "@/components/ui/badge";
+import type { QuoteRow } from "@/features/quotes/_types/quotes";
 import { money } from "@/features/quotes/rules";
-import type { Workspace } from "@/lib/domain/_types/workspace";
 
-export const quoteColumns: ColumnDef<DataTableFeatures, Workspace["quotes"][number]>[] = [
+export const quoteColumns: ColumnDef<DataTableFeatures, QuoteRow>[] = [
   {
     accessorKey: "number",
     header: "Quotation",
     cell: ({ row }) => <span className="font-medium">{row.original.number}</span>,
   },
-  { accessorKey: "customerId", header: "Customer" },
+  { accessorKey: "customerName", header: "Customer" },
   {
     accessorKey: "status",
     header: "Stage",

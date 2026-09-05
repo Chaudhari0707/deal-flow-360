@@ -19,6 +19,7 @@ const body = t.Object(
         productId: id,
         quantity: t.Integer({ minimum: 1, maximum: 10000 }),
         discountBps: t.Integer({ minimum: 0, maximum: 10000 }),
+        upsell: t.Optional(t.Boolean()),
       }),
       { minItems: 1, maxItems: 100 },
     ),
@@ -97,14 +98,19 @@ export const quoteRoutes = new Elysia({ name: "quotes" })
   )
   .post(
     "/quotes/:id/send",
-    async ({ params, request }) => {
+    async ({ params, request, body: input }) => {
       const actor = await requireActor(request, ["rep", "manager", "finance", "admin"]);
       const [quote] = await db.select().from(quotes).where(eq(quotes.id, params.id));
       if (!quote || (actor.role === "rep" && quote.ownerId !== actor.id))
         throw new DomainError("Quotation not found", 404);
-      return sendQuotation(params.id, actor);
+      return sendQuotation(params.id, actor, input?.renew ?? false);
     },
-    { params: t.Object({ id }) },
+    {
+      params: t.Object({ id }),
+      body: t.Optional(
+        t.Object({ renew: t.Optional(t.Boolean()) }, { additionalProperties: false }),
+      ),
+    },
   )
   .post(
     "/quotes/:id/confirm",

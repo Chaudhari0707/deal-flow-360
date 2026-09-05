@@ -12,22 +12,26 @@ export const defaultDiscounts: Record<string, number> = {
   highTotalBps: 800,
 };
 
+export const defaultPricelists: Record<string, number> = {
+  Bronze: 10000,
+  Silver: 9500,
+  Gold: 9000,
+};
+
 function rounded(n: bigint, d: bigint) {
   return Number((n + d / 2n) / d);
 }
 
-export function priceLines(products: PricingProduct[], tier: string, inputs: LineInput[]) {
+export function priceLines(
+  products: PricingProduct[],
+  tier: string,
+  inputs: LineInput[],
+  pricelists = defaultPricelists,
+) {
   return inputs.map((input) => {
     const product = products.find((p) => p.id === input.productId);
     if (!product) throw new Error("Product is not available");
-    const factor =
-      product.category === "Hardware"
-        ? tier === "Gold"
-          ? 9000
-          : tier === "Silver"
-            ? 9500
-            : 10000
-        : 10000;
+    const factor = product.category === "Hardware" ? (pricelists[tier] ?? 10000) : 10000;
     return {
       category: product.category,
       costCents: product.costCents,
@@ -43,6 +47,15 @@ export function priceLines(products: PricingProduct[], tier: string, inputs: Lin
       taxBps: product.taxBps,
       taxCents: 0,
       totalCents: 0,
+      upsell:
+        input.upsell === true &&
+        inputs.some(
+          (other) =>
+            other.productId !== input.productId &&
+            products
+              .find((candidate) => candidate.id === other.productId)
+              ?.pairedProductIds?.includes(input.productId),
+        ),
       variant: product.variant,
     };
   });

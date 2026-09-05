@@ -18,6 +18,7 @@ export async function saveQuote(input: QuoteInput, actor: Actor, id?: string) {
     if (!customer) throw new DomainError("Customer not found", 404);
     const allProducts = await tx.select().from(products).where(eq(products.active, true));
     const [policy] = await tx.select().from(settings).where(eq(settings.id, "discounts"));
+    const [pricelist] = await tx.select().from(settings).where(eq(settings.id, "pricelists"));
     let existing: typeof quotes.$inferSelect | undefined;
     if (id) {
       [existing] = await tx.select().from(quotes).where(eq(quotes.id, id)).for("update");
@@ -31,7 +32,7 @@ export async function saveQuote(input: QuoteInput, actor: Actor, id?: string) {
     let amounts;
     try {
       amounts = calculateQuote(
-        priceLines(allProducts, customer.tier, input.lines),
+        priceLines(allProducts, customer.tier, input.lines, pricelist?.value),
         input.orderDiscountBps,
         customer.tier,
         policy?.value ?? defaultDiscounts,
