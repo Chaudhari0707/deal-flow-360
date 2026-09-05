@@ -6,6 +6,8 @@ import type { SalesReport } from "@/features/billing/_types/reports";
 import { invoiceOutstanding } from "@/features/billing/rules";
 import { documentMoney as money } from "@/lib/money";
 
+export { reportPdf } from "@/features/billing/report-pdf";
+
 /** Standard PDF fonts cannot encode arbitrary Unicode; escape unsupported codepoints visibly. */
 function printable(value: string): string {
   return value.replace(
@@ -42,57 +44,6 @@ function drawHorizontalLine(
   x2: number,
 ) {
   page.drawLine({ start: { x: x1, y }, end: { x: x2, y }, thickness: 0.5, color: BORDER });
-}
-
-async function textPdf(title: string, lines: string[]): Promise<Uint8Array> {
-  const pdf = await PDFDocument.create();
-  pdf.setTitle(title);
-  pdf.setCreator("DealFlow360");
-  const font = await pdf.embedFont(StandardFonts.Helvetica);
-  const heading = await pdf.embedFont(StandardFonts.HelveticaBold);
-  let page = pdf.addPage([595, 842]);
-  let y = 790;
-
-  const logo = await embedLogo(pdf);
-  if (logo) {
-    const logoWidth = 160;
-    const logoHeight = 53;
-    page.drawImage(logo, { height: logoHeight, width: logoWidth, x: 40, y: y - logoHeight + 8 });
-    y -= logoHeight + 20;
-  }
-
-  const addLine = (value: string, prominent = false) => {
-    const characters = printable(value);
-    let current = "";
-    const draw = (text: string) => {
-      if (y < 50) {
-        page = pdf.addPage([595, 842]);
-        y = 790;
-      }
-      page.drawText(text, {
-        font: prominent ? heading : font,
-        size: prominent ? 17 : 10,
-        x: 40,
-        y,
-        color: prominent ? NAVY : GRAY_600,
-      });
-      y -= prominent ? 29 : 17;
-    };
-    for (const character of characters) {
-      const next = current + character;
-      if (
-        (prominent ? heading : font).widthOfTextAtSize(next, prominent ? 17 : 10) > 510 &&
-        current
-      ) {
-        draw(current);
-        current = character;
-      } else current = next;
-    }
-    draw(current);
-  };
-  addLine(title, true);
-  for (const line of lines) addLine(line);
-  return pdf.save();
 }
 
 export async function invoicePdf(invoice: InvoiceDocument): Promise<Uint8Array> {
@@ -291,39 +242,6 @@ export async function invoicePdf(invoice: InvoiceDocument): Promise<Uint8Array> 
   });
 
   return pdf.save();
-}
-
-export function reportPdf(
-  rows: ReportRow[],
-  filterDescription: string,
-  sales?: SalesReport,
-): Promise<Uint8Array> {
-  return textPdf("DealFlow360 | Sales and financial report", [
-    filterDescription,
-    ...(sales
-      ? [
-          `Quotes created: ${sales.metrics.quotesCreated} | Orders confirmed: ${sales.metrics.ordersConfirmed} | Ordered: ${money(sales.metrics.orderedCents)}`,
-          `Average approval: ${sales.metrics.averageApprovalHours === null ? "No completed cycles" : `${sales.metrics.averageApprovalHours.toFixed(2)} hours`} | Completed cycles: ${sales.metrics.completedApprovalCycles}`,
-          `Top upsold product: ${sales.metrics.topUpsoldProduct ? `${sales.metrics.topUpsoldProduct.name}, ${sales.metrics.topUpsoldProduct.quantity} units` : "No confirmed upsell units"}`,
-          "Sales records (creation dates UTC):",
-          ...[...sales.quotes, ...sales.orders].map(
-            (row) =>
-              `${row.kind} ${row.number} | ${row.date.slice(0, 10)} | ${row.customer} | ${row.representative} | ${row.team} | ${row.status} | ${money(row.amountCents)}`,
-          ),
-          "Financial records (issue dates UTC):",
-        ]
-      : []),
-    `Rows: ${rows.length}. Dates use invoice issue date in UTC. Currency: INR.`,
-    "",
-    ...rows.flatMap((row) => [
-      `${row.number} | ${row.date.slice(0, 10)} | ${row.customer} | ${row.category} | ${row.kind} | ${row.status}`,
-      `Total ${money(row.totalCents)} | Paid ${money(row.paidCents)} | Outstanding ${money(row.outstandingCents)}`,
-    ]),
-    "",
-    `Net billed: ${money(rows.reduce((sum, row) => sum + (row.kind === "credit" ? -row.totalCents : row.totalCents), 0))}`,
-    `Paid: ${money(rows.reduce((sum, row) => sum + row.paidCents, 0))}`,
-    `Outstanding: ${money(rows.reduce((sum, row) => sum + row.outstandingCents, 0))}`,
-  ]);
 }
 
 export async function reportSpreadsheet(

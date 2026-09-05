@@ -136,6 +136,7 @@ implementation handoff; a test file's existence is not proof that a run passed.
 | Due scheduler and calendar/proration correctness | Billing | [Scheduler regression](../../test/integration/billing-scheduler.regression.test.ts), [calendar tests](../../test/unit/billing-rules.test.ts) |
 | Financial/sales reports, filters and limits | Reporting | [Sales report integration](../../test/integration/billing-sales-report.regression.test.ts), [row-cap regression](../../test/integration/billing-report-cap.regression.test.ts) |
 | Reports for every role, totals, filters, exports and session expiry | Reporting | [Report browser matrix](../../playwright/e2e/reports.spec.ts) |
+| PDF executive summary, charts, signed credit totals and long-table pagination | Reporting | [Document tests](../../test/unit/billing-documents.test.ts) |
 | Customer health rules and recorded nudges | Reporting | [Health rules](../../test/unit/billing-health.regression.test.ts), [billing integration](../../test/integration/billing.regression.test.ts) |
 | INR UI and PDF/XLS labels | All domains | [Money regression](../../test/unit/money.regression.test.ts), [document artifacts](../../test/unit/billing-documents.test.ts) |
 | Theme, tables and compiled styles | Shared interface | [Theme rules](../../test/unit/theme-options.regression.test.ts), [table regression](../../test/unit/data-table.regression.test.ts), [stylesheet browser](../../playwright/e2e/stylesheet.spec.ts) |
