@@ -13,6 +13,7 @@ Linear phase contracts. Read them in this order:
 6. [Native runtime compatibility](runtime.md): TypeScript PostCSS, Turbopack and Bun package loading.
 7. [Implemented data model](data-model.md): actual relationships, snapshots and integrity constraints.
 8. [Quotation recommendations](quotation-recommendations.md): last-purchase suggestions and best-seller fallback.
+9. [Customer management](customer-management.md): directory permissions, safe deletion, login email synchronization, and tier policy.
 
 The core invariant is simple: a customer confirms an **approved revision**, and one database
 transaction creates the order, reserves available stock and records initial billing. Email and live

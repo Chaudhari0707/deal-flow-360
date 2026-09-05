@@ -43,6 +43,7 @@ function NumberInput({
   ...props
 }: NumberInputProps) {
   const [rawValue, setRawValue] = React.useState(() => displayValue(value ?? defaultValue));
+  const [editing, setEditing] = React.useState(false);
   const lastValidValue = React.useRef(rawValue);
   const isControlled = value !== undefined;
   const minNumber = toNumber(min);
@@ -51,7 +52,9 @@ function NumberInput({
 
   const controlledValue = value !== null && Number.isFinite(value) ? value : undefined;
   const displayRawValue =
-    isControlled && parseNumberInput(rawValue) !== controlledValue ? displayValue(value) : rawValue;
+    isControlled && !editing && parseNumberInput(rawValue) !== controlledValue
+      ? displayValue(value)
+      : rawValue;
 
   function setValidity(input: HTMLInputElement, nextValue: string) {
     input.setCustomValidity(
@@ -76,12 +79,15 @@ function NumberInput({
       defaultValue={isControlled ? undefined : defaultValue}
       value={isControlled ? displayRawValue : undefined}
       onFocus={(event) => {
+        setEditing(true);
+        setRawValue(event.currentTarget.value);
         lastValidValue.current = event.currentTarget.value;
         // Select a lone zero so the next digit replaces it instead of becoming "03".
         if (/^-?0(?:\.0+)?$/.test(event.currentTarget.value)) event.currentTarget.select();
         onFocus?.(event);
       }}
       onBlur={(event) => {
+        setEditing(false);
         const nextValue = normalizeNumberInput(event.currentTarget.value);
         event.currentTarget.value = nextValue;
         lastValidValue.current = nextValue;
@@ -98,7 +104,7 @@ function NumberInput({
 
         event.currentTarget.value = nextValue;
         lastValidValue.current = nextValue;
-        if (isControlled) setRawValue(nextValue);
+        setRawValue(nextValue);
         setValidity(event.currentTarget, nextValue);
         onValueChange?.(parseNumberInput(nextValue));
         onChange?.(event);

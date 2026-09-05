@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
 import { Plus } from "lucide-react";
 
@@ -15,6 +15,7 @@ import { money } from "@/features/shell/format";
 import { PageHeader } from "@/features/shell/page-header";
 import { useWorkspace } from "@/features/shell/use-workspace";
 import { WorkspaceState } from "@/features/shell/workspace-state";
+import { HttpResponseError } from "@/lib/api/client";
 import type { Workspace } from "@/lib/domain/_types/workspace";
 
 type Product = Workspace["products"][number];
@@ -63,13 +64,39 @@ const customerColumns: ColumnDef<DataTableFeatures, Customer>[] = [
   { accessorKey: "team", header: "Team" },
 ];
 
-export function Catalog() {
+export function Catalog({ customersOnly = false }: { customersOnly?: boolean }) {
   const { data, error, mutate } = useWorkspace();
   const [editor, setEditor] = useState<{
     kind: "product" | "customer";
     product?: Product;
     customer?: Customer;
   } | null>(null);
+  const canEditCustomer = ["admin", "manager"].includes(data?.actor.role ?? "");
+  const directoryColumns = useMemo<ColumnDef<DataTableFeatures, Customer>[]>(
+    () =>
+      canEditCustomer
+        ? [
+            ...customerColumns,
+            {
+              id: "actions",
+              header: "Actions",
+              cell: ({ row }) => (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    setEditor({ kind: "customer", customer: row.original });
+                  }}
+                >
+                  Edit customer
+                </Button>
+              ),
+            },
+          ]
+        : customerColumns,
+    [canEditCustomer],
+  );
   if (error || !data)
     return (
       <WorkspaceState
@@ -80,18 +107,25 @@ export function Catalog() {
       />
     );
   const canEdit = data.actor.role === "admin";
-  const canEditCustomer = ["admin", "manager"].includes(data.actor.role);
+  if (customersOnly && !["rep", "manager", "admin"].includes(data.actor.role))
+    return <WorkspaceState error={new HttpResponseError(403)} />;
   return (
     <>
       <PageHeader
-        title="Product catalog"
-        description="The products, services, and customers behind every great deal."
+        title={customersOnly ? "Customers" : "Product catalog"}
+        description={
+          customersOnly
+            ? "Customer contact details and pricing tiers."
+            : "The products, services, and customers behind every great deal."
+        }
       />
-      <Tabs defaultValue="products">
-        <TabsList>
-          <TabsTrigger value="products">Products · {data.products.length}</TabsTrigger>
-          <TabsTrigger value="customers">Customers · {data.customers.length}</TabsTrigger>
-        </TabsList>
+      <Tabs defaultValue={customersOnly ? "customers" : "products"}>
+        {!customersOnly && (
+          <TabsList>
+            <TabsTrigger value="products">Products · {data.products.length}</TabsTrigger>
+            <TabsTrigger value="customers">Customers · {data.customers.length}</TabsTrigger>
+          </TabsList>
+        )}
         <TabsContent value="products">
           <Card>
             <CardContent>
@@ -155,7 +189,7 @@ export function Catalog() {
                     }
                   />
                 )}
-                columns={customerColumns}
+                columns={directoryColumns}
                 data={data.customers}
                 getRowId={(row) => row.id}
                 onRowClick={

@@ -32,6 +32,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { CustomerDelete } from "@/features/shell/customer-delete";
 import { useWorkspace } from "@/features/shell/use-workspace";
 import { apiClient, apiData, HttpResponseError } from "@/lib/api/client";
 import type { Workspace } from "@/lib/domain/_types/workspace";
@@ -124,7 +125,9 @@ export function CatalogEditor({
       setError(
         failure instanceof HttpResponseError && failure.status === 403
           ? "Your role cannot change this catalog."
-          : "Could not save. Check the field values and try again.",
+          : failure instanceof HttpResponseError
+            ? failure.message
+            : "Could not save. Check the field values and try again.",
       );
     } finally {
       setPending(false);
@@ -145,7 +148,7 @@ export function CatalogEditor({
           <DialogDescription>
             {kind === "product"
               ? "Each variant is a separate SKU with its own final unit price. Catalog changes apply to new quotation lines; existing quotes keep their pricing snapshots."
-              : "Manage the customer details used for quotations and billing."}
+              : "Manage the customer details used for quotations and billing. Changing a linked login email signs that customer out; their password stays the same."}
           </DialogDescription>
         </DialogHeader>
         <form method="post" onSubmit={submit}>

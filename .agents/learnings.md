@@ -28,3 +28,6 @@ retry 200. | `test/unit/inventory-movement-response.test.ts`
 2026-09-06 | Elysia Intersect | Next's compiled adapter can 400 `t.Intersect` response rows that
 `api.handle` accepts. Flatten snapshot objects instead of intersecting `stockModel`. |
 `src/features/inventory/model.ts` inventory snapshot stocks.
+2026-09-06 | Quotation recommendations | Validate transient form values before calculating dependent
+recommendation prices; an empty or out-of-range discount must not throw out of render and replace
+the editor with a workspace error. | `playwright/e2e/number-input.spec.ts`
