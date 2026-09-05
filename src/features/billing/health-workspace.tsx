@@ -196,8 +196,8 @@ export function HealthWorkspace() {
               {!valid && (
                 <Alert variant="destructive">
                   <AlertDescription>
-                    Enter whole numbers within the displayed field limits. Discount difference uses
-                    basis points (100 = 1%).
+                    Check each field: use whole numbers inside the shown limits. Discount difference
+                    uses basis points (100 = 1%).
                   </AlertDescription>
                 </Alert>
               )}

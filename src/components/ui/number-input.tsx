@@ -4,6 +4,7 @@ import * as React from "react";
 
 import { Input } from "@/components/ui/input";
 import {
+  coerceNumberTyping,
   isPartialNumberInput,
   normalizeNumberInput,
   numberInputValidationMessage,
@@ -76,6 +77,8 @@ function NumberInput({
       value={isControlled ? displayRawValue : undefined}
       onFocus={(event) => {
         lastValidValue.current = event.currentTarget.value;
+        // Select a lone zero so the next digit replaces it instead of becoming "03".
+        if (/^-?0(?:\.0+)?$/.test(event.currentTarget.value)) event.currentTarget.select();
         onFocus?.(event);
       }}
       onBlur={(event) => {
@@ -87,12 +90,13 @@ function NumberInput({
         onBlur?.(event);
       }}
       onChange={(event) => {
-        const nextValue = event.currentTarget.value;
+        const nextValue = coerceNumberTyping(event.currentTarget.value);
         if (!isPartialNumberInput(nextValue)) {
           event.currentTarget.value = lastValidValue.current;
           return;
         }
 
+        event.currentTarget.value = nextValue;
         lastValidValue.current = nextValue;
         if (isControlled) setRawValue(nextValue);
         setValidity(event.currentTarget, nextValue);

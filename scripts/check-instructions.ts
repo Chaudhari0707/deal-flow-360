@@ -58,7 +58,7 @@ const mcpJson = JSON.parse(await read(".mcp.json")) as {
 };
 const jsonServers = Object.keys(mcpJson.mcpServers ?? {}).sort();
 const codexConfig = await read(".codex/config.toml");
-const tomlServers = [...codexConfig.matchAll(/^\[mcp_servers\.([^\]]+)\]$/gm)]
+const tomlServers = [...codexConfig.matchAll(/^\[mcp_servers\.([^.\]]+)\]$/gm)]
   .map((match) => match[1])
   .sort();
 

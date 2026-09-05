@@ -289,17 +289,10 @@ export function ReportWorkspace() {
             ))}
           </div>
           <Card>
-            <CardHeader>
-              <CardTitle>Quotations and confirmed orders</CardTitle>
-              <CardDescription>
-                Includes quotes with no invoice. Ordered value{" "}
-                {money(report.data.sales.metrics.orderedCents)}. Approval average uses{" "}
-                {report.data.sales.metrics.completedApprovalCycles} completed revision cycles;
-                automatic approvals take zero hours.
-              </CardDescription>
-            </CardHeader>
             <CardContent>
               <DataTable
+                title="Quotations and confirmed orders"
+                description={`Ordered value ${money(report.data.sales.metrics.orderedCents)}.`}
                 columns={salesColumns}
                 data={[...report.data.sales.quotes, ...report.data.sales.orders]}
                 getRowId={(row) => `${row.kind}:${row.id}`}
@@ -322,11 +315,9 @@ export function ReportWorkspace() {
             ))}
           </div>
           <Card>
-            <CardHeader>
-              <CardTitle>{report.data.rows.length} financial records</CardTitle>
-            </CardHeader>
             <CardContent>
               <DataTable
+                title={`${report.data.rows.length} financial records`}
                 columns={reportColumns}
                 data={report.data.rows}
                 getRowId={(row) => row.number}

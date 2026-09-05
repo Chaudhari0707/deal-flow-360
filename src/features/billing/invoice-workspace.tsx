@@ -5,9 +5,10 @@ import { DownloadIcon, ReceiptTextIcon } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { DataTable } from "@/components/ui/data-table";
+import { DataTable, DataTableDefaultToolbar } from "@/components/ui/data-table";
 import {
   Dialog,
+  DialogBody,
   DialogContent,
   DialogDescription,
   DialogFooter,
@@ -90,20 +91,19 @@ export function InvoiceWorkspace({ initialId }: { initialId?: string }) {
         </Alert>
       )}
       <Card>
-        <CardHeader>
-          <CardTitle>Invoice register</CardTitle>
-          <CardDescription>
-            Select an invoice to review its lines, record payment or download its PDF.
-          </CardDescription>
-          <Input
-            aria-label="Search invoices"
-            placeholder="Search invoice or customer"
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-          />
-        </CardHeader>
         <CardContent>
           <DataTable
+            toolbar={(table, extras) => (
+              <DataTableDefaultToolbar
+                table={table}
+                title="Invoice register"
+                description="Select an invoice to review its lines, record payment, or download its PDF."
+                searchValue={search}
+                onSearchValueChange={setSearch}
+                searchPlaceholder="Search invoice or customer"
+                actions={extras.bulkRemove}
+              />
+            )}
             columns={invoiceColumns}
             data={rows.map((entry) => ({
               ...entry,
@@ -139,7 +139,7 @@ export function InvoiceWorkspace({ initialId }: { initialId?: string }) {
                 {displayStatus(invoice.kind)}
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-5">
+            <DialogBody className="space-y-5">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -228,7 +228,7 @@ export function InvoiceWorkspace({ initialId }: { initialId?: string }) {
                     </AlertDescription>
                   </Alert>
                 ))}
-            </div>
+            </DialogBody>
             <DialogFooter showCloseButton>
               <Button
                 variant="outline"

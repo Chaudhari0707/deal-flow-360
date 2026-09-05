@@ -8,7 +8,6 @@ import {
   Activity,
   BarChart3,
   Boxes,
-  CircleCheck,
   FileText,
   House,
   LogOut,
@@ -17,10 +16,10 @@ import {
   RefreshCw,
   Settings2,
   ShieldCheck,
+  Warehouse,
 } from "lucide-react";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -92,6 +91,12 @@ const navigation = [
         roles: ["admin", "finance", "manager"],
       },
       { title: "Product catalog", href: "/catalog", icon: Boxes, roles: ["admin", "manager"] },
+      {
+        title: "Inventory",
+        href: "/inventory",
+        icon: Warehouse,
+        roles: ["admin"],
+      },
       { title: "Settings", href: "/settings", icon: Settings2, roles: ["admin", "manager"] },
     ],
   },
@@ -227,10 +232,6 @@ export function WorkspaceShell({ children, actor }: { children: ReactNode; actor
           </Breadcrumb>
           <div className="ml-auto flex items-center gap-2">
             <ThemeToggle />
-            <Badge variant="outline" className="hidden gap-1.5 sm:flex">
-              <CircleCheck className="text-primary" />
-              Local workspace
-            </Badge>
           </div>
         </header>
         <div className="@container/main flex flex-1 flex-col gap-6 p-4 md:p-6 lg:p-8">

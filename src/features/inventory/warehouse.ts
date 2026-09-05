@@ -1,6 +1,10 @@
 import { eq, ne } from "drizzle-orm";
 import { sql } from "drizzle-orm";
 
+import {
+  ACTIVE_WAREHOUSE_LIMIT_MESSAGE,
+  wouldExceedActiveWarehouseLimit,
+} from "@/features/inventory/warehouse-limits";
 import { db } from "@/lib/db/connection";
 import { warehouses } from "@/lib/db/schema/inventory";
 import type { Actor } from "@/lib/domain/_types/domain";
@@ -20,11 +24,8 @@ export async function saveWarehouse(
       .where(id ? ne(warehouses.id, id) : undefined);
     if (!id && existing.length >= 100)
       throw new DomainError("The local workspace supports up to 100 configured warehouses", 409);
-    if (values.active && existing.filter((w) => w.active).length >= 3)
-      throw new DomainError(
-        "Pause an existing warehouse first. The demo planner supports three active warehouses.",
-        409,
-      );
+    if (wouldExceedActiveWarehouseLimit(existing, id ?? "", values.active === true))
+      throw new DomainError(ACTIVE_WAREHOUSE_LIMIT_MESSAGE, 409);
     const [warehouse] = id
       ? await tx.update(warehouses).set(values).where(eq(warehouses.id, id)).returning()
       : await tx.insert(warehouses).values(values).returning();

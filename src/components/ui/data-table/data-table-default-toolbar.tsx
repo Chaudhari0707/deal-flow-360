@@ -37,6 +37,10 @@ interface DataTableDefaultToolbarProps<TData extends RowData> {
    * Rendered to the left of the view-options toggle.
    */
   actions?: React.ReactNode;
+  /** Card title shown on the same row as View. */
+  title?: React.ReactNode;
+  /** Supporting text under the title. */
+  description?: React.ReactNode;
 }
 
 export function DataTableDefaultToolbar<TData extends RowData>({
@@ -48,6 +52,8 @@ export function DataTableDefaultToolbar<TData extends RowData>({
   showViewOptions = true,
   filters,
   actions,
+  title,
+  description,
 }: DataTableDefaultToolbarProps<TData>) {
   "use no memo";
   const isExternallyFiltered = Boolean(searchValue?.trim());
@@ -61,41 +67,52 @@ export function DataTableDefaultToolbar<TData extends RowData>({
         : "";
 
   return (
-    <div className="flex items-center justify-between gap-2">
-      <div className="flex flex-1 flex-wrap items-center gap-2">
-        {columnSearchId && (
-          <Input
-            placeholder={searchPlaceholder}
-            value={resolvedSearchValue}
-            onChange={(e) => {
-              if (onSearchValueChange) {
-                onSearchValueChange(e.target.value);
-                return;
-              }
-
-              table.getColumn(columnSearchId)?.setFilterValue(e.target.value);
-            }}
-            className="h-8 w-64"
-          />
+    <div className="flex items-start justify-between gap-4">
+      <div className="min-w-0 flex-1 space-y-3">
+        {(title || description) && (
+          <div className="space-y-1">
+            {title ? <div className="text-base leading-snug font-medium">{title}</div> : null}
+            {description ? <p className="text-sm text-muted-foreground">{description}</p> : null}
+          </div>
         )}
-        {filters}
-        {isFiltered && (
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="h-8 px-2"
-            onClick={() => {
-              table.resetColumnFilters();
-              onSearchValueChange?.("");
-            }}
-          >
-            Reset
-            <X aria-hidden="true" className="ml-1 size-4" />
-          </Button>
+        {(columnSearchId || onSearchValueChange || filters || isFiltered) && (
+          <div className="flex flex-wrap items-center gap-2">
+            {(columnSearchId || onSearchValueChange) && (
+              <Input
+                aria-label={searchPlaceholder}
+                placeholder={searchPlaceholder}
+                value={resolvedSearchValue}
+                onChange={(e) => {
+                  if (onSearchValueChange) {
+                    onSearchValueChange(e.target.value);
+                    return;
+                  }
+
+                  table.getColumn(columnSearchId!)?.setFilterValue(e.target.value);
+                }}
+                className="h-8 w-64"
+              />
+            )}
+            {filters}
+            {isFiltered && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-8 px-2"
+                onClick={() => {
+                  table.resetColumnFilters();
+                  onSearchValueChange?.("");
+                }}
+              >
+                Reset
+                <X aria-hidden="true" className="ml-1 size-4" />
+              </Button>
+            )}
+          </div>
         )}
       </div>
-      <div className="flex items-center gap-2">
+      <div className="ml-auto flex shrink-0 items-center gap-2">
         {actions}
         {showViewOptions && <DataTableViewOptions table={table} />}
       </div>

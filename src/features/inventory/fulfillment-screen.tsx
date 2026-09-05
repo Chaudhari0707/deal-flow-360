@@ -6,9 +6,10 @@ import useSWR from "swr";
 
 import type { DataTableFeatures } from "@/components/ui/_types/data-table";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { DataTable } from "@/components/ui/data-table";
 import type { FulfillmentList } from "@/features/inventory/_types/ui";
+import { displayFulfillmentStatus } from "@/features/inventory/fulfillment-copy";
 import { FulfillmentDetailDialog } from "@/features/inventory/fulfillment-detail";
 import { useStockFeed } from "@/features/inventory/use-stock-feed";
 import { PageHeader } from "@/features/shell/page-header";
@@ -27,7 +28,7 @@ const columns: ColumnDef<DataTableFeatures, FulfillmentList["items"][number]>[] 
     header: "Status",
     cell: ({ row }) => (
       <Badge variant={row.original.fulfillmentStatus === "BACKORDER" ? "destructive" : "secondary"}>
-        {row.original.fulfillmentStatus.replaceAll("_", " ")}
+        {displayFulfillmentStatus(row.original.fulfillmentStatus)}
       </Badge>
     ),
   },
@@ -63,18 +64,14 @@ export function FulfillmentScreen() {
     <>
       <PageHeader
         title="Fulfillment"
-        description="From a confirmed quote to a completed delivery. Choose an order to review its warehouse plan."
-        actions={<Badge variant="outline">{live}</Badge>}
+        description="Confirm holds stock (Awaiting accept). Accept shipment, then Ship to fulfill."
+        actions={live ? <Badge variant="outline">{live}</Badge> : undefined}
       />
       <Card>
-        <CardHeader>
-          <CardTitle>Order dispatch queue</CardTitle>
-          <CardDescription>
-            Minimum shipments, protected reservations, and a clear path through backorders.
-          </CardDescription>
-        </CardHeader>
         <CardContent>
           <DataTable
+            title="Order dispatch queue"
+            description="Accept shipment, then Ship. Consolidate remaining backorder when stock arrives."
             columns={columns}
             data={data.items}
             getRowId={(row) => row.id}
@@ -91,7 +88,10 @@ export function FulfillmentScreen() {
         <FulfillmentDetailDialog
           id={selectedOrder.id}
           title={selectedOrder.number}
-          onClose={() => setSelected(undefined)}
+          onClose={() => {
+            setSelected(undefined);
+            void mutate();
+          }}
         />
       )}
     </>

@@ -56,8 +56,8 @@ fixtures are Acme 24 laptops → Main 22 + East 2, and Harbor 50 → Main 22 + E
 
 Warehouse configuration allows up to 100 records and at most three active locations. Pause one before
 activating another. Pausing excludes new planner allocations; existing reservations remain valid for
-shipment. Enabling a SKU at a warehouse creates a zero balance; receiving stock creates the audited
-physical quantity change. Replenishment thresholds are alerts, not automatic purchasing.
+shipment. Receiving stock at a warehouse creates the balance if the product is new there, then
+records the audited quantity change. Replenishment thresholds are alerts, not automatic purchasing.
 
 ## API contract
 
