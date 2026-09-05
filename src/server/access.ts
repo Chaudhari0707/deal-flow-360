@@ -19,6 +19,7 @@ export async function requireActor(request: Request, roles?: Role[]): Promise<Ac
     id: session.user.id,
     name: session.user.name,
     role: profile?.role ?? "rep",
+    mustChangePassword: profile?.mustChangePassword ?? false,
   };
   if (roles && !roles.includes(actor.role))
     throw new DomainError("Your role cannot perform this action.", 403);
@@ -38,9 +39,12 @@ export const actorContext = new Elysia({ name: "actor-context" }).macro({
   authorize(roles: true | Role[]) {
     return {
       detail: { security: [{ SessionCookie: [] }] },
-      resolve: async ({ request }) => ({
-        actor: await requireActor(request, roles === true ? undefined : roles),
-      }),
+      resolve: async ({ request }) => {
+        const actor = await requireActor(request, roles === true ? undefined : roles);
+        if (actor.mustChangePassword && roles !== true)
+          throw new DomainError("Change your temporary password before continuing.", 403);
+        return { actor };
+      },
     };
   },
 });

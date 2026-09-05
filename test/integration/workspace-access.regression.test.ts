@@ -3,7 +3,7 @@ import { beforeAll, describe, expect, test } from "bun:test";
 import { eq } from "drizzle-orm";
 
 import { changeSubscription, recordPayment } from "@/features/billing/service";
-import { tokenDigest } from "@/features/quotes/email";
+import { sendQuotation, tokenDigest } from "@/features/quotes/email";
 import { confirmQuote, counterQuote, saveQuote, submitQuote } from "@/features/quotes/service";
 import { createAuth } from "@/lib/auth/create-auth";
 import { db } from "@/lib/db/connection";
@@ -316,7 +316,7 @@ describe("internal and portal ownership boundaries", () => {
         (await request(`/portal/${id}/confirm`, role, "POST", { revision: before!.revision }))
           .status,
       ).toBe(403);
-      if (role !== "admin") {
+      {
         await expect(confirmQuote(id, before!.revision, accounts[role]!.actor)).rejects.toThrow(
           "Only the customer",
         );

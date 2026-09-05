@@ -90,7 +90,7 @@ export function ReportWorkspace() {
         description="Follow the complete sales journey, from quotations and approvals to confirmed orders, upsells and collected revenue."
         actions={
           <ReportExportActions
-            enabled={!invalid && Boolean(report.data) && !report.isLoading}
+            enabled={!invalid && Boolean(report.data) && !report.isValidating && !report.error}
             url={url}
           />
         }
@@ -255,7 +255,7 @@ export function ReportWorkspace() {
         <Alert variant="destructive">
           <AlertDescription>Start date must be before the end date.</AlertDescription>
         </Alert>
-      ) : !report.data || report.isLoading ? (
+      ) : report.error || !report.data || report.isLoading ? (
         <WorkspaceState error={report.error} retry={() => void report.mutate()} />
       ) : (
         <>

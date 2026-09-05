@@ -47,6 +47,7 @@ import {
 import { ThemeToggle } from "@/features/shell/theme-toggle";
 import { authClient } from "@/lib/auth/client";
 import type { Actor } from "@/lib/domain/_types/domain";
+import { permissions } from "@/lib/domain/permissions";
 
 const navigation = [
   {
@@ -56,11 +57,11 @@ const navigation = [
         title: "Overview",
         href: "/dashboard",
         icon: House,
-        roles: ["admin", "finance", "manager", "ops", "rep"],
+        roles: permissions.workspace,
       },
-      { title: "Quotations", href: "/quotations", icon: FileText, roles: ["manager", "rep"] },
-      { title: "Customers", href: "/customers", icon: Boxes, roles: ["rep", "manager", "admin"] },
-      { title: "Approvals", href: "/approvals", icon: ShieldCheck, roles: ["finance", "manager"] },
+      { title: "Quotations", href: "/quotations", icon: FileText, roles: permissions.quotations },
+      { title: "Customers", href: "/customers", icon: Boxes, roles: permissions.customers },
+      { title: "Approvals", href: "/approvals", icon: ShieldCheck, roles: permissions.approvals },
     ],
   },
   {
@@ -70,16 +71,16 @@ const navigation = [
         title: "Fulfillment",
         href: "/fulfillment",
         icon: PackageCheck,
-        roles: ["manager", "ops", "rep"],
+        roles: permissions.fulfillment,
       },
       {
         title: "Subscriptions",
         href: "/subscriptions",
         icon: RefreshCw,
-        roles: ["finance", "rep"],
+        roles: permissions.subscriptions,
       },
-      { title: "Invoices", href: "/invoices", icon: Receipt, roles: ["finance", "rep"] },
-      { title: "Customer health", href: "/health", icon: Activity, roles: ["manager"] },
+      { title: "Invoices", href: "/invoices", icon: Receipt, roles: permissions.invoices },
+      { title: "Customer health", href: "/health", icon: Activity, roles: permissions.health },
     ],
   },
   {
@@ -89,7 +90,7 @@ const navigation = [
         title: "Reports",
         href: "/reports",
         icon: BarChart3,
-        roles: ["admin", "finance", "manager"],
+        roles: permissions.reports,
       },
       { title: "Product catalog", href: "/catalog", icon: Boxes, roles: ["admin", "manager"] },
       {
@@ -147,7 +148,9 @@ function WorkspaceSidebar({ actor, pathname }: { actor: Actor; pathname: string 
       </SidebarHeader>
       <SidebarContent>
         {navigation.map((group) => {
-          const items = group.items.filter((item) => item.roles.includes(actor.role));
+          const items = group.items.filter(
+            (item) => actor.role !== "customer" && item.roles.includes(actor.role),
+          );
           if (!items.length) return null;
           return (
             <SidebarGroup key={group.label}>

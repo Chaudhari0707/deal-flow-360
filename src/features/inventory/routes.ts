@@ -25,6 +25,7 @@ import { saveWarehouse } from "@/features/inventory/warehouse";
 import { db } from "@/lib/db/connection";
 import { products } from "@/lib/db/schema/commerce";
 import { stocks, warehouses } from "@/lib/db/schema/inventory";
+import { permissions } from "@/lib/domain/permissions";
 import { actorContext } from "@/server/access";
 import { audit } from "@/server/audit";
 import { DomainError } from "@/server/errors";
@@ -93,7 +94,7 @@ export const inventoryRoutes = new Elysia({
     async ({ actor, params: p, body }) =>
       await overrideSplit(p.id, body.allocations, body.reason, actor),
     {
-      authorize: ["ops"],
+      authorize: permissions.fulfillmentOperate,
       params,
       body: t.Object(
         {
@@ -111,7 +112,7 @@ export const inventoryRoutes = new Elysia({
     "/fulfillment/:id/ship",
     async ({ actor, params: p, body }) => await shipReservation(p.id, body, actor),
     {
-      authorize: ["ops"],
+      authorize: permissions.fulfillmentOperate,
       params,
       body: t.Object(
         { operationKey: id, quantity: positive, reservationId: id },
@@ -121,7 +122,7 @@ export const inventoryRoutes = new Elysia({
     },
   )
   .post("/inventory/restock", async ({ actor, body }) => await restock(body, actor), {
-    authorize: ["admin"],
+    authorize: ["admin", "ops"],
     body: t.Object(
       { operationKey: id, productId: id, quantity: positive, reason, warehouseId: id },
       { additionalProperties: false },
@@ -133,7 +134,7 @@ export const inventoryRoutes = new Elysia({
     async ({ actor, body }) =>
       await saveWarehouse(undefined, { ...body, id: crypto.randomUUID() }, actor),
     {
-      authorize: ["admin"],
+      authorize: permissions.stockSetup,
       body: warehouseBody,
       response: { 200: warehouseModel, ...apiErrorResponses },
     },
@@ -142,7 +143,7 @@ export const inventoryRoutes = new Elysia({
     "/inventory/warehouses/:id",
     async ({ actor, params: p, body }) => await saveWarehouse(p.id, { ...body, id: p.id }, actor),
     {
-      authorize: ["admin"],
+      authorize: permissions.stockSetup,
       params,
       body: warehouseBody,
       response: { 200: warehouseModel, ...apiErrorResponses },
@@ -172,7 +173,7 @@ export const inventoryRoutes = new Elysia({
       });
     },
     {
-      authorize: ["admin"],
+      authorize: permissions.stockSetup,
       body: t.Object({ productId: id, warehouseId: id }, { additionalProperties: false }),
       response: { 200: stockModel, ...apiErrorResponses },
     },

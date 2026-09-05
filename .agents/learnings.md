@@ -31,3 +31,12 @@ retry 200. | `test/unit/inventory-movement-response.test.ts`
 2026-09-06 | Quotation recommendations | Validate transient form values before calculating dependent
 recommendation prices; an empty or out-of-range discount must not throw out of render and replace
 the editor with a workspace error. | `playwright/e2e/number-input.spec.ts`
+
+2026-09-06 | Customer provisioning | Better Auth signup with autoSignIn disabled may return a
+synthetic success for an existing email. Check the persisted identity inside the customer/profile
+transaction; never attach a pre-existing account or replace the creating staff session. |
+`test/integration/customer-onboarding.regression.test.ts`
+
+2026-09-06 | Report refresh | SWR can retain previous data alongside an error. Do not let cached
+data hide a failed report refresh or enable exports while the current selection is unverified. |
+`playwright/e2e/reports.spec.ts` expired-session refresh.

@@ -11,7 +11,7 @@ import { DataTable } from "@/components/ui/data-table";
 import type { FulfillmentList } from "@/features/inventory/_types/ui";
 import { displayFulfillmentStatus } from "@/features/inventory/fulfillment-copy";
 import { FulfillmentDetailDialog } from "@/features/inventory/fulfillment-detail";
-import { useStockFeed } from "@/features/inventory/use-stock-feed";
+import { InventoryScreen } from "@/features/inventory/inventory-screen";
 import { PageHeader } from "@/features/shell/page-header";
 import { WorkspaceState } from "@/features/shell/workspace-state";
 import { apiClient, apiData } from "@/lib/api/client";
@@ -57,15 +57,13 @@ export function FulfillmentScreen() {
       ),
     { keepPreviousData: true },
   );
-  const live = useStockFeed();
   if (!data) return <WorkspaceState error={error} retry={() => void mutate()} />;
   const selectedOrder = data.items.find((item) => item.id === selected);
   return (
     <>
       <PageHeader
         title="Fulfillment"
-        description="Confirm holds stock (Awaiting accept). Accept shipment, then Ship to fulfill."
-        actions={live ? <Badge variant="outline">{live}</Badge> : undefined}
+        description="From a confirmed quote to a completed delivery. Choose an order to review its warehouse plan."
       />
       <Card>
         <CardContent>
@@ -84,6 +82,7 @@ export function FulfillmentScreen() {
           />
         </CardContent>
       </Card>
+      <InventoryScreen />
       {selectedOrder && (
         <FulfillmentDetailDialog
           id={selectedOrder.id}

@@ -3,10 +3,12 @@ import { desc, eq, inArray, not, or } from "drizzle-orm";
 import { db } from "@/lib/db/connection";
 import * as s from "@/lib/db/schema";
 import type { Actor } from "@/lib/domain/_types/domain";
+import { can } from "@/lib/domain/permissions";
 
 export async function workspaceSnapshot(actor: Actor) {
   const representative = actor.role === "rep";
-  const financial = actor.role !== "ops";
+  const financial = can(actor.role, "billingRead");
+  const stockVisible = can(actor.role, "stockRead");
   // Scope in SQL before bounding a dataset so unrelated records cannot crowd out owned rows.
   const ownedQuotes = db
     .select({ id: s.quotes.id })
@@ -71,8 +73,8 @@ export async function workspaceSnapshot(actor: Actor) {
       .where(representative ? eq(s.quotes.ownerId, actor.id) : undefined)
       .orderBy(desc(s.quotes.createdAt), desc(s.quotes.id))
       .limit(200),
-    db.select().from(s.warehouses).orderBy(s.warehouses.id).limit(100),
-    db.select().from(s.stocks).orderBy(s.stocks.id).limit(1000),
+    stockVisible ? db.select().from(s.warehouses).orderBy(s.warehouses.id).limit(100) : [],
+    stockVisible ? db.select().from(s.stocks).orderBy(s.stocks.id).limit(1000) : [],
     db
       .select()
       .from(s.orders)
@@ -111,12 +113,14 @@ export async function workspaceSnapshot(actor: Actor) {
           .orderBy(desc(s.payments.createdAt), desc(s.payments.id))
           .limit(200)
       : [],
-    db
-      .select()
-      .from(s.reservations)
-      .where(representative ? inArray(s.reservations.orderId, ownedOrders) : undefined)
-      .orderBy(s.reservations.id)
-      .limit(1000),
+    stockVisible
+      ? db
+          .select()
+          .from(s.reservations)
+          .where(representative ? inArray(s.reservations.orderId, ownedOrders) : undefined)
+          .orderBy(s.reservations.id)
+          .limit(1000)
+      : [],
     db
       .select()
       .from(s.messages)

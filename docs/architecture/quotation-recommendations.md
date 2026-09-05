@@ -11,7 +11,7 @@ confirmed orders, ranked by total units ordered, then ascending product ID for t
 Only active products qualify. No sales means an empty panel; a previous purchase
 containing only inactive products also yields an empty panel, without falling back.
 
-`GET /api/v1/quotes/recommendations?customerId=...` requires a rep, manager or admin
+`GET /api/v1/quotes/recommendations?customerId=...` requires a rep
 session, matching quotation creation. Customers are shared records in this
 single-organization application. The response contains only `source`
 (`last_purchase` or `best_sellers`) and `productIds`, with no other customer or

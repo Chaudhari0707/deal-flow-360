@@ -1,11 +1,16 @@
-import { beforeAll, describe, expect, test } from "bun:test";
+import { beforeAll, describe, expect, mock, test } from "bun:test";
 
 import { eq } from "drizzle-orm";
 
 import { createAuth } from "@/lib/auth/create-auth";
 import { db } from "@/lib/db/connection";
 import { customers } from "@/lib/db/schema";
-import { api } from "@/server/api";
+mock.module("resend", () => ({
+  Resend: class {
+    emails = { send: async () => ({ data: { id: crypto.randomUUID() }, error: null }) };
+  },
+}));
+const { api } = await import("@/server/api");
 
 const email = `origin-${crypto.randomUUID()}@example.com`;
 const password = `Origin-${crypto.randomUUID()}`;
