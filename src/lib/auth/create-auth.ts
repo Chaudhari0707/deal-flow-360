@@ -18,15 +18,7 @@ export function trustedOrigins(baseURL: string): string[] {
   return [...origins];
 }
 
-export function createAuth(database: PostgresJsDatabase<typeof schema>) {
-  const baseURL = Bun.env.BETTER_AUTH_URL;
-  const secret = Bun.env.BETTER_AUTH_SECRET;
-
-  if (!baseURL) throw new Error("BETTER_AUTH_URL is required");
-  if (!secret || secret.length < 32) {
-    throw new Error("BETTER_AUTH_SECRET must contain at least 32 characters");
-  }
-
+function buildAuth(database: PostgresJsDatabase<typeof schema>, baseURL: string, secret: string) {
   return betterAuth({
     baseURL,
     database: drizzleAdapter(database, { provider: "pg", schema }),
@@ -37,4 +29,23 @@ export function createAuth(database: PostgresJsDatabase<typeof schema>) {
     secret,
     trustedOrigins: trustedOrigins(baseURL),
   });
+}
+
+const authInstances = new WeakMap<object, ReturnType<typeof buildAuth>>();
+
+export function createAuth(database: PostgresJsDatabase<typeof schema>) {
+  const existing = authInstances.get(database);
+  if (existing) return existing;
+
+  const baseURL = Bun.env.BETTER_AUTH_URL;
+  const secret = Bun.env.BETTER_AUTH_SECRET;
+
+  if (!baseURL) throw new Error("BETTER_AUTH_URL is required");
+  if (!secret || secret.length < 32) {
+    throw new Error("BETTER_AUTH_SECRET must contain at least 32 characters");
+  }
+
+  const auth = buildAuth(database, baseURL, secret);
+  authInstances.set(database, auth);
+  return auth;
 }

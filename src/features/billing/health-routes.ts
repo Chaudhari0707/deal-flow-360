@@ -3,15 +3,15 @@ import { Elysia, t } from "elysia";
 
 import { db } from "@/lib/db/connection";
 import { auditEntries, quotes, settings } from "@/lib/db/schema/commerce";
-import { requireActor } from "@/server/access";
+import { actorContext } from "@/server/access";
 import { audit } from "@/server/audit";
 import { DomainError } from "@/server/errors";
 
 export const healthRoutes = new Elysia({ name: "health-rules" })
+  .use(actorContext)
   .post(
     "/health/rules",
-    async ({ request, body }) => {
-      const actor = await requireActor(request, ["admin", "manager"]);
+    async ({ actor, body }) => {
       return db.transaction(async (tx) => {
         const [result] = await tx
           .insert(settings)
@@ -30,6 +30,7 @@ export const healthRoutes = new Elysia({ name: "health-rules" })
       });
     },
     {
+      authorize: ["admin", "manager"],
       body: t.Object({
         anomalyBps: t.Number({ maximum: 10000, minimum: 0, multipleOf: 1 }),
         historyDays: t.Number({ maximum: 365, minimum: 1, multipleOf: 1 }),
@@ -41,8 +42,7 @@ export const healthRoutes = new Elysia({ name: "health-rules" })
   )
   .post(
     "/health/nudge",
-    async ({ request, body }) => {
-      const actor = await requireActor(request, ["admin", "manager", "finance", "rep"]);
+    async ({ actor, body }) => {
       return db.transaction(async (tx) => {
         const [quote] = await tx.select().from(quotes).where(eq(quotes.id, body.quoteId));
         if (!quote) throw new DomainError("Quotation not found", 404);
@@ -69,6 +69,7 @@ export const healthRoutes = new Elysia({ name: "health-rules" })
       });
     },
     {
+      authorize: ["admin", "manager", "finance", "rep"],
       body: t.Object({
         operationKey: t.String({ minLength: 8, maxLength: 100 }),
         quoteId: t.String({ minLength: 1, maxLength: 100 }),

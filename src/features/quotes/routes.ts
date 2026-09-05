@@ -6,7 +6,7 @@ import { purchaseRecommendations } from "@/features/quotes/recommendations";
 import { approvalAction, confirmQuote, saveQuote, submitQuote } from "@/features/quotes/service";
 import { db } from "@/lib/db/connection";
 import { auditEntries, messages, quotes } from "@/lib/db/schema";
-import { requireActor } from "@/server/access";
+import { actorContext } from "@/server/access";
 import { DomainError } from "@/server/errors";
 
 const id = t.String({ minLength: 1, maxLength: 100 }),
@@ -33,31 +33,27 @@ const body = t.Object(
 );
 
 export const quoteRoutes = new Elysia({ name: "quotes" })
+  .use(actorContext)
   .get(
     "/quotes/recommendations",
-    async ({ query, request, set }) => {
-      await requireActor(request, ["rep", "manager", "admin"]);
+    async ({ query, set }) => {
       set.headers["cache-control"] = "private, no-store";
       return purchaseRecommendations(query.customerId);
     },
-    { query: t.Object({ customerId: id }) },
+    { authorize: ["rep", "manager", "admin"], query: t.Object({ customerId: id }) },
   )
-  .post(
-    "/quotes",
-    async ({ body: b, request }) =>
-      saveQuote(b, await requireActor(request, ["rep", "manager", "admin"])),
-    { body },
-  )
-  .patch(
-    "/quotes/:id",
-    async ({ body: b, params, request }) =>
-      saveQuote(b, await requireActor(request, ["rep", "manager", "admin"]), params.id),
-    { body, params: t.Object({ id }) },
-  )
+  .post("/quotes", ({ actor, body: b }) => saveQuote(b, actor), {
+    authorize: ["rep", "manager", "admin"],
+    body,
+  })
+  .patch("/quotes/:id", ({ actor, body: b, params }) => saveQuote(b, actor, params.id), {
+    authorize: ["rep", "manager", "admin"],
+    body,
+    params: t.Object({ id }),
+  })
   .get(
     "/quotes/:id",
-    async ({ params, request }) => {
-      const actor = await requireActor(request, ["rep", "manager", "finance", "ops", "admin"]);
+    async ({ actor, params }) => {
       const [quote] = await db.select().from(quotes).where(eq(quotes.id, params.id));
       if (!quote || (actor.role === "rep" && quote.ownerId !== actor.id))
         throw new DomainError("Quotation not found", 404);
@@ -77,27 +73,30 @@ export const quoteRoutes = new Elysia({ name: "quotes" })
       ]);
       return { quote, activity, messages: thread };
     },
-    { params: t.Object({ id }) },
+    { authorize: ["rep", "manager", "finance", "ops", "admin"], params: t.Object({ id }) },
   )
   .post(
     "/quotes/:id/submit",
-    async ({ params, body: b, request }) => {
-      const actor = await requireActor(request, ["rep", "manager", "admin"]);
+    async ({ actor, params, body: b }) => {
       const quote = await submitQuote(params.id, b.revision, actor);
       if (quote.status === "APPROVED") await sendQuotation(quote.id, actor);
       return quote;
     },
-    { params: t.Object({ id }), body: t.Object({ revision }) },
+    {
+      authorize: ["rep", "manager", "admin"],
+      params: t.Object({ id }),
+      body: t.Object({ revision }),
+    },
   )
   .post(
     "/quotes/:id/approval",
-    async ({ params, body: b, request }) => {
-      const actor = await requireActor(request, ["manager", "finance", "admin"]);
+    async ({ actor, params, body: b }) => {
       const quote = await approvalAction(params.id, b.revision, b.action, b.reason, actor);
       if (quote.status === "APPROVED") await sendQuotation(quote.id, actor);
       return quote;
     },
     {
+      authorize: ["manager", "finance", "admin"],
       params: t.Object({ id }),
       body: t.Object({
         revision,
@@ -108,14 +107,14 @@ export const quoteRoutes = new Elysia({ name: "quotes" })
   )
   .post(
     "/quotes/:id/send",
-    async ({ params, request, body: input }) => {
-      const actor = await requireActor(request, ["rep", "manager", "finance", "admin"]);
+    async ({ actor, params, body: input }) => {
       const [quote] = await db.select().from(quotes).where(eq(quotes.id, params.id));
       if (!quote || (actor.role === "rep" && quote.ownerId !== actor.id))
         throw new DomainError("Quotation not found", 404);
       return sendQuotation(params.id, actor, input?.renew ?? false);
     },
     {
+      authorize: ["rep", "manager", "finance", "admin"],
       params: t.Object({ id }),
       body: t.Optional(
         t.Object({ renew: t.Optional(t.Boolean()) }, { additionalProperties: false }),
@@ -124,7 +123,6 @@ export const quoteRoutes = new Elysia({ name: "quotes" })
   )
   .post(
     "/quotes/:id/confirm",
-    async ({ params, body: b, request }) =>
-      confirmQuote(params.id, b.revision, await requireActor(request, ["admin"])),
-    { params: t.Object({ id }), body: t.Object({ revision }) },
+    ({ actor, params, body: b }) => confirmQuote(params.id, b.revision, actor),
+    { authorize: ["admin"], params: t.Object({ id }), body: t.Object({ revision }) },
   );

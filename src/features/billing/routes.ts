@@ -8,7 +8,7 @@ import { changeSubscription, recordPayment, runDueBilling } from "@/features/bil
 import { db } from "@/lib/db/connection";
 import { invoices } from "@/lib/db/schema/billing";
 import { customers, orders, quotes } from "@/lib/db/schema/commerce";
-import { requireActor } from "@/server/access";
+import { actorContext } from "@/server/access";
 import { DomainError } from "@/server/errors";
 
 const id = t.Object({ id: t.String({ minLength: 1, maxLength: 100 }) });
@@ -46,28 +46,24 @@ function download(bytes: Uint8Array, name: string, type: string) {
 }
 
 export const billingRoutes = new Elysia({ name: "billing" })
+  .use(actorContext)
   .post(
     "/invoices/:id/pay",
-    async ({ request, params, body }) =>
-      recordPayment(
-        await requireActor(request, ["admin", "finance"]),
-        params.id,
-        body.operationKey,
-        body.reference,
-      ),
+    ({ actor, params, body }) => recordPayment(actor, params.id, body.operationKey, body.reference),
     {
+      authorize: ["admin", "finance"],
       body: t.Object({ operationKey: key, reference: t.String({ minLength: 3, maxLength: 100 }) }),
       params: id,
     },
   )
-  .post("/subscriptions/run-due", async ({ request }) =>
-    runDueBilling(await requireActor(request, ["admin", "finance"])),
-  )
+  .post("/subscriptions/run-due", ({ actor }) => runDueBilling(actor), {
+    authorize: ["admin", "finance"],
+  })
   .post(
     "/subscriptions/:id/change",
-    async ({ request, params, body }) =>
-      changeSubscription(await requireActor(request, ["admin", "finance"]), params.id, body),
+    ({ actor, params, body }) => changeSubscription(actor, params.id, body),
     {
+      authorize: ["admin", "finance"],
       body: t.Object({
         operationKey: key,
         productId: t.Optional(t.String({ minLength: 1, maxLength: 100 })),
@@ -80,9 +76,9 @@ export const billingRoutes = new Elysia({ name: "billing" })
   )
   .post(
     "/subscriptions/:id/cancel",
-    async ({ request, params, body }) =>
-      changeSubscription(await requireActor(request, ["admin", "finance"]), params.id, body, true),
+    ({ actor, params, body }) => changeSubscription(actor, params.id, body, true),
     {
+      authorize: ["admin", "finance"],
       body: t.Object({
         operationKey: key,
         reason,
@@ -93,8 +89,7 @@ export const billingRoutes = new Elysia({ name: "billing" })
   )
   .get(
     "/invoices/:id/pdf",
-    async ({ request, params }) => {
-      const actor = await requireActor(request);
+    async ({ actor, params }) => {
       const [record] = await db
         .select({ customer: customers, invoice: invoices, quote: quotes })
         .from(invoices)
@@ -129,12 +124,11 @@ export const billingRoutes = new Elysia({ name: "billing" })
       });
       return download(bytes, `${invoice.number}.pdf`, "application/pdf");
     },
-    { params: id },
+    { authorize: true, params: id },
   )
   .get(
     "/reports/financial",
-    async ({ request, query }) => {
-      await requireActor(request, ["admin", "finance", "manager"]);
+    async ({ query }) => {
       const [financial, sales, options] = await Promise.all([
         financialReport(query),
         salesReport(query),
@@ -156,5 +150,5 @@ export const billingRoutes = new Elysia({ name: "billing" })
         );
       return result;
     },
-    { query: reportQuery },
+    { authorize: ["admin", "finance", "manager"], query: reportQuery },
   );

@@ -3,7 +3,7 @@ import { Elysia, t } from "elysia";
 
 import { db } from "@/lib/db/connection";
 import { customers, products, settings } from "@/lib/db/schema";
-import { requireActor } from "@/server/access";
+import { actorContext } from "@/server/access";
 import { audit } from "@/server/audit";
 import { DomainError } from "@/server/errors";
 
@@ -40,10 +40,10 @@ const customerBody = t.Object(
 );
 
 export const catalogRoutes = new Elysia({ name: "catalog" })
+  .use(actorContext)
   .post(
     "/catalog/products",
-    async ({ request, body }) => {
-      const actor = await requireActor(request, ["admin"]);
+    async ({ actor, body }) => {
       if (body.stockable && body.intervalMonths > 0)
         throw new DomainError("Recurring plans are not stockable");
       return db.transaction(async (tx) => {
@@ -55,12 +55,11 @@ export const catalogRoutes = new Elysia({ name: "catalog" })
         return p;
       });
     },
-    { body: productBody },
+    { authorize: ["admin"], body: productBody },
   )
   .patch(
     "/catalog/products/:id",
-    async ({ request, body, params }) => {
-      const actor = await requireActor(request, ["admin"]);
+    async ({ actor, body, params }) => {
       if (body.stockable && body.intervalMonths > 0)
         throw new DomainError("Recurring plans are not stockable");
       return db.transaction(async (tx) => {
@@ -74,12 +73,11 @@ export const catalogRoutes = new Elysia({ name: "catalog" })
         return p;
       });
     },
-    { params: t.Object({ id }), body: productBody },
+    { authorize: ["admin"], params: t.Object({ id }), body: productBody },
   )
   .post(
     "/customers",
-    async ({ request, body }) => {
-      const actor = await requireActor(request, ["rep", "manager", "admin"]);
+    async ({ actor, body }) => {
       return db.transaction(async (tx) => {
         const [customer] = await tx
           .insert(customers)
@@ -89,12 +87,11 @@ export const catalogRoutes = new Elysia({ name: "catalog" })
         return customer;
       });
     },
-    { body: customerBody },
+    { authorize: ["rep", "manager", "admin"], body: customerBody },
   )
   .patch(
     "/customers/:id",
-    async ({ request, body, params }) => {
-      const actor = await requireActor(request, ["manager", "admin"]);
+    async ({ actor, body, params }) => {
       return db.transaction(async (tx) => {
         const [customer] = await tx
           .update(customers)
@@ -113,12 +110,11 @@ export const catalogRoutes = new Elysia({ name: "catalog" })
         return customer;
       });
     },
-    { params: t.Object({ id }), body: customerBody },
+    { authorize: ["manager", "admin"], params: t.Object({ id }), body: customerBody },
   )
   .patch(
     "/settings/:id",
-    async ({ request, body, params }) => {
-      const actor = await requireActor(request, ["manager", "admin"]);
+    async ({ actor, body, params }) => {
       const allowed: Record<string, string[]> = {
         discounts: [
           "Bronze",
@@ -192,6 +188,7 @@ export const catalogRoutes = new Elysia({ name: "catalog" })
       });
     },
     {
+      authorize: ["manager", "admin"],
       params: t.Object({ id }),
       body: t.Object({ value: t.Record(t.String(), t.Number()) }, { additionalProperties: false }),
     },
