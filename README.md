@@ -55,10 +55,6 @@ Set `DEMO_PASSWORD` to opt into the full synthetic demo seed; these accounts sha
 Customer access is separate from the internal workspace. New self-signups become Sales Reps,
 not administrators. Demo accounts are synthetic; no production credentials are included.
 
-For a UAT reviewer login dropdown that fills both email and password, set
-`NEXT_PUBLIC_REVIEWER_PASSWORD` to the same synthetic value as `DEMO_PASSWORD`. This value is
-intentionally browser-visible, so it must never be a production, staff, or customer credential.
-
 ## Verification
 
 ```bash
