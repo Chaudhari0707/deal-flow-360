@@ -17,13 +17,16 @@ import {
 import type { Actor } from "@/lib/domain/_types/domain";
 
 type Envelope = { from: string; subject: string; text: string; to: string };
+type ProviderResult = { data: { id: string } | null; error: { message: string } | null };
 const calls: { message: Envelope; key: string }[] = [];
 let reject = false;
+let dispatch: (() => Promise<ProviderResult>) | undefined;
 mock.module("resend", () => ({
   Resend: class {
     emails = {
       send: async (message: Envelope, options: { idempotencyKey: string }) => {
         calls.push({ message, key: options.idempotencyKey });
+        if (dispatch) return dispatch();
         return reject
           ? { error: { message: "Test provider failure" }, data: null }
           : { data: { id: `provider-${calls.length}` }, error: null };
@@ -158,5 +161,46 @@ describe("quotation mail provider boundary", () => {
     expect(old!.revoked).toBe(true);
     const newLink = calls[2]!.message.text.match(/https?:\/\/[^\s]+/)![0];
     expect((await redeemAccess(new URL(newLink).searchParams.get("token")!)).quoteId).toBe(quoteId);
+  });
+  test("a late failed retry cannot downgrade accepted mail", async () => {
+    const existing = await db.select().from(deliveries).where(eq(deliveries.quoteId, quoteId));
+    const latest = existing.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())[0]!;
+    await db
+      .update(deliveries)
+      .set({ status: "PENDING", providerId: null, error: null, attempts: 0 })
+      .where(eq(deliveries.id, latest.id));
+    const firstEntered = Promise.withResolvers<void>(),
+      secondEntered = Promise.withResolvers<void>();
+    const firstResult = Promise.withResolvers<ProviderResult>(),
+      secondResult = Promise.withResolvers<ProviderResult>();
+    let entered = 0;
+    dispatch = () => {
+      entered += 1;
+      if (entered === 1) {
+        firstEntered.resolve();
+        return firstResult.promise;
+      }
+      secondEntered.resolve();
+      return secondResult.promise;
+    };
+    const first = sendQuotation(quoteId, actor);
+    await firstEntered.promise;
+    const second = sendQuotation(quoteId, actor);
+    try {
+      await secondEntered.promise;
+      firstResult.resolve({ data: { id: "accepted-provider-operation" }, error: null });
+      expect((await first).status).toBe("SENT");
+      secondResult.resolve({ data: null, error: { message: "Late network failure" } });
+      expect((await second).status).toBe("SENT");
+      const [final] = await db.select().from(deliveries).where(eq(deliveries.id, latest.id));
+      expect(final!.providerId).toBe("accepted-provider-operation");
+      expect(final!.error).toBeNull();
+      expect(final!.attempts).toBe(2);
+    } finally {
+      firstResult.resolve({ data: { id: "accepted-provider-operation" }, error: null });
+      secondResult.resolve({ data: null, error: { message: "Late network failure" } });
+      await Promise.allSettled([first, second]);
+      dispatch = undefined;
+    }
   });
 });

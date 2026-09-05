@@ -121,21 +121,27 @@ export async function sendQuotation(id: string, actor: Actor, renew = false) {
       if (result.error)
         error =
           "Email provider rejected the send. Check the configured sender and recipient, then retry.";
-      else providerId = result.data?.id ?? null;
+      else if (result.data?.id) providerId = result.data.id;
+      else error = "Email provider did not confirm acceptance. Retry this delivery.";
     } catch {
       error = "Email provider is unavailable. Retry this delivery.";
     }
   }
-  await db.transaction(async (tx) => {
-    await tx
+  const outcome = await db.transaction(async (tx) => {
+    const [updated] = await tx
       .update(deliveries)
       .set({
-        status: error ? "FAILED" : "SENT",
-        error,
-        providerId,
+        status: error
+          ? sql`case when ${deliveries.status} = 'SENT' then 'SENT' else 'FAILED' end`
+          : "SENT",
+        error: error
+          ? sql`case when ${deliveries.status} = 'SENT' then null else ${error} end`
+          : null,
+        providerId: providerId ?? sql`${deliveries.providerId}`,
         attempts: sql`${deliveries.attempts} + 1`,
       })
-      .where(eq(deliveries.id, intent.delivery.id));
+      .where(eq(deliveries.id, intent.delivery.id))
+      .returning();
     if (!error)
       await tx
         .update(quotes)
@@ -151,9 +157,10 @@ export async function sendQuotation(id: string, actor: Actor, renew = false) {
       tx,
       actor,
       id,
-      error ? "EMAIL_FAILED" : "EMAIL_SENT",
+      error ? "EMAIL_ATTEMPT_FAILED" : "EMAIL_SENT",
       error ?? "Quotation email accepted by provider",
     );
+    return updated!;
   });
-  return { status: error ? "FAILED" : "SENT", message: error, deliveryId: intent.delivery.id };
+  return { status: outcome.status, message: outcome.error, deliveryId: intent.delivery.id };
 }
