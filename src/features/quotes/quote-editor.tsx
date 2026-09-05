@@ -21,6 +21,7 @@ import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import type { LineInput } from "@/features/quotes/_types/quotes";
 import { quoteRequest } from "@/features/quotes/client-action";
+import { PurchaseRecommendations } from "@/features/quotes/purchase-recommendations";
 import { calculateQuote, defaultDiscounts, money, priceLines } from "@/features/quotes/rules";
 import type { Workspace } from "@/lib/domain/_types/workspace";
 
@@ -339,6 +340,18 @@ export function QuoteEditor({
         </Card>
       </div>
       <div className="space-y-4">
+        <PurchaseRecommendations
+          key={customerId}
+          customerId={customerId}
+          products={data.products}
+          existingIds={lines.map((line) => line.productId)}
+          disabled={pending || lines.length >= 100 || (lines.length > 0 && !!validation)}
+          limits={limits}
+          orderDiscountBps={orderDiscountBps}
+          onAdd={(id) => add(id)}
+          pricelists={pricelists}
+          tier={customer?.tier ?? "Bronze"}
+        />
         <Card>
           <CardHeader>
             <CardDescription>One-time total</CardDescription>

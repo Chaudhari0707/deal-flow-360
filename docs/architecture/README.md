@@ -10,6 +10,7 @@ Linear phase contracts. Read them in this order:
 4. [Billing](billing.md): schedules, proration, invoice/payment/credit ledgers and reporting.
 5. [Native runtime compatibility](runtime.md): TypeScript PostCSS, Turbopack and Bun package loading.
 6. [Implemented data model](data-model.md): actual relationships, snapshots and integrity constraints.
+7. [Quotation recommendations](quotation-recommendations.md): last-purchase suggestions and best-seller fallback.
 
 The core invariant is simple: a customer confirms an **approved revision**, and one database
 transaction creates the order, reserves available stock and records initial billing. Email and live
