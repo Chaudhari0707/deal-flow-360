@@ -6,6 +6,14 @@ Currency is INR throughout. Numerical examples are synthetic and depend on the c
 
 ## Read by workflow
 
+Search-only toolbars remain visible across quotations, approvals, customers, catalog,
+invoices, subscriptions and the customer portal, without Show/Hide controls. Multi-filter
+sections such as Reports start collapsed; **Show filters** opens the controls and **Hide filters**
+preserves the selection and filtered results. Creation actions, form fields and column visibility
+controls are not collapsed. Permissions, validation and loading/error behavior are unchanged. Browser coverage:
+[list filter panels](../../playwright/e2e/filter-panels.spec.ts) and
+[reports](../../playwright/e2e/reports.spec.ts).
+
 | Guide | What it explains |
 | --- | --- |
 | [Identity and administration](identity-and-administration.md) | Signup, login, logout, customer onboarding, temporary passwords, customer CRUD, catalog, variants, promotions, settings and role navigation |

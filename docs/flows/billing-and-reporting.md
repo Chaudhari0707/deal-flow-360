@@ -247,6 +247,11 @@ Standalone credit rows display APPLIED or AVAILABLE. Data limits require narrowe
 above 2,000 invoices, 2,000 credits, 2,000 quotes, 2,000 orders, or 20,000 approval events;
 the endpoint rejects oversized selections rather than silently truncating totals.
 
+Report filters start collapsed. Select **Show filters** to edit them and **Hide filters** to
+collapse them again; the header shows the active filter count. Collapsing preserves selections,
+results, validation errors and export scope. For example, selecting a customer then hiding filters
+still shows and exports only that customer's matching records.
+
 PDF and Excel downloads use the active filter query. The export description explains date
 and whole-record matching semantics. Excel money columns remain numeric with INR headings, and
 customer-entered text is treated as text.

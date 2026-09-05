@@ -44,7 +44,7 @@ export const quoteDetailModel = t.Object({
 
 export const recommendationsModel = t.Object({
   source: t.Union([t.Literal("last_purchase"), t.Literal("best_sellers")]),
-  productIds: t.Array(t.String()),
+  productIds: t.Array(t.String(), { maxItems: 5 }),
 });
 
 export const deliveryResultModel = t.Object({
