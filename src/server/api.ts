@@ -4,16 +4,16 @@ import { Elysia, t } from "elysia";
 import { healthRoutes } from "@/features/billing/health-routes";
 import { billingModels } from "@/features/billing/model";
 import { billingRoutes } from "@/features/billing/routes";
+import { catalogRoutes } from "@/features/catalog/routes";
 import { inventoryModels } from "@/features/inventory/model";
 import { inventoryRoutes } from "@/features/inventory/routes";
 import { quoteModels } from "@/features/quotes/model";
 import { portalRoutes } from "@/features/quotes/portal-routes";
 import { quoteRoutes } from "@/features/quotes/routes";
 import { workspaceModels } from "@/features/workspace/model";
-import { catalogRoutes } from "@/server/catalog";
+import { workspaceRoutes } from "@/features/workspace/routes";
 import { DomainError } from "@/server/errors";
 import { apiModels } from "@/server/models";
-import { workspaceRoutes } from "@/server/workspace";
 
 export const api = new Elysia({ prefix: "/api/v1", normalize: false })
   .model({ ...apiModels, ...billingModels, ...inventoryModels, ...quoteModels, ...workspaceModels })
