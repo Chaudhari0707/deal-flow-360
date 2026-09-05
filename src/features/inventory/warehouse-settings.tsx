@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/dialog";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { NumberInput } from "@/components/ui/number-input";
 import type { WarehouseRow } from "@/features/inventory/_types/ui";
 import { apiClient, apiData } from "@/lib/api/client";
 
@@ -74,9 +75,8 @@ export function WarehouseSettings({
             </Field>
             <Field>
               <FieldLabel htmlFor={`weight-${warehouse.id}`}>Shipping score × 100</FieldLabel>
-              <Input
+              <NumberInput
                 id={`weight-${warehouse.id}`}
-                type="number"
                 {...form.register("shippingWeight", {
                   valueAsNumber: true,
                   min: 0,
@@ -92,9 +92,8 @@ export function WarehouseSettings({
               <FieldLabel htmlFor={`threshold-${warehouse.id}`}>
                 Low-stock alert threshold
               </FieldLabel>
-              <Input
+              <NumberInput
                 id={`threshold-${warehouse.id}`}
-                type="number"
                 {...form.register("replenishmentThreshold", {
                   valueAsNumber: true,
                   min: 0,

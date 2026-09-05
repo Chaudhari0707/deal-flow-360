@@ -71,7 +71,7 @@ export const inventoryRoutes = new Elysia({
     response: { 200: fulfillmentDetailModel, ...apiErrorResponses },
   })
   .post("/fulfillment/:id/accept", async ({ actor, params: p }) => acceptSplit(p.id, actor), {
-    authorize: ["admin", "ops"],
+    authorize: ["ops"],
     params,
     response: { 200: orderModel, ...apiErrorResponses },
   })
@@ -79,7 +79,7 @@ export const inventoryRoutes = new Elysia({
     "/fulfillment/:id/consolidate",
     async ({ actor, params: p }) => consolidateBackorder(p.id, actor),
     {
-      authorize: ["admin", "ops"],
+      authorize: ["ops"],
       params,
       response: { 200: allocationPlanModel, ...apiErrorResponses },
     },
@@ -88,7 +88,7 @@ export const inventoryRoutes = new Elysia({
     "/fulfillment/:id/override",
     async ({ actor, params: p, body }) => overrideSplit(p.id, body.allocations, body.reason, actor),
     {
-      authorize: ["admin", "ops"],
+      authorize: ["ops"],
       params,
       body: t.Object(
         {
@@ -106,7 +106,7 @@ export const inventoryRoutes = new Elysia({
     "/fulfillment/:id/ship",
     async ({ actor, params: p, body }) => shipReservation(p.id, body, actor),
     {
-      authorize: ["admin", "ops"],
+      authorize: ["ops"],
       params,
       body: t.Object(
         { operationKey: id, quantity: positive, reservationId: id },
@@ -116,7 +116,7 @@ export const inventoryRoutes = new Elysia({
     },
   )
   .post("/inventory/restock", async ({ actor, body }) => restock(body, actor), {
-    authorize: ["admin", "ops"],
+    authorize: ["ops"],
     body: t.Object(
       { operationKey: id, productId: id, quantity: positive, reason, warehouseId: id },
       { additionalProperties: false },

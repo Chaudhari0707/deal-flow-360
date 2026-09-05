@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { NumberInput } from "@/components/ui/number-input";
 import type { PortalDetail } from "@/features/portal/_types/portal";
 import { apiClient, apiData, HttpResponseError } from "@/lib/api/client";
 
@@ -66,10 +67,9 @@ export function PortalCounter({
             {data.quote.lines.map((line) => (
               <Field key={line.id}>
                 <FieldLabel htmlFor={`discount-${line.id}`}>{line.name} · discount (%)</FieldLabel>
-                <Input
+                <NumberInput
                   id={`discount-${line.id}`}
                   name={line.id}
-                  type="number"
                   min="0"
                   max="100"
                   step="0.01"

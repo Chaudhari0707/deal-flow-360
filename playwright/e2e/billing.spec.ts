@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, request as requestFactory, test } from "@playwright/test";
 
 import type { Workspace } from "@/lib/domain/_types/workspace";
 
@@ -8,17 +8,21 @@ function demoPassword() {
   return password;
 }
 
+async function signedInRequest(baseURL: string, email: string, password: string) {
+  const request = await requestFactory.newContext({ baseURL });
+  const response = await request.post("/api/auth/sign-in/email", { data: { email, password } });
+  expect(response.ok(), await response.text()).toBe(true);
+  return request;
+}
+
 test("finance records a full payment, downloads real documents and cancels recurring service @regression", async ({
   baseURL,
   page,
-  request,
 }) => {
+  if (!baseURL) throw new Error("Billing browser tests require the application base URL");
   const password = demoPassword();
-  const adminSignIn = await request.post("/api/auth/sign-in/email", {
-    data: { email: "admin@dealflow360.demo", password },
-  });
-  expect(adminSignIn.ok()).toBe(true);
-  const created = await request.post("/api/v1/quotes", {
+  const repRequest = await signedInRequest(baseURL, "rep@dealflow360.demo", password);
+  const created = await repRequest.post("/api/v1/quotes", {
     headers: { origin: new URL(baseURL!).origin },
     data: {
       customerId: "acme",
@@ -32,21 +36,30 @@ test("finance records a full payment, downloads real documents and cancels recur
   });
   expect(created.ok()).toBe(true);
   const quote = (await created.json()) as { id: string; revision: number };
-  const submitted = await request.post(`/api/v1/quotes/${quote.id}/submit`, {
+  const submitted = await repRequest.post(`/api/v1/quotes/${quote.id}/submit`, {
     headers: { origin: new URL(baseURL!).origin },
     data: { revision: quote.revision },
   });
   expect(submitted.ok()).toBe(true);
   const approved = (await submitted.json()) as { revision: number };
-  const confirmed = await request.post(`/api/v1/quotes/${quote.id}/confirm`, {
+  await repRequest.dispose();
+  const customerRequest = await signedInRequest(baseURL, "acme@dealflow360.demo", password);
+  const confirmed = await customerRequest.post(`/api/v1/portal/${quote.id}/confirm`, {
     headers: { origin: new URL(baseURL!).origin },
     data: { revision: approved.revision },
   });
   expect(confirmed.ok()).toBe(true);
   const order = (await confirmed.json()) as { id: string; number: string };
-  const initialResponse = await request.get("/api/v1/workspace");
+  await customerRequest.dispose();
+  const adminRequest = await signedInRequest(baseURL, "admin@dealflow360.demo", password);
+  const initialResponse = await adminRequest.get("/api/v1/workspace");
   expect(initialResponse.ok()).toBe(true);
   const initial = (await initialResponse.json()) as Workspace;
+  await adminRequest.dispose();
+  const quoteCreator = initial.activity.find(
+    (entry) => entry.action === "QUOTE_CREATED" && entry.entityId === quote.id,
+  );
+  expect(quoteCreator).toBeDefined();
   const invoice = initial.invoices.find(
     (entry) => entry.orderId === order.id && entry.kind === "ONE_TIME",
   )!;
@@ -139,9 +152,9 @@ test("finance records a full payment, downloads real documents and cancels recur
   for (const filter of [
     {
       label: "Report representative",
-      option: initial.actor.name,
+      option: quoteCreator!.actorName,
       key: "repId",
-      value: initial.actor.id,
+      value: quoteCreator!.actorId!,
     },
     {
       label: "Report team",

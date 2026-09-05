@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/dialog";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { NumberInput } from "@/components/ui/number-input";
 import type { StockRow } from "@/features/inventory/_types/ui";
 import { apiClient, apiData } from "@/lib/api/client";
 
@@ -77,9 +78,8 @@ export function RestockDialog({
           <FieldGroup className="sm:grid sm:grid-cols-2 sm:items-end">
             <Field>
               <FieldLabel htmlFor="restock-quantity">Quantity received</FieldLabel>
-              <Input
+              <NumberInput
                 id="restock-quantity"
-                type="number"
                 {...form.register("quantity", {
                   valueAsNumber: true,
                   required: true,

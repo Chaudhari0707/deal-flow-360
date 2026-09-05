@@ -12,8 +12,7 @@ import { audit } from "@/server/audit";
 import { DomainError } from "@/server/errors";
 
 export async function saveQuote(input: QuoteInput, actor: Actor, id?: string) {
-  if (!["rep", "manager", "admin"].includes(actor.role))
-    throw new DomainError("Your role cannot edit quotations", 403);
+  if (actor.role !== "rep") throw new DomainError("Your role cannot edit quotations", 403);
   return db.transaction(async (tx) => {
     const [customer] = await tx.select().from(customers).where(eq(customers.id, input.customerId));
     if (!customer) throw new DomainError("Customer not found", 404);
@@ -78,8 +77,7 @@ export async function saveQuote(input: QuoteInput, actor: Actor, id?: string) {
 }
 
 export async function submitQuote(id: string, revision: number, actor: Actor) {
-  if (!["rep", "manager", "admin"].includes(actor.role))
-    throw new DomainError("Your role cannot submit quotations", 403);
+  if (actor.role !== "rep") throw new DomainError("Your role cannot submit quotations", 403);
   return db.transaction(async (tx) => {
     const [quote] = await tx.select().from(quotes).where(eq(quotes.id, id)).for("update");
     if (!quote || (actor.role === "rep" && quote.ownerId !== actor.id))
@@ -147,7 +145,7 @@ export async function approvalAction(
     if (!quote) throw new DomainError("Quotation not found", 404);
     if (quote.status !== "PENDING_APPROVAL" || quote.revision !== revision)
       throw new DomainError("Approval is stale. Reload current quotation.", 409);
-    if (actor.role !== quote.approvalStep && actor.role !== "admin")
+    if (actor.role !== quote.approvalStep)
       throw new DomainError("Only the current approval role can act", 403);
     const [approvalPolicy] = await tx
       .select()
@@ -198,8 +196,7 @@ export async function counterQuote(
   actor: Actor,
   promisedDate?: string,
 ) {
-  if (!["customer", "admin"].includes(actor.role))
-    throw new DomainError("Only the customer or administrator demo proxy can propose terms", 403);
+  if (actor.role !== "customer") throw new DomainError("Only the customer can propose terms", 403);
   return db.transaction(async (tx) => {
     const [quote] = await tx.select().from(quotes).where(eq(quotes.id, id)).for("update");
     if (!quote) throw new DomainError("Quotation not found", 404);
@@ -261,8 +258,7 @@ export async function counterQuote(
 }
 
 export async function confirmQuote(id: string, revision: number, actor: Actor) {
-  if (!["customer", "admin"].includes(actor.role))
-    throw new DomainError("Only the customer or administrator demo proxy can accept terms", 403);
+  if (actor.role !== "customer") throw new DomainError("Only the customer can accept terms", 403);
   return db.transaction(async (tx) => {
     const [quote] = await tx.select().from(quotes).where(eq(quotes.id, id)).for("update");
     if (!quote) throw new DomainError("Quotation not found", 404);

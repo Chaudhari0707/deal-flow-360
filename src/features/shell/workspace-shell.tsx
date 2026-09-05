@@ -1,6 +1,7 @@
 "use client";
 
 import { type CSSProperties, type ReactNode, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -10,7 +11,6 @@ import {
   CircleCheck,
   FileText,
   House,
-  Layers3,
   LogOut,
   PackageCheck,
   Receipt,
@@ -52,26 +52,46 @@ const navigation = [
   {
     label: "Workspace",
     items: [
-      { title: "Overview", href: "/dashboard", icon: House },
-      { title: "Quotations", href: "/quotations", icon: FileText },
-      { title: "Approvals", href: "/approvals", icon: ShieldCheck },
+      {
+        title: "Overview",
+        href: "/dashboard",
+        icon: House,
+        roles: ["admin", "finance", "manager", "ops", "rep"],
+      },
+      { title: "Quotations", href: "/quotations", icon: FileText, roles: ["manager", "rep"] },
+      { title: "Approvals", href: "/approvals", icon: ShieldCheck, roles: ["finance", "manager"] },
     ],
   },
   {
     label: "Operations",
     items: [
-      { title: "Fulfillment", href: "/fulfillment", icon: PackageCheck },
-      { title: "Subscriptions", href: "/subscriptions", icon: RefreshCw },
-      { title: "Invoices", href: "/invoices", icon: Receipt },
-      { title: "Customer health", href: "/health", icon: Activity },
+      {
+        title: "Fulfillment",
+        href: "/fulfillment",
+        icon: PackageCheck,
+        roles: ["manager", "ops", "rep"],
+      },
+      {
+        title: "Subscriptions",
+        href: "/subscriptions",
+        icon: RefreshCw,
+        roles: ["finance", "rep"],
+      },
+      { title: "Invoices", href: "/invoices", icon: Receipt, roles: ["finance", "rep"] },
+      { title: "Customer health", href: "/health", icon: Activity, roles: ["manager"] },
     ],
   },
   {
     label: "Management",
     items: [
-      { title: "Reports", href: "/reports", icon: BarChart3 },
-      { title: "Product catalog", href: "/catalog", icon: Boxes },
-      { title: "Settings", href: "/settings", icon: Settings2 },
+      {
+        title: "Reports",
+        href: "/reports",
+        icon: BarChart3,
+        roles: ["admin", "finance", "manager"],
+      },
+      { title: "Product catalog", href: "/catalog", icon: Boxes, roles: ["admin", "manager"] },
+      { title: "Settings", href: "/settings", icon: Settings2, roles: ["admin", "manager"] },
     ],
   },
 ];
@@ -101,29 +121,33 @@ function WorkspaceSidebar({ actor, pathname }: { actor: Actor; pathname: string 
       <SidebarHeader className="px-4 py-5">
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton size="lg" render={<Link href="/dashboard" />}>
-              <Badge className="size-9 rounded-xl p-2">
-                <Layers3 className="size-5!" />
-              </Badge>
-              <span className="text-lg font-semibold tracking-tight text-foreground">
-                DealFlow360
-              </span>
+            <SidebarMenuButton
+              size="lg"
+              className="h-14 hover:bg-transparent"
+              render={<Link href="/dashboard" />}
+            >
+              <Image
+                src="/logo.png"
+                alt="DealFlow360"
+                width={180}
+                height={60}
+                className="h-10 w-auto object-contain"
+                priority
+              />
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
-        {navigation.map((group) => (
-          <SidebarGroup key={group.label}>
-            <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                {group.items
-                  .filter(
-                    (item) =>
-                      item.href !== "/settings" || ["admin", "manager"].includes(actor.role),
-                  )
-                  .map((item) => (
+        {navigation.map((group) => {
+          const items = group.items.filter((item) => item.roles.includes(actor.role));
+          if (!items.length) return null;
+          return (
+            <SidebarGroup key={group.label}>
+              <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {items.map((item) => (
                     <SidebarMenuItem key={item.href}>
                       <SidebarMenuButton
                         className="h-10 data-active:bg-primary/15 data-active:text-foreground"
@@ -136,10 +160,11 @@ function WorkspaceSidebar({ actor, pathname }: { actor: Actor; pathname: string 
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                   ))}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        ))}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          );
+        })}
       </SidebarContent>
       <SidebarFooter className="gap-3 p-4">
         <Separator />

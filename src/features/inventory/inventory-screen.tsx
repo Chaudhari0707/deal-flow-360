@@ -75,7 +75,7 @@ export function InventoryScreen() {
   const workspace = useWorkspace();
   const live = useStockFeed();
   if (!data) return <WorkspaceState error={error} retry={() => void mutate()} />;
-  const canOperate = ["admin", "ops"].includes(workspace.data?.actor.role ?? "");
+  const canOperate = workspace.data?.actor.role === "ops";
   const stock = data.stocks.find((s) => s.id === selected);
   return (
     <>

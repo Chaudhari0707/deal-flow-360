@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
+import { NumberInput } from "@/components/ui/number-input";
 import { displayStatus } from "@/features/shell/format";
 import { PageHeader } from "@/features/shell/page-header";
 import { useWorkspace } from "@/features/shell/use-workspace";
@@ -70,10 +70,9 @@ function PolicyForm({
               {Object.entries(setting.value).map(([key, value]) => (
                 <Field key={key}>
                   <FieldLabel htmlFor={`${setting.id}-${key}`}>{displayStatus(key)}</FieldLabel>
-                  <Input
+                  <NumberInput
                     id={`${setting.id}-${key}`}
                     name={key}
-                    type="number"
                     required
                     min={
                       setting.id === "approvalChain"

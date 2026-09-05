@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/dialog";
 import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { NumberInput } from "@/components/ui/number-input";
 import {
   Select,
   SelectContent,
@@ -49,7 +50,7 @@ export function SubscriptionWorkspace() {
   const [search, setSearch] = useState("");
   const action = useBillingAction();
   if (!data) return <WorkspaceState error={error} retry={() => void mutate()} />;
-  const canManage = ["admin", "finance"].includes(data.actor.role);
+  const canManage = data.actor.role === "finance";
   const subscription = data.subscriptions.find((entry) => entry.id === selected);
   const product = data.products.find((entry) => entry.id === productId);
   const preview = subscriptionPreview(subscription, product, quantity);
@@ -207,14 +208,13 @@ export function SubscriptionWorkspace() {
                     </Field>
                     <Field>
                       <FieldLabel htmlFor="subscription-quantity">Quantity</FieldLabel>
-                      <Input
+                      <NumberInput
                         id="subscription-quantity"
-                        type="number"
                         min={1}
                         max={10000}
                         step={1}
                         value={quantity}
-                        onChange={(event) => setQuantity(Number(event.target.value))}
+                        onValueChange={(value) => setQuantity(value ?? Number.NaN)}
                       />
                       {(!Number.isInteger(quantity) || quantity < 1 || quantity > 10000) && (
                         <FieldError>Enter 1 to 10,000 whole units.</FieldError>
@@ -253,7 +253,7 @@ export function SubscriptionWorkspace() {
                   <AlertDescription>
                     {subscription.status === "CANCELLED"
                       ? "This subscription is cancelled. Issued invoices and credits remain available."
-                      : "Finance and administrators can change or cancel this subscription."}
+                      : "Finance can change or cancel this subscription."}
                   </AlertDescription>
                 </Alert>
               )}

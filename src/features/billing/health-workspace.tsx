@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field, FieldLabel } from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
+import { NumberInput } from "@/components/ui/number-input";
 import { dealHealth } from "@/features/billing/health";
 import { useBillingAction } from "@/features/billing/use-billing-action";
 import { PageHeader } from "@/features/shell/page-header";
@@ -180,15 +180,14 @@ export function HealthWorkspace() {
                 ).map((field) => (
                   <Field key={field.key}>
                     <FieldLabel htmlFor={field.key}>{field.label}</FieldLabel>
-                    <Input
+                    <NumberInput
                       id={field.key}
-                      type="number"
                       min={field.min}
                       max={field.max}
                       step={1}
                       value={values[field.key]}
-                      onChange={(event) =>
-                        setDraft({ ...values, [field.key]: Number(event.target.value) })
+                      onValueChange={(value) =>
+                        setDraft({ ...values, [field.key]: value ?? Number.NaN })
                       }
                     />
                   </Field>

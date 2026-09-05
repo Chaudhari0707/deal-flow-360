@@ -9,12 +9,12 @@ import {
   recommendationsModel,
 } from "@/features/quotes/model";
 import { purchaseRecommendations } from "@/features/quotes/recommendations";
-import { approvalAction, confirmQuote, saveQuote, submitQuote } from "@/features/quotes/service";
+import { approvalAction, saveQuote, submitQuote } from "@/features/quotes/service";
 import { db } from "@/lib/db/connection";
 import { auditEntries, messages, quotes } from "@/lib/db/schema";
 import { actorContext } from "@/server/access";
 import { DomainError } from "@/server/errors";
-import { apiErrorResponses, orderModel, quoteModel } from "@/server/models";
+import { apiErrorResponses, quoteModel } from "@/server/models";
 
 const id = t.String({ minLength: 1, maxLength: 100 }),
   revision = t.Integer({ minimum: 1 });
@@ -35,12 +35,12 @@ export const quoteRoutes = new Elysia({ name: "quotes", tags: ["Quotes"] })
     },
   )
   .post("/quotes", async ({ actor, body: b }) => saveQuote(b, actor), {
-    authorize: ["rep", "manager", "admin"],
+    authorize: ["rep"],
     body,
     response: { 200: quoteModel, ...apiErrorResponses },
   })
   .patch("/quotes/:id", async ({ actor, body: b, params }) => saveQuote(b, actor, params.id), {
-    authorize: ["rep", "manager", "admin"],
+    authorize: ["rep"],
     body,
     params: t.Object({ id }),
     response: { 200: quoteModel, ...apiErrorResponses },
@@ -68,7 +68,7 @@ export const quoteRoutes = new Elysia({ name: "quotes", tags: ["Quotes"] })
       return { quote, activity, messages: thread };
     },
     {
-      authorize: ["rep", "manager", "finance", "ops", "admin"],
+      authorize: ["rep", "manager", "finance", "ops"],
       params: t.Object({ id }),
       response: { 200: quoteDetailModel, ...apiErrorResponses },
     },
@@ -81,7 +81,7 @@ export const quoteRoutes = new Elysia({ name: "quotes", tags: ["Quotes"] })
       return quote;
     },
     {
-      authorize: ["rep", "manager", "admin"],
+      authorize: ["rep"],
       params: t.Object({ id }),
       body: t.Object({ revision }),
       response: { 200: quoteModel, ...apiErrorResponses },
@@ -95,7 +95,7 @@ export const quoteRoutes = new Elysia({ name: "quotes", tags: ["Quotes"] })
       return quote;
     },
     {
-      authorize: ["manager", "finance", "admin"],
+      authorize: ["manager", "finance"],
       params: t.Object({ id }),
       body: t.Object({
         revision,
@@ -114,21 +114,11 @@ export const quoteRoutes = new Elysia({ name: "quotes", tags: ["Quotes"] })
       return sendQuotation(params.id, actor, input?.renew ?? false);
     },
     {
-      authorize: ["rep", "manager", "finance", "admin"],
+      authorize: ["rep", "manager", "finance"],
       params: t.Object({ id }),
       body: t.Optional(
         t.Object({ renew: t.Optional(t.Boolean()) }, { additionalProperties: false }),
       ),
       response: { 200: deliveryResultModel, ...apiErrorResponses },
-    },
-  )
-  .post(
-    "/quotes/:id/confirm",
-    async ({ actor, params, body: b }) => confirmQuote(params.id, b.revision, actor),
-    {
-      authorize: ["admin"],
-      params: t.Object({ id }),
-      body: t.Object({ revision }),
-      response: { 200: orderModel, ...apiErrorResponses },
     },
   );

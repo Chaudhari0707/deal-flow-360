@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/dialog";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { NumberInput } from "@/components/ui/number-input";
 import type { FulfillmentDetail } from "@/features/inventory/_types/ui";
 import { apiClient, apiData } from "@/lib/api/client";
 import type { Workspace } from "@/lib/domain/_types/workspace";
@@ -103,9 +104,8 @@ export function OverrideForm({
                 <FieldLabel htmlFor={`allocation-${index}`}>
                   {row.label} · up to {row.available}
                 </FieldLabel>
-                <Input
+                <NumberInput
                   id={`allocation-${index}`}
-                  type="number"
                   {...form.register(`allocations.${index}.quantity`, {
                     valueAsNumber: true,
                     required: true,

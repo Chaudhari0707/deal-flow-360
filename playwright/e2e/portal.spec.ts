@@ -8,7 +8,7 @@ test("customer reviews, discusses, counters and confirms their approved quotatio
   const password = Bun.env.DEMO_PASSWORD ?? Bun.env.PLAYWRIGHT_USER_PASSWORD;
   if (!password) throw new Error("Portal browser tests require the seeded demo password");
   const signedIn = await request.post("/api/auth/sign-in/email", {
-    data: { email: "admin@dealflow360.demo", password },
+    data: { email: "rep@dealflow360.demo", password },
   });
   expect(signedIn.ok()).toBe(true);
   const created = await request.post("/api/v1/quotes", {
