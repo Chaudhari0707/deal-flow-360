@@ -23,7 +23,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { proratedAdjustment, roundRatioHalfUp } from "@/features/billing/rules";
+import { subscriptionPreview } from "@/features/billing/subscription-preview";
 import { subscriptionColumns } from "@/features/billing/table-columns";
 import { useBillingAction } from "@/features/billing/use-billing-action";
 import { displayDate, displayStatus, money } from "@/features/shell/format";
@@ -43,31 +43,11 @@ export function SubscriptionWorkspace() {
   const canManage = ["admin", "finance"].includes(data.actor.role);
   const subscription = data.subscriptions.find((entry) => entry.id === selected);
   const product = data.products.find((entry) => entry.id === productId);
-  const valid =
-    Number.isInteger(quantity) && quantity >= 1 && quantity <= 10000 && reason.trim().length >= 3;
+  const preview = subscriptionPreview(subscription, product, quantity);
+  const valid = preview.valid && reason.trim().length >= 3;
+  const adjustment = preview.adjustment;
   const cadence = (months: number) =>
     months === 12 ? "Yearly" : months === 3 ? "Quarterly" : "Monthly";
-  let adjustment: number | null = null;
-  if (
-    subscription &&
-    product &&
-    quantity >= 1 &&
-    Number.isInteger(quantity) &&
-    new Date(subscription.periodEnd) > new Date()
-  ) {
-    const net =
-      product.id === subscription.productId
-        ? roundRatioHalfUp(subscription.priceBasisCents, quantity, subscription.priceBasisQuantity)
-        : product.priceCents * quantity;
-    adjustment = proratedAdjustment(
-      subscription.periodNetCents +
-        roundRatioHalfUp(subscription.periodNetCents, subscription.taxBps, 10000),
-      net + roundRatioHalfUp(net, subscription.taxBps, 10000),
-      new Date(subscription.periodStart),
-      new Date(subscription.periodEnd),
-      new Date(),
-    );
-  }
   return (
     <>
       <PageHeader
@@ -241,8 +221,9 @@ export function SubscriptionWorkspace() {
                       : `${adjustment < 0 ? "Estimated credit" : "Estimated adjustment"}: ${money(Math.abs(adjustment))}`}
                   </AlertTitle>
                   <AlertDescription>
-                    Changes take effect today. Actual remaining calendar days determine the amount.
-                    The server confirms final cents and catches up any due periods.
+                    Changes take effect today. Future or invalid billing periods and price data must
+                    be corrected before changes. Actual remaining calendar days determine the
+                    amount. The server confirms final cents and catches up any due periods.
                   </AlertDescription>
                 </Alert>
                 <div className="flex flex-wrap gap-3">
@@ -252,7 +233,7 @@ export function SubscriptionWorkspace() {
                   <Button
                     variant="destructive"
                     type="button"
-                    disabled={action.pending || reason.trim().length < 3}
+                    disabled={action.pending || !valid}
                     onClick={() =>
                       void action.run(
                         `/subscriptions/${encodeURIComponent(subscription.id)}/cancel`,

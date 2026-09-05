@@ -57,6 +57,11 @@ credit remaining after a prepaid invoice is preserved as available customer cred
 not a cash refund, and automatic application of available credit to a different invoice is
 not implemented.
 
+Invoices issued with zero outstanding balance are immediately `PAID` (settled), including free
+products, fully discounted lines and free recurring renewals. No payment ledger row or cash
+collection is invented. This keeps zero-value invoices out of unpaid filters while retaining their
+commercial history.
+
 Payments record the entire outstanding amount with a reference, actor and unique operation
 identity. Invoice row locks serialize concurrent payments, and database checks prevent
 payments plus applied credits exceeding the invoice. A balance settled entirely by credit has
@@ -85,22 +90,48 @@ sequenceDiagram
 
 ## Reports and documents
 
-`GET /api/v1/reports/financial` accepts `from`, `to`, `customerId`, `category`, and `status`.
-Dates refer to each document's issue timestamp in UTC. Category selects whole invoices
-containing that category; it does not allocate a mixed invoice's paid amount between categories.
-Credit notes follow their own issue date and source invoice's category. A paid/unpaid status
-filter selects invoices and excludes credit notes. Results are ordered by issue date and document
-number. Narrow filters when more than 2,000 invoices or 2,000 credits match.
+`GET /api/v1/reports/financial` accepts `from`, `to`, `customerId`, `category`, `productId`,
+`repId`, `team`, `approvalStatus`, and financial payment `status` (`PAID` / `UNPAID`).
+All filters apply in PostgreSQL before row caps. Representative means the source quote owner;
+team means the customer's configured team. Product and category must match the same stored line.
+They select the whole quote/order/invoice amount, without pretending to allocate mixed-document
+payments between products. Credit notes match their source invoice's lines and source quote owner.
+
+Approval status values are `NOT_SUBMITTED` (draft), `PENDING`, `RETURNED`, `REJECTED`, and
+`APPROVED`. Approved means the current commercial revision was approved, including subsequently
+sent or confirmed quotes. Payment status filters financial records only and excludes credit notes;
+it does not hide draft sales activity. Reports are restricted to manager, finance and admin roles.
+
+Dates are inclusive UTC calendar dates applied independently to each record: quote creation,
+order creation, invoice issue, or credit-note issue. Thus a quote created January 1, ordered
+January 2 and invoiced January 3 appears in those respective date ranges. No invoice is required
+for a quote to appear in the report. The JSON response preserves financial `rows` and `totals`,
+and adds `sales` (quote/order records and metrics) and `options` (representative/team choices).
+
+Sales metrics are:
+
+- **Quotes created:** matching quote records, including drafts without invoices.
+- **Orders confirmed:** matching persisted orders; ordered value sums their accepted line totals.
+- **Average approval hours:** elapsed time from submission/counterproposal to the final required
+  approval, grouped by quote and commercial revision. HIGH risk includes manager and finance
+  steps. Automatic approval is zero hours. Incomplete, returned/rejected, duplicate, and
+  unversioned legacy events do not manufacture completed cycles. This is the completed-cycle
+  average for the selected quote-creation cohort, using all its recorded approval history.
+- **Top upsold product:** greatest unit quantity among `upsell: true` lines in matching confirmed
+  orders. Category/product filters also restrict eligible upsell lines. Ties use product ID;
+  an empty result is shown as unknown/none, never inferred from catalog pairings.
 
 Net billed is invoice totals minus issued credit notes. Collected is recorded cash payment
 amounts. Outstanding is invoice total minus payments and applied credits. These are distinct
 metrics, and an available prepaid credit does not reduce another invoice automatically.
 
-`format=pdf` creates a real text PDF; `format=xlsx` creates an Excel workbook with numeric
-currency cells, frozen headers and the filter description. Formula-like customer strings stay
-plain strings. Invoice PDF downloads use `/api/v1/invoices/:id/pdf`. Standard PDF fonts cannot
-render all Unicode characters, so unsupported characters are visibly escaped as Unicode
-code points rather than silently dropping names or failing the export.
+Results have stable date/ID ordering. Narrow filters when more than 2,000 invoices, credits,
+quotes or orders, or 20,000 approval events match. These limits do not silently truncate metrics.
+`format=pdf` creates a text PDF containing the same financial and sales records and metric values.
+`format=xlsx` preserves the Financial report sheet and adds Sales metrics, Quotations and Orders
+sheets, with numeric amounts and a Filters sheet. Formula-like customer strings remain strings.
+Invoice PDF downloads use `/api/v1/invoices/:id/pdf`. Standard PDF fonts cannot render every
+Unicode character; unsupported characters are visibly escaped as Unicode code points.
 
 ## API mutations
 
