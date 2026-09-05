@@ -6,6 +6,7 @@ import type {
   invoices,
   messages,
   orders,
+  payments,
   products,
   quotes,
   reservations,
@@ -33,6 +34,7 @@ export interface Workspace {
   invoices: Serialized<typeof invoices.$inferSelect>[];
   messages: Serialized<typeof messages.$inferSelect>[];
   orders: Serialized<typeof orders.$inferSelect>[];
+  payments: Serialized<typeof payments.$inferSelect>[];
   products: Serialized<typeof products.$inferSelect>[];
   quotes: Serialized<typeof quotes.$inferSelect>[];
   reservations: Serialized<typeof reservations.$inferSelect>[];

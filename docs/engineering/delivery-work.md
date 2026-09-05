@@ -16,8 +16,13 @@ Project: [DealFlow360 local delivery](https://linear.app/odoohack/project/dealfl
 
 The maintainer authorized a shared integration branch with exclusive file ownership, recorded in the
 issues. The coordinator alone stages/commits/pushes, owns shared schema and package changes, and
-creates chronological phase PRs. Named agents represent workstreams; commits retain their actual
-configured author and current timestamps. Prior foundation is `dev` at `6728ed8`.
+creates chronological phase PRs. The maintainer requested commits attributed to each supplied
+workstream username/email; commit bodies identify the agent-generated contribution. Timestamps are
+current and existing history is preserved. Prior foundation is `dev` at `6728ed8`.
+
+Promotion follows feature PR → `dev` → `production` → `main`. Run the applicable gates before each
+promotion; these are Git branches and do not imply a hosted deployment. The first foundation commit
+used the configured 0monish identity; subsequent feature commits carry the assigned workstream author.
 
 After each phase, record actual checks and outstanding acceptance in Linear. An issue is Done only
 when its acceptance was exercised. External blockers are documented for later review, not reported as

@@ -21,6 +21,8 @@ export const subscriptions = pgTable(
     quantity: integer("quantity").notNull(),
     priceCents: integer("price_cents").notNull(),
     periodNetCents: integer("period_net_cents").notNull(),
+    priceBasisCents: integer("price_basis_cents").notNull(),
+    priceBasisQuantity: integer("price_basis_quantity").notNull(),
     taxBps: integer("tax_bps").notNull().default(0),
     intervalMonths: integer("interval_months").notNull(),
     anchorDay: integer("anchor_day").notNull(),
