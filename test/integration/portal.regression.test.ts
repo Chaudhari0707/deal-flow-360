@@ -247,6 +247,30 @@ describe("portal scoped access regressions", () => {
     expect(savedInvoices[0]?.totalCents).toBe(10000);
   });
 
+  test("unauthenticated portal reads stay closed", async () => {
+    expect((await request("/portal")).status).toBe(401);
+    expect((await request("/portal/missing")).status).toBe(401);
+  });
+
+  test("a leftover portal cookie cannot open the portal for any staff session", async () => {
+    const item = await fixture();
+    const portal = await access(item.token);
+    for (const role of ["admin", "finance", "manager", "ops", "rep"] as const) {
+      const cookie = `${await authenticatedCookie(role)}; ${portal}`;
+      expect((await request("/portal", "GET", cookie)).status).toBe(403);
+      expect((await request(`/portal/${item.quoteId}`, "GET", cookie)).status).toBe(403);
+      expect(
+        (
+          await request(`/portal/${item.quoteId}/message`, "POST", cookie, {
+            body: "Staff cannot ride a leftover portal cookie.",
+          })
+        ).status,
+      ).toBe(403);
+    }
+    expect((await request("/portal", "GET", portal)).status).toBe(200);
+    expect((await request(`/portal/${item.quoteId}`, "GET", portal)).status).toBe(200);
+  });
+
   test("logout revokes the granted quote session", async () => {
     const item = await fixture();
     const cookie = await access(item.token);

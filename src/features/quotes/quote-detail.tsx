@@ -21,6 +21,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { QuoteConversation } from "@/features/quotes/quote-conversation";
 import { QuoteEditor } from "@/features/quotes/quote-editor";
 import { money } from "@/features/quotes/rules";
 import { PageHeader } from "@/features/shell/page-header";
@@ -369,22 +370,16 @@ export function QuoteDetail({ isNew = false }: { isNew?: boolean }) {
                   )}
                 </CardContent>
               </Card>
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">Customer conversation</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  {detail.data?.messages.map((m) => (
-                    <div key={m.id} className="rounded-lg bg-muted p-3 text-sm">
-                      <p className="font-medium">{m.authorName}</p>
-                      <p className="mt-1 text-muted-foreground">{m.body}</p>
-                    </div>
-                  ))}
-                  {!detail.data?.messages.length && (
-                    <p className="text-sm text-muted-foreground">No messages yet.</p>
-                  )}
-                </CardContent>
-              </Card>
+              <QuoteConversation
+                canReply={["finance", "manager", "rep"].includes(data.actor.role)}
+                lines={quote.lines}
+                messages={detail.data?.messages ?? []}
+                quoteId={quote.id}
+                saved={async () => {
+                  await mutate();
+                  await detail.mutate();
+                }}
+              />
             </div>
           </div>
         )

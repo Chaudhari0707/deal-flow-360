@@ -15,6 +15,9 @@
   rejected. Cookies remain host-scoped, so changing aliases requires a separate sign-in.
 - Protected server actions and Elysia handlers validate the session server-side. Hiding UI is never
   authorization.
+- Portal identity resolves the Better Auth session first. Any signed-in non-customer role is `403`
+  on `/portal` and `/api/v1/portal/*`, even when a leftover `dealflow_portal` cookie is still valid.
+  Staff reply on quotation detail; they never use the customer shell.
 - Open signup, email verification, reset callbacks, session duration/revocation, roles, and account
   lifecycle remain explicit Linear decisions.
 - Auth-flow E2E tests use real credentials and no saved state. Other E2E specs may reuse ignored

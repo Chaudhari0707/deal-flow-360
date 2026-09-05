@@ -47,6 +47,9 @@ describe("generated API contract", () => {
     expect(document.components?.securitySchemes).toHaveProperty("SessionCookie");
     expect(document.components?.securitySchemes).toHaveProperty("PortalCookie");
     expect(document.paths?.["/api/v1/workspace"]?.get.security).toEqual([{ SessionCookie: [] }]);
+    expect(document.paths?.["/api/v1/quotes/{id}/message"]?.post.security).toEqual([
+      { SessionCookie: [] },
+    ]);
     expect(document.paths?.["/api/v1/portal"]?.get.security).toEqual([
       { PortalCookie: [] },
       { SessionCookie: [] },
