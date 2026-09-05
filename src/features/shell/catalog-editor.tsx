@@ -1,0 +1,341 @@
+"use client";
+
+import { type FormEvent, useState } from "react";
+
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import type { Workspace } from "@/lib/domain/_types/workspace";
+import { fetchJson, HttpResponseError } from "@/lib/swr/fetcher";
+
+export function CatalogEditor({
+  kind,
+  product,
+  customer,
+  close,
+  saved,
+}: {
+  kind: "product" | "customer";
+  product?: Workspace["products"][number];
+  customer?: Workspace["customers"][number];
+  close: () => void;
+  saved: () => Promise<unknown>;
+}) {
+  const [error, setError] = useState("");
+  const [pending, setPending] = useState(false);
+  const [stockable, setStockable] = useState(product?.stockable ?? false);
+  const [active, setActive] = useState(product?.active ?? true);
+  const [promoted, setPromoted] = useState(product?.promoted ?? false);
+  const existing = kind === "product" ? product : customer;
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    const value = (name: string) => String(form.get(name) ?? "").trim();
+    const numeric = (name: string, scale = 1) => Math.round(Number(value(name)) * scale);
+    const body =
+      kind === "product"
+        ? {
+            name: value("name"),
+            category: value("category"),
+            description: value("description"),
+            unit: value("unit"),
+            variant: value("variant"),
+            priceCents: numeric("price", 100),
+            costCents: numeric("cost", 100),
+            taxBps: numeric("tax", 100),
+            intervalMonths: numeric("interval"),
+            promotionBps: numeric("promotion", 100),
+            pairedProductIds: value("paired")
+              .split(",")
+              .map((id) => id.trim())
+              .filter(Boolean),
+            stockable,
+            active,
+            promoted,
+          }
+        : { name: value("name"), email: value("email"), tier: value("tier"), team: value("team") };
+    if (kind === "product" && stockable && numeric("interval") > 0) {
+      setError("Recurring subscriptions cannot track warehouse inventory.");
+      return;
+    }
+    setPending(true);
+    setError("");
+    try {
+      const base = kind === "product" ? "/api/v1/catalog/products" : "/api/v1/customers";
+      await fetchJson(existing ? `${base}/${existing.id}` : base, {
+        method: existing ? "PATCH" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      await saved();
+      close();
+    } catch (failure) {
+      setError(
+        failure instanceof HttpResponseError && failure.status === 403
+          ? "Your role cannot change this catalog."
+          : "Could not save. Check the field values and try again.",
+      );
+    } finally {
+      setPending(false);
+    }
+  }
+  return (
+    <Dialog
+      open
+      onOpenChange={(open) => {
+        if (!open && !pending) close();
+      }}
+    >
+      <DialogContent className="max-h-[90svh] overflow-y-auto sm:max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>
+            {existing ? "Edit" : "Add"} {kind}
+          </DialogTitle>
+          <DialogDescription>
+            {kind === "product"
+              ? "Catalog changes apply to new quotation lines. Existing quotes keep their pricing snapshots."
+              : "Manage the customer details used for quotations and billing."}
+          </DialogDescription>
+        </DialogHeader>
+        <form method="post" onSubmit={submit}>
+          <FieldGroup>
+            <Field>
+              <FieldLabel htmlFor="catalog-name">Name</FieldLabel>
+              <Input
+                id="catalog-name"
+                name="name"
+                required
+                maxLength={120}
+                defaultValue={existing?.name}
+              />
+            </Field>
+            {kind === "customer" ? (
+              <>
+                <Field>
+                  <FieldLabel htmlFor="catalog-email">Customer email</FieldLabel>
+                  <Input
+                    id="catalog-email"
+                    name="email"
+                    type="email"
+                    required
+                    maxLength={254}
+                    defaultValue={customer?.email}
+                  />
+                </Field>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <Field>
+                    <FieldLabel htmlFor="catalog-tier">Tier</FieldLabel>
+                    <Select name="tier" defaultValue={customer?.tier ?? "Bronze"}>
+                      <SelectTrigger id="catalog-tier" className="w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {["Bronze", "Silver", "Gold"].map((tier) => (
+                          <SelectItem key={tier} value={tier}>
+                            {tier}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </Field>
+                  <Field>
+                    <FieldLabel htmlFor="catalog-team">Sales team</FieldLabel>
+                    <Input
+                      id="catalog-team"
+                      name="team"
+                      required
+                      maxLength={100}
+                      defaultValue={customer?.team ?? "Enterprise"}
+                    />
+                  </Field>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <Field>
+                    <FieldLabel htmlFor="catalog-category">Category</FieldLabel>
+                    <Select name="category" defaultValue={product?.category ?? "Hardware"}>
+                      <SelectTrigger id="catalog-category" className="w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {["Hardware", "Services", "Subscription"].map((category) => (
+                          <SelectItem key={category} value={category}>
+                            {category}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </Field>
+                  <Field>
+                    <FieldLabel htmlFor="catalog-variant">Variant</FieldLabel>
+                    <Input
+                      id="catalog-variant"
+                      name="variant"
+                      required
+                      maxLength={100}
+                      defaultValue={product?.variant ?? "Standard"}
+                    />
+                  </Field>
+                </div>
+                <Field>
+                  <FieldLabel htmlFor="catalog-description">Description</FieldLabel>
+                  <Textarea
+                    id="catalog-description"
+                    name="description"
+                    maxLength={2000}
+                    defaultValue={product?.description}
+                  />
+                </Field>
+                <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+                  {[
+                    {
+                      name: "price",
+                      label: "Unit price ($)",
+                      value: (product?.priceCents ?? 0) / 100,
+                      step: "0.01",
+                      max: 100000,
+                    },
+                    {
+                      name: "cost",
+                      label: "Unit cost ($)",
+                      value: (product?.costCents ?? 0) / 100,
+                      step: "0.01",
+                      max: 100000,
+                    },
+                    {
+                      name: "tax",
+                      label: "Tax (%)",
+                      value: (product?.taxBps ?? 0) / 100,
+                      step: "0.01",
+                      max: 100,
+                    },
+                    {
+                      name: "promotion",
+                      label: "Promotion discount (%)",
+                      value: (product?.promotionBps ?? 0) / 100,
+                      step: "0.01",
+                      max: 100,
+                    },
+                  ].map((field) => (
+                    <Field key={field.name}>
+                      <FieldLabel htmlFor={`catalog-${field.name}`}>{field.label}</FieldLabel>
+                      <Input
+                        id={`catalog-${field.name}`}
+                        name={field.name}
+                        type="number"
+                        required
+                        min="0"
+                        max={field.max}
+                        step={field.step}
+                        defaultValue={field.value}
+                      />
+                    </Field>
+                  ))}
+                  <Field>
+                    <FieldLabel htmlFor="catalog-interval">Billing interval</FieldLabel>
+                    <Select name="interval" defaultValue={String(product?.intervalMonths ?? 0)}>
+                      <SelectTrigger id="catalog-interval" className="w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {[
+                          { value: "0", label: "One-time" },
+                          { value: "1", label: "Monthly" },
+                          { value: "3", label: "Quarterly" },
+                          { value: "12", label: "Yearly" },
+                        ].map((interval) => (
+                          <SelectItem key={interval.value} value={interval.value}>
+                            {interval.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </Field>
+                  <Field>
+                    <FieldLabel htmlFor="catalog-unit">Unit</FieldLabel>
+                    <Input
+                      id="catalog-unit"
+                      name="unit"
+                      required
+                      maxLength={50}
+                      defaultValue={product?.unit ?? "unit"}
+                    />
+                  </Field>
+                </div>
+                <Field>
+                  <FieldLabel htmlFor="catalog-paired">
+                    Paired product IDs (comma separated)
+                  </FieldLabel>
+                  <Input
+                    id="catalog-paired"
+                    name="paired"
+                    maxLength={2000}
+                    defaultValue={product?.pairedProductIds.join(", ")}
+                  />
+                </Field>
+                <div className="flex flex-wrap gap-6">
+                  <Field orientation="horizontal">
+                    <Checkbox
+                      id="catalog-stockable"
+                      checked={stockable}
+                      onCheckedChange={(value) => setStockable(Boolean(value))}
+                    />
+                    <FieldLabel htmlFor="catalog-stockable">Track inventory</FieldLabel>
+                  </Field>
+                  <Field orientation="horizontal">
+                    <Checkbox
+                      id="catalog-active"
+                      checked={active}
+                      onCheckedChange={(value) => setActive(Boolean(value))}
+                    />
+                    <FieldLabel htmlFor="catalog-active">Active</FieldLabel>
+                  </Field>
+                  <Field orientation="horizontal">
+                    <Checkbox
+                      id="catalog-promoted"
+                      checked={promoted}
+                      onCheckedChange={(value) => setPromoted(Boolean(value))}
+                    />
+                    <FieldLabel htmlFor="catalog-promoted">Promoted</FieldLabel>
+                  </Field>
+                </div>
+              </>
+            )}
+            {error && (
+              <Alert variant="destructive">
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="outline" onClick={close} disabled={pending}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={pending}>
+                {pending ? "Saving…" : `Save ${kind}`}
+              </Button>
+            </div>
+          </FieldGroup>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
