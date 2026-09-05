@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import { createAuth } from "@/lib/auth/create-auth";
 import type { db } from "@/lib/db/connection";
 import { user } from "@/lib/db/schema";
+import { seedDemo } from "@/lib/db/seed/demo";
 
 type Database = typeof db;
 type Transaction = Parameters<Parameters<Database["transaction"]>[0]>[0];
@@ -37,4 +38,5 @@ export async function seedDatabase(database: Database) {
     for (const seed of seeders) await seed(transaction);
   });
   await seedCredentialUser(database);
+  await seedDemo(database);
 }

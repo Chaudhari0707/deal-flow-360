@@ -12,7 +12,7 @@ export async function audit(
 ) {
   await tx.insert(auditEntries).values({
     id: crypto.randomUUID(),
-    actorId: actor.id,
+    actorId: actor.id || null,
     actorName: actor.name,
     entityId,
     action,
