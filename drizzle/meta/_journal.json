@@ -15,6 +15,13 @@
       "when": 1788601290877,
       "tag": "0001_absent_boomer",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1788602091048,
+      "tag": "0002_abandoned_living_mummy",
+      "breakpoints": true
     }
   ]
 }
