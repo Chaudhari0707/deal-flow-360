@@ -5,6 +5,19 @@ import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 import * as schema from "@/lib/db/schema";
 
+export function trustedOrigins(baseURL: string): string[] {
+  const configured = new URL(baseURL);
+  const origins = new Set([configured.origin]);
+
+  if (configured.hostname === "localhost" || configured.hostname === "127.0.0.1") {
+    const alias = new URL(configured.origin);
+    alias.hostname = configured.hostname === "localhost" ? "127.0.0.1" : "localhost";
+    origins.add(alias.origin);
+  }
+
+  return [...origins];
+}
+
 export function createAuth(database: PostgresJsDatabase<typeof schema>) {
   const baseURL = Bun.env.BETTER_AUTH_URL;
   const secret = Bun.env.BETTER_AUTH_SECRET;
@@ -22,6 +35,6 @@ export function createAuth(database: PostgresJsDatabase<typeof schema>) {
     },
     plugins: [nextCookies()],
     secret,
-    trustedOrigins: [baseURL],
+    trustedOrigins: trustedOrigins(baseURL),
   });
 }
