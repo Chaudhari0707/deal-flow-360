@@ -1,0 +1,3 @@
+bun run build:rules
+bun --bun x lint-staged
+bun run check:instructions

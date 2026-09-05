@@ -1,0 +1,26 @@
+# Repository-scoped tool configuration. Authentication remains local to each contributor.
+
+[mcp_servers.linear]
+url = "https://mcp.linear.app/mcp"
+auth = "oauth"
+enabled = true
+default_tools_approval_mode = "writes"
+
+[mcp_servers.context7]
+command = "bunx"
+args = ["-y", "@upstash/context7-mcp@4.0.5"]
+startup_timeout_ms = 20000
+
+[mcp_servers.next-devtools]
+command = "bunx"
+args = ["next-devtools-mcp@0.4.0"]
+startup_timeout_ms = 20000
+
+[mcp_servers.better-auth]
+url = "https://mcp.better-auth.com/mcp"
+enabled = true
+
+[mcp_servers.shadcn]
+command = "bunx"
+args = ["shadcn@4.21.0", "mcp"]
+startup_timeout_ms = 20000
