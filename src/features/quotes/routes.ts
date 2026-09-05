@@ -28,11 +28,14 @@ export const quoteRoutes = new Elysia({ name: "quotes", tags: ["Quotes"] })
     "/quotes/recommendations",
     async ({ query, set }) => {
       set.headers["cache-control"] = "private, no-store";
-      return purchaseRecommendations(query.customerId);
+      return purchaseRecommendations(query.customerId, query.selectedProductIds);
     },
     {
       authorize: permissions.quoteWrite,
-      query: t.Object({ customerId: id }),
+      query: t.Object({
+        customerId: id,
+        selectedProductIds: t.Optional(t.Array(id, { maxItems: 100 })),
+      }),
       response: { 200: recommendationsModel, ...apiErrorResponses },
     },
   )

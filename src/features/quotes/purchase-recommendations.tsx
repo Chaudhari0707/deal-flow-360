@@ -30,12 +30,15 @@ export function PurchaseRecommendations({
   pricelists?: Record<string, number>;
   tier: string;
 }) {
+  const selectedProductIds = [...new Set(existingIds)].sort();
   const { data, error, isLoading, mutate } = useSWR(
-    customerId
-      ? `/api/v1/quotes/recommendations?customerId=${encodeURIComponent(customerId)}`
-      : null,
+    customerId ? ["/api/v1/quotes/recommendations", customerId, selectedProductIds] : null,
     async () =>
-      apiData(await apiClient.api.v1.quotes.recommendations.get({ query: { customerId } })),
+      apiData(
+        await apiClient.api.v1.quotes.recommendations.get({
+          query: { customerId, selectedProductIds },
+        }),
+      ),
     { keepPreviousData: false },
   );
   const validDiscount =
@@ -59,7 +62,6 @@ export function PurchaseRecommendations({
     return [
       {
         marginCents: line.netCents - line.costCents * line.quantity,
-        maxDiscountBps: Math.min(policy[tier] ?? 0, policy[product.category] ?? 0),
         product,
       },
     ];
@@ -76,7 +78,7 @@ export function PurchaseRecommendations({
               : "Suggestions for the selected customer."}
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-4" aria-live="polite">
         {!customerId ? (
           <p>Select a customer to see recommendations.</p>
         ) : isLoading ? (
@@ -97,8 +99,9 @@ export function PurchaseRecommendations({
             <div key={product.product.id} className="space-y-2">
               <p className="font-medium">{product.product.name}</p>
               <p className="text-xs text-muted-foreground">
-                Max discount {(product.maxDiscountBps / 100).toFixed(2)}% · Margin{" "}
-                {money(product.marginCents)}
+                {product.product.promoted && product.product.promotionBps > 0
+                  ? `Promotion discount ${(product.product.promotionBps / 100).toFixed(2)}%`
+                  : `Estimated margin ${money(product.marginCents)}`}
               </p>
               <div>
                 <Button

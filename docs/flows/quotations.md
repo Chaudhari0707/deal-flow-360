@@ -138,11 +138,14 @@ Source: [pricing rules](../../src/features/quotes/rules.ts),
 
 ## Recommendations and add-ons
 
-**Recommended products** uses the selected customer's latest order, taking up to six active products.
-If the customer has no orders, it uses up to six best sellers ranked by ordered quantity with stable
+**Recommended products** uses the selected customer's latest order, taking up to five active products.
+If the customer has no orders, it uses up to five best sellers ranked by ordered quantity with stable
 ID tie-breaking. If the latest order's products are inactive, the result can be empty; it does not
-fall back to best sellers in that case. Already-added products are hidden. Changing the customer
-uses a different request key and does not retain the previous customer's suggestions. Loading,
+fall back to best sellers in that case. Selected products are excluded before limiting results.
+Adding a product fetches the next eligible suggestions; removing it makes it eligible again.
+Promoted products show only their promotion discount; others show only estimated one-unit margin
+(current tier and order discount). A 5% promoted care plan therefore shows its discount, not both metrics.
+Changing the customer or selected product IDs uses a different request key and does not retain stale suggestions. Loading,
 empty, error/retry, and invalid-order-discount states appear in the card.
 
 **A better fit for this deal** uses catalog product pairings. It excludes inactive, dismissed, and

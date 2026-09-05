@@ -64,6 +64,16 @@ for (const role of ["manager", "finance", "admin", "rep", "ops", "customer"]) {
     expect(initial.sales.metrics.ordersConfirmed).toBe(workspace.orders.length);
     await page.getByRole("link", { name: "Reports", exact: true }).click();
     await expect(page.getByRole("heading", { name: "Reports", exact: true })).toBeVisible();
+    const showFilters = page.getByRole("button", { name: "Show filters", exact: true });
+    await expect(showFilters).toHaveAttribute("aria-expanded", "false");
+    await expect(page.getByLabel("From", { exact: true })).toBeHidden();
+    await showFilters.focus();
+    await page.keyboard.press("Enter");
+    await expect(page.getByRole("button", { name: "Hide filters", exact: true })).toHaveAttribute(
+      "aria-expanded",
+      "true",
+    );
+    await expect(page.getByLabel("From", { exact: true })).toBeVisible();
     for (const [label, value] of [
       ["Net billed", rupees(initial.totals.billedCents)],
       ["Payments collected", rupees(initial.totals.paidCents)],
@@ -128,6 +138,24 @@ for (const role of ["manager", "finance", "admin", "rep", "ops", "customer"]) {
       if (filter.key === "customerId") {
         expect(filtered.rows.every((row) => row.customer === customer.name)).toBe(true);
         expect(filtered.sales.quotes.every((row) => row.customer === customer.name)).toBe(true);
+        await page.getByRole("button", { name: "Hide filters", exact: true }).click();
+        await expect(
+          page.getByRole("combobox", { name: "Report customer", exact: true }),
+        ).toBeHidden();
+        await expect(page.getByText("1 active filter", { exact: true })).toBeVisible();
+        await expect(
+          page.getByText(`${filtered.rows.length} financial records`, { exact: true }),
+        ).toBeVisible();
+        await showFilters.click();
+        await page.getByRole("combobox", { name: "Report customer", exact: true }).click();
+        await expect(
+          page.getByRole("option", {
+            name: customer.name,
+            exact: true,
+            selected: true,
+          }),
+        ).toBeVisible();
+        await page.keyboard.press("Escape");
       }
       if (filter.key === "status") {
         expect(filtered.rows.every((row) => row.status === "PAID")).toBe(true);
