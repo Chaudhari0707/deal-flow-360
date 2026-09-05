@@ -9,8 +9,10 @@
   omits required modern account identity fields; credential integration must verify the migration.
 - Credential forms use `method="post"` and wait for hydration before client submission, so a native
   fallback cannot put passwords in a GET URL.
-- Keep `BETTER_AUTH_SECRET` server-only and at least 32 bytes. `BETTER_AUTH_URL`, trusted origins,
-  Playwright base URL, and cookie host must use the same canonical origin.
+- Keep `BETTER_AUTH_SECRET` server-only and at least 32 bytes. `BETTER_AUTH_URL` selects the canonical
+  origin. Only its same-scheme, same-port `localhost`/`127.0.0.1` alias is additionally trusted;
+  reuse `trustedOrigins` for HTTP and WebSocket origin checks. Missing/foreign mutation origins are
+  rejected. Cookies remain host-scoped, so changing aliases requires a separate sign-in.
 - Protected server actions and Elysia handlers validate the session server-side. Hiding UI is never
   authorization.
 - Open signup, email verification, reset callbacks, session duration/revocation, roles, and account

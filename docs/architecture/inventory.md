@@ -90,8 +90,12 @@ Run `bun run realtime` alongside Next.js. The default WebSocket port is 3101, bo
 loopback; tests use 3102. The client derives its feed port as the current app port plus 101. The
 `REALTIME_PORT` server setting must match this local convention.
 
-`/stock` upgrades only for a permitted Origin and a valid internal Better Auth session. Cookies remain
-HTTP-only. The feed rechecks sessions and roles every 30 seconds. Each connection receives a full
+`/stock` upgrades only for a permitted Origin and a valid internal Better Auth session. It shares
+HTTP authentication's [loopback alias policy](../engineering/local-runtime.md#loopback-aliases-and-sign-in):
+only the configured app origin and its same-scheme, same-port `localhost` / `127.0.0.1` alias are
+accepted. Missing Origin remains forbidden. The CSP explicitly permits `ws://localhost` and
+`ws://127.0.0.1` on the documented companion ports 3101 and 3102, without a wildcard. Cookies remain
+HTTP-only and scoped to their hostname. The feed rechecks sessions and roles every 30 seconds. Each connection receives a full
 `stock.snapshot` containing committed stock values and revisions. Once per second, a single bounded
 poll reads up to 1,000 balances and broadcasts only when the snapshot changed. A reconnect receives
 a new authoritative snapshot and revalidates affected SWR keys. It does not assume missed events

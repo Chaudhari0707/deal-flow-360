@@ -2,6 +2,7 @@ import type { ServerWebSocket } from "bun";
 
 import { startBillingScheduler } from "@/features/billing/scheduler";
 import { inventorySnapshot } from "@/features/inventory/queries";
+import { trustedOrigins } from "@/lib/auth/create-auth";
 import { requireActor } from "@/server/access";
 
 interface StockSocketData {
@@ -27,7 +28,9 @@ const server = Bun.serve<StockSocketData>({
         billing: billing?.state ?? { enabled: false },
       });
     if (url.pathname !== "/stock") return new Response("Not found", { status: 404 });
-    if (request.headers.get("origin") !== new URL(Bun.env.BETTER_AUTH_URL!).origin)
+    const origin = request.headers.get("origin");
+    const baseURL = Bun.env.BETTER_AUTH_URL;
+    if (!origin || !baseURL || !trustedOrigins(baseURL).includes(origin))
       return new Response("Origin not allowed", { status: 403 });
     try {
       await requireActor(request, ["admin", "ops", "manager", "rep"]);

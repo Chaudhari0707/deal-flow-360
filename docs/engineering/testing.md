@@ -27,8 +27,11 @@ the real Better Auth email/password endpoint and writes ignored storage state. O
 `*.authenticated.spec.ts` consumes that state. Login, logout, invalid-credential, verification, and
 password-reset UI tests run without stored state.
 
-Use the single canonical host `127.0.0.1`; switching between it and `localhost` breaks cookie-domain
-assumptions. The local web server is considered ready only when `/api/v1/health` responds.
+The default browser suite uses `127.0.0.1`. The [loopback alias policy](local-runtime.md#loopback-aliases-and-sign-in)
+also permits `localhost` with the same scheme and app port; alias tests must create their own real
+session on that hostname rather than copying a cookie across hosts. Test foreign, missing, `null`,
+and wrong-port mutation/WebSocket origins as denied cases. The local web server is considered ready
+only when `/api/v1/health` responds.
 
 ## Regression proof
 
