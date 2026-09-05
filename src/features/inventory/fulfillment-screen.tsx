@@ -11,7 +11,6 @@ import { DataTable } from "@/components/ui/data-table";
 import type { FulfillmentList } from "@/features/inventory/_types/ui";
 import { displayFulfillmentStatus } from "@/features/inventory/fulfillment-copy";
 import { FulfillmentDetailDialog } from "@/features/inventory/fulfillment-detail";
-import { InventoryScreen } from "@/features/inventory/inventory-screen";
 import { PageHeader } from "@/features/shell/page-header";
 import { WorkspaceState } from "@/features/shell/workspace-state";
 import { apiClient, apiData } from "@/lib/api/client";
@@ -82,7 +81,6 @@ export function FulfillmentScreen() {
           />
         </CardContent>
       </Card>
-      <InventoryScreen />
       {selectedOrder && (
         <FulfillmentDetailDialog
           id={selectedOrder.id}

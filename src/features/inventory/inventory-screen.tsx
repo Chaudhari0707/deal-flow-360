@@ -49,14 +49,18 @@ export function InventoryScreen() {
   const workspace = useWorkspace();
   const live = useStockFeed();
   if (!data) return <WorkspaceState error={error} retry={() => void mutate()} />;
-  const canRestock = workspace.data?.actor.role === "admin";
+  const canRestock = workspace.data?.actor.role === "admin" || workspace.data?.actor.role === "ops";
   const locations = selectedProductId ? restockLocations(data, selectedProductId) : [];
   const stock = locations[0];
   return (
     <>
       <PageHeader
         title="Inventory"
-        description="Select a product to receive stock. Choose the warehouse in the receipt dialog; its current quantity is shown there."
+        description={
+          canRestock
+            ? "Select a product to receive stock. Choose the warehouse in the receipt dialog; its current quantity is shown there."
+            : "Review stockable products and select one to receive stock at a warehouse."
+        }
         actions={
           <>
             {live ? <Badge variant="outline">{live}</Badge> : null}

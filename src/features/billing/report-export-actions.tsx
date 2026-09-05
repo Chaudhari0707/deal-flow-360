@@ -2,32 +2,36 @@ import { DownloadIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 
-export function ReportExportActions({ enabled, url }: { enabled: boolean; url: string }) {
-  return (
-    <>
-      {(
-        [
-          { format: "pdf", label: "PDF", name: "Download report PDF", variant: "outline" },
-          { format: "xlsx", label: "Excel", name: "Download report Excel", variant: "default" },
-        ] as const
-      ).map((item) =>
-        enabled ? (
-          <Button
-            key={item.format}
-            variant={item.variant}
-            nativeButton={false}
-            render={<a aria-label={item.name} href={`${url}&format=${item.format}`} />}
-          >
-            <DownloadIcon />
-            {item.label}
-          </Button>
-        ) : (
-          <Button key={item.format} variant={item.variant} disabled aria-label={item.name}>
-            <DownloadIcon />
-            {item.label}
-          </Button>
-        ),
-      )}
-    </>
+export function ReportExportActions({
+  enabled,
+  format,
+  url,
+}: {
+  enabled: boolean;
+  format: "pdf" | "xlsx";
+  url: string;
+}) {
+  const item =
+    format === "pdf"
+      ? { label: "Download PDF", name: "Download sales report PDF", variant: "outline" as const }
+      : {
+          label: "Download Excel",
+          name: "Download financial report Excel",
+          variant: "default" as const,
+        };
+  return enabled ? (
+    <Button
+      variant={item.variant}
+      nativeButton={false}
+      render={<a aria-label={item.name} href={`${url}&format=${format}`} />}
+    >
+      <DownloadIcon />
+      {item.label}
+    </Button>
+  ) : (
+    <Button variant={item.variant} disabled aria-label={item.name}>
+      <DownloadIcon />
+      {item.label}
+    </Button>
   );
 }

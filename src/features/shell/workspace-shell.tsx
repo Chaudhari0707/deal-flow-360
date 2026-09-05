@@ -74,6 +74,12 @@ const navigation = [
         roles: permissions.fulfillment,
       },
       {
+        title: "Inventory",
+        href: "/inventory",
+        icon: Warehouse,
+        roles: permissions.stockRead,
+      },
+      {
         title: "Subscriptions",
         href: "/subscriptions",
         icon: RefreshCw,
@@ -93,12 +99,6 @@ const navigation = [
         roles: permissions.reports,
       },
       { title: "Product catalog", href: "/catalog", icon: Boxes, roles: ["admin", "manager"] },
-      {
-        title: "Inventory",
-        href: "/inventory",
-        icon: Warehouse,
-        roles: ["admin"],
-      },
       { title: "Settings", href: "/settings", icon: Settings2, roles: ["admin", "manager"] },
     ],
   },

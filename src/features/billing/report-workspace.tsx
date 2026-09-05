@@ -23,6 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ReportExportActions } from "@/features/billing/report-export-actions";
 import { reportColumns, salesColumns } from "@/features/billing/table-columns";
 import { money } from "@/features/shell/format";
@@ -40,6 +41,7 @@ function isApprovalStatus(
 export function ReportWorkspace() {
   const workspace = useWorkspace();
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [reportTab, setReportTab] = useState<"sales" | "financial">("sales");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [customerId, setCustomerId] = useState("all");
@@ -101,6 +103,7 @@ export function ReportWorkspace() {
         actions={
           <ReportExportActions
             enabled={!invalid && Boolean(report.data) && !report.isValidating && !report.error}
+            format={reportTab === "sales" ? "pdf" : "xlsx"}
             url={url}
           />
         }
@@ -287,74 +290,87 @@ export function ReportWorkspace() {
       ) : report.error || !report.data || report.isLoading ? (
         <WorkspaceState error={report.error} retry={() => void report.mutate()} />
       ) : (
-        <>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {[
-              { label: "Quotes created", value: String(report.data.sales.metrics.quotesCreated) },
-              {
-                label: "Orders confirmed",
-                value: String(report.data.sales.metrics.ordersConfirmed),
-              },
-              {
-                label: "Average approval time",
-                value:
-                  report.data.sales.metrics.averageApprovalHours === null
-                    ? "No completed cycles"
-                    : `${report.data.sales.metrics.averageApprovalHours.toFixed(2)} hours`,
-              },
-              {
-                label: "Top upsold product",
-                value: report.data.sales.metrics.topUpsoldProduct
-                  ? `${report.data.sales.metrics.topUpsoldProduct.name} · ${report.data.sales.metrics.topUpsoldProduct.quantity} units`
-                  : "No confirmed upsells",
-              },
-            ].map((metric) => (
-              <Card key={metric.label}>
-                <CardHeader>
-                  <CardDescription>{metric.label}</CardDescription>
-                  <CardTitle className="text-xl tabular-nums">{metric.value}</CardTitle>
-                </CardHeader>
-              </Card>
-            ))}
-          </div>
-          <Card>
-            <CardContent>
-              <DataTable
-                title="Quotations and confirmed orders"
-                description={`Ordered value ${money(report.data.sales.metrics.orderedCents)}.`}
-                columns={salesColumns}
-                data={[...report.data.sales.quotes, ...report.data.sales.orders]}
-                getRowId={(row) => `${row.kind}:${row.id}`}
-                emptyMessage="No sales records match these filters."
-              />
-            </CardContent>
-          </Card>
-          <div className="grid gap-4 sm:grid-cols-3">
-            {[
-              { label: "Net billed", value: report.data.totals.billedCents },
-              { label: "Payments collected", value: report.data.totals.paidCents },
-              { label: "Outstanding", value: report.data.totals.outstandingCents },
-            ].map((metric) => (
-              <Card key={metric.label}>
-                <CardHeader>
-                  <CardDescription>{metric.label}</CardDescription>
-                  <CardTitle className="text-2xl tabular-nums">{money(metric.value)}</CardTitle>
-                </CardHeader>
-              </Card>
-            ))}
-          </div>
-          <Card>
-            <CardContent>
-              <DataTable
-                title={`${report.data.rows.length} financial records`}
-                columns={reportColumns}
-                data={report.data.rows}
-                getRowId={(row) => row.number}
-                emptyMessage="No records match these filters."
-              />
-            </CardContent>
-          </Card>
-        </>
+        <Tabs
+          value={reportTab}
+          onValueChange={(value) => {
+            if (value === "sales" || value === "financial") setReportTab(value);
+          }}
+        >
+          <TabsList aria-label="Report type">
+            <TabsTrigger value="sales">Sales report</TabsTrigger>
+            <TabsTrigger value="financial">Financial report</TabsTrigger>
+          </TabsList>
+          <TabsContent value="sales" className="space-y-4">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {[
+                { label: "Quotes created", value: String(report.data.sales.metrics.quotesCreated) },
+                {
+                  label: "Orders confirmed",
+                  value: String(report.data.sales.metrics.ordersConfirmed),
+                },
+                {
+                  label: "Average approval time",
+                  value:
+                    report.data.sales.metrics.averageApprovalHours === null
+                      ? "No completed cycles"
+                      : `${report.data.sales.metrics.averageApprovalHours.toFixed(2)} hours`,
+                },
+                {
+                  label: "Top upsold product",
+                  value: report.data.sales.metrics.topUpsoldProduct
+                    ? `${report.data.sales.metrics.topUpsoldProduct.name} · ${report.data.sales.metrics.topUpsoldProduct.quantity} units`
+                    : "No confirmed upsells",
+                },
+              ].map((metric) => (
+                <Card key={metric.label}>
+                  <CardHeader>
+                    <CardDescription>{metric.label}</CardDescription>
+                    <CardTitle className="text-xl tabular-nums">{metric.value}</CardTitle>
+                  </CardHeader>
+                </Card>
+              ))}
+            </div>
+            <Card>
+              <CardContent>
+                <DataTable
+                  title="Quotations and confirmed orders"
+                  description={`Ordered value ${money(report.data.sales.metrics.orderedCents)}.`}
+                  columns={salesColumns}
+                  data={[...report.data.sales.quotes, ...report.data.sales.orders]}
+                  getRowId={(row) => `${row.kind}:${row.id}`}
+                  emptyMessage="No sales records match these filters."
+                />
+              </CardContent>
+            </Card>
+          </TabsContent>
+          <TabsContent value="financial" className="space-y-4">
+            <div className="grid gap-4 sm:grid-cols-3">
+              {[
+                { label: "Net billed", value: report.data.totals.billedCents },
+                { label: "Payments collected", value: report.data.totals.paidCents },
+                { label: "Outstanding", value: report.data.totals.outstandingCents },
+              ].map((metric) => (
+                <Card key={metric.label}>
+                  <CardHeader>
+                    <CardDescription>{metric.label}</CardDescription>
+                    <CardTitle className="text-2xl tabular-nums">{money(metric.value)}</CardTitle>
+                  </CardHeader>
+                </Card>
+              ))}
+            </div>
+            <Card>
+              <CardContent>
+                <DataTable
+                  title={`${report.data.rows.length} financial records`}
+                  columns={reportColumns}
+                  data={report.data.rows}
+                  getRowId={(row) => row.number}
+                  emptyMessage="No records match these filters."
+                />
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       )}
     </>
   );
