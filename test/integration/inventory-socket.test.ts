@@ -92,6 +92,7 @@ test("real socket authenticates, delivers committed restock, and reloads latest 
           (entry): entry is [string, string] => typeof entry[1] === "string",
         ),
       ),
+      AUTOMATIC_BILLING: "false",
       REALTIME_PORT: "43101",
     },
     stdout: "pipe",
@@ -108,15 +109,28 @@ test("real socket authenticates, delivers committed restock, and reloads latest 
     ]);
     reader.releaseLock();
     expect(new TextDecoder().decode(started.value)).toContain("Stock WebSocket listening");
-    const origin = Bun.env.BETTER_AUTH_URL!;
+    const origin = new URL(Bun.env.BETTER_AUTH_URL!).origin;
+    const alias = new URL(origin);
+    alias.hostname = alias.hostname === "localhost" ? "127.0.0.1" : "localhost";
+    const wrongPort = new URL(origin);
+    wrongPort.port = String(Number(wrongPort.port || 80) + 1);
+    const aliasWrongPort = new URL(alias);
+    aliasWrongPort.port = wrongPort.port;
     expect((await fetch("http://127.0.0.1:43101/stock", { headers: { origin } })).status).toBe(401);
+    for (const deniedOrigin of [
+      undefined,
+      "null",
+      "https://untrusted.example",
+      wrongPort.origin,
+      aliasWrongPort.origin,
+    ]) {
+      const headers = new Headers({ cookie });
+      if (deniedOrigin !== undefined) headers.set("origin", deniedOrigin);
+      expect((await fetch("http://127.0.0.1:43101/stock", { headers })).status).toBe(403);
+    }
     expect(
-      (
-        await fetch("http://127.0.0.1:43101/stock", {
-          headers: { origin: "https://untrusted.example", cookie },
-        })
-      ).status,
-    ).toBe(403);
+      (await fetch("http://127.0.0.1:43101/stock", { headers: { origin: alias.origin } })).status,
+    ).toBe(401);
     const socket = new WebSocket("ws://127.0.0.1:43101/stock", { headers: { cookie, origin } });
     sockets.push(socket);
     await snapshot(socket, id, 1);
@@ -138,6 +152,12 @@ test("real socket authenticates, delivers committed restock, and reloads latest 
     });
     sockets.push(reconnected);
     await snapshot(reconnected, id, 9);
+    const aliasSocket = new WebSocket("ws://localhost:43101/stock", {
+      headers: { cookie, origin: alias.origin },
+    });
+    sockets.push(aliasSocket);
+    await snapshot(aliasSocket, id, 9);
+
     await auth.api.signOut({ headers: new Headers({ cookie }) });
     expect(
       (await fetch("http://127.0.0.1:43101/stock", { headers: { cookie, origin } })).status,
