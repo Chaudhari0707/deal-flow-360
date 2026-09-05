@@ -7,6 +7,7 @@ import {
   messageModel,
   quoteLineModel,
   quoteModel,
+  quoteStatusModel,
 } from "@/server/models";
 
 const nullable = <Schema extends TSchema>(schema: Schema) => t.Union([schema, t.Null()]);
@@ -47,7 +48,7 @@ export const recommendationsModel = t.Object({
 });
 
 export const deliveryResultModel = t.Object({
-  status: t.String(),
+  status: t.Union([t.Literal("SENT"), t.Literal("FAILED")]),
   deliveryId: t.String(),
   message: t.Optional(nullable(t.String())),
 });
@@ -57,7 +58,7 @@ export const publicQuoteModel = t.Object({
   id: t.String(),
   number: t.String(),
   customerId: t.String(),
-  status: t.String(),
+  status: quoteStatusModel,
   revision: t.Integer(),
   approvedRevision: nullable(t.Integer()),
   lines: t.Array(publicQuoteLineModel),

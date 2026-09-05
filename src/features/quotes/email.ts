@@ -1,6 +1,7 @@
 import { and, desc, eq, sql } from "drizzle-orm";
 import { Resend } from "resend";
 
+import { senderAddress } from "@/features/quotes/sender-address";
 import { db } from "@/lib/db/connection";
 import { customers, deliveries, quoteAccess, quotes } from "@/lib/db/schema";
 import type { Actor } from "@/lib/domain/_types/domain";
@@ -89,7 +90,8 @@ export async function sendQuotation(id: string, actor: Actor, renew = false) {
     await audit(tx, actor, id, "EMAIL_QUEUED", "Quotation access email queued");
     return { customer: customer!, delivery: delivery!, quote };
   });
-  if (intent.delivery.status === "SENT") return { status: "SENT", deliveryId: intent.delivery.id };
+  if (intent.delivery.status === "SENT")
+    return { status: "SENT" as const, deliveryId: intent.delivery.id };
   const portalUrl = await open(intent.delivery.encryptedPayload);
   let error: string | null = null,
     providerId: string | null = null;
@@ -112,7 +114,7 @@ export async function sendQuotation(id: string, actor: Actor, renew = false) {
       const origin = new URL(Bun.env.BETTER_AUTH_URL!).origin;
       const result = await new Resend(Bun.env.RESEND_API_KEY).emails.send(
         {
-          from: Bun.env.EMAIL_FROM ?? "DealFlow360 <onboarding@resend.dev>",
+          from: senderAddress(Bun.env.EMAIL_FROM ?? "DealFlow360 <onboarding@resend.dev>"),
           html: `<!DOCTYPE html><html><head><meta charset="utf-8"><style>body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;background-color:#f8fafc;margin:0;padding:24px;color:#0f172a;}.card{max-width:560px;margin:0 auto;background:#ffffff;border-radius:12px;border:1px solid #e2e8f0;overflow:hidden;}.header{padding:28px 32px 20px;border-bottom:1px solid #f1f5f9;text-align:center;}.logo{height:40px;width:auto;max-width:180px;}.content{padding:32px;}.title{font-size:20px;font-weight:700;margin:0 0 12px;color:#0f172a;}.text{font-size:15px;line-height:24px;color:#475569;margin:0 0 20px;}.btn{display:inline-block;background-color:#0284c7;color:#ffffff;font-weight:600;font-size:15px;padding:12px 28px;border-radius:8px;text-decoration:none;text-align:center;}.footer{padding:20px 32px;background:#f8fafc;border-top:1px solid #f1f5f9;font-size:12px;color:#94a3b8;text-align:center;}</style></head><body><div class="card"><div class="header"><img src="${origin}/logo.png" alt="DealFlow360" class="logo" /></div><div class="content"><h1 class="title">Quotation ${intent.quote.number}</h1><p class="text">Hello ${intent.customer.name},</p><p class="text">Your quotation is ready for review. Open your private customer portal to ask questions, propose adjustments, or accept the approved terms:</p><div style="text-align:center;margin:28px 0;"><a href="${portalUrl}" class="btn" style="color:#ffffff;">Open Quotation</a></div><p class="text" style="font-size:13px;color:#64748b;">This secure access link expires in 24 hours.<br/><a href="${portalUrl}" style="color:#0284c7;word-break:break-all;">${portalUrl}</a></p></div><div class="footer">DealFlow360 · Sales Flow. Smarter.</div></div></body></html>`,
           subject: `${intent.quote.number} — your quotation is ready`,
           text: `Hello ${intent.customer.name},\n\nYour quotation is ready for review. Open your private quotation to ask questions, propose changes, or accept the approved terms:\n${portalUrl}\n\nThis access link expires in 24 hours.\nDealFlow360`,
@@ -164,5 +166,7 @@ export async function sendQuotation(id: string, actor: Actor, renew = false) {
     );
     return updated!;
   });
+  if (outcome.status !== "SENT" && outcome.status !== "FAILED")
+    throw new DomainError("Email delivery did not reach a final state", 503);
   return { status: outcome.status, message: outcome.error, deliveryId: intent.delivery.id };
 }

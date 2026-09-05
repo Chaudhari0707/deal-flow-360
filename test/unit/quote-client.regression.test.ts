@@ -1,5 +1,6 @@
 import { afterAll, expect, test } from "bun:test";
 
+import { assertQuoteAction } from "@/features/quotes/client-action";
 import { apiClient, apiData } from "@/lib/api/client";
 
 const originalFetch = globalThis.fetch;
@@ -58,4 +59,15 @@ test("Eden uses relative same-origin URLs and encodes typed query values", async
 
   expect(apiData(result)).toEqual({ productIds: [], source: "last_purchase" });
   expect(requested).toBe("/api/v1/quotes/recommendations?customerId=customer%2Fa%20%26%20b");
+});
+
+test("HTTP 200 with FAILED status is treated as a failed board action", () => {
+  expect(() =>
+    assertQuoteAction({
+      message:
+        "Email provider rejected the send. Check the configured sender and recipient, then retry.",
+      status: "FAILED",
+    }),
+  ).toThrow("Email provider rejected the send");
+  expect(assertQuoteAction({ status: "SENT" })).toEqual({ status: "SENT" });
 });

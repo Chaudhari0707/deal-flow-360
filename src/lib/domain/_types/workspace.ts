@@ -5,4 +5,4 @@ import type { JsonTransport } from "@/lib/api/_types/client";
 
 export type Serialized<Data> = JsonTransport<Data>;
 export type Workspace = Omit<WorkspaceResponse, "asOf"> & { asOf?: string };
-type WorkspaceResponse = JsonTransport<Static<typeof workspaceResponseModel>>;
+export type WorkspaceResponse = JsonTransport<Static<typeof workspaceResponseModel>>;

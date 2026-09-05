@@ -11,6 +11,25 @@ export const roleModel = t.Union([
   t.Literal("rep"),
 ]);
 
+export const quoteStatusModel = t.Union([
+  t.Literal("DRAFT"),
+  t.Literal("PENDING_APPROVAL"),
+  t.Literal("APPROVED"),
+  t.Literal("SENT"),
+  t.Literal("UNDER_NEGOTIATION"),
+  t.Literal("CONFIRMED"),
+  t.Literal("RETURNED"),
+  t.Literal("REJECTED"),
+]);
+
+export const quoteRiskModel = t.Union([t.Literal("NONE"), t.Literal("MEDIUM"), t.Literal("HIGH")]);
+
+export const deliveryStatusModel = t.Union([
+  t.Literal("PENDING"),
+  t.Literal("SENT"),
+  t.Literal("FAILED"),
+]);
+
 export const actorModel = t.Object({
   customerId: nullable(t.String()),
   email: t.String({ format: "email" }),
@@ -76,7 +95,7 @@ export const riskSnapshotModel = t.Object({
     }),
   ),
   maxOverBps: t.Integer(),
-  risk: t.Union([t.Literal("NONE"), t.Literal("MEDIUM"), t.Literal("HIGH")]),
+  risk: quoteRiskModel,
   sumOverBps: t.Integer(),
 });
 
@@ -85,13 +104,13 @@ export const quoteModel = t.Object({
   number: t.String(),
   customerId: t.String(),
   ownerId: t.String(),
-  status: t.String(),
+  status: quoteStatusModel,
   revision: t.Integer(),
   approvedRevision: nullable(t.Integer()),
-  approvalStep: nullable(t.String()),
+  approvalStep: nullable(t.Union([t.Literal("manager"), t.Literal("finance")])),
   lines: t.Array(quoteLineModel),
   orderDiscountBps: t.Integer(),
-  risk: t.String(),
+  risk: quoteRiskModel,
   riskSnapshot: nullable(riskSnapshotModel),
   subtotalCents: t.Integer(),
   taxCents: t.Integer(),
@@ -251,7 +270,7 @@ export const deliveryModel = t.Object({
   id: t.String(),
   quoteId: t.String(),
   revision: t.Integer(),
-  status: t.String(),
+  status: deliveryStatusModel,
   providerId: nullable(t.String()),
   error: nullable(t.String()),
   attempts: t.Integer(),

@@ -3,27 +3,19 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowUpRight, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
 
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { DataTable } from "@/components/ui/data-table";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { QuoteBoard } from "@/features/quotes/quote-board";
 import { quoteColumns } from "@/features/quotes/quote-columns";
 import { money } from "@/features/quotes/rules";
 import { PageHeader } from "@/features/shell/page-header";
 import { useWorkspace } from "@/features/shell/use-workspace";
 import { WorkspaceState } from "@/features/shell/workspace-state";
-
-const stages = [
-  { label: "Draft", statuses: ["DRAFT", "RETURNED"] },
-  { label: "In approval", statuses: ["PENDING_APPROVAL"] },
-  { label: "Approved", statuses: ["APPROVED"] },
-  { label: "Negotiation", statuses: ["SENT", "UNDER_NEGOTIATION"] },
-  { label: "Confirmed", statuses: ["CONFIRMED"] },
-];
 
 export function QuoteList({ approvals = false }: { approvals?: boolean }) {
   const { data, error, mutate } = useWorkspace();
@@ -102,60 +94,13 @@ export function QuoteList({ approvals = false }: { approvals?: boolean }) {
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
-        <TabsContent value="board">
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-            {stages.map((stage) => {
-              const rows = visible.filter((q) => stage.statuses.includes(q.status));
-              return (
-                <Card key={stage.label} className="bg-muted/30">
-                  <CardHeader>
-                    <CardTitle className="flex items-center justify-between text-sm">
-                      {stage.label}
-                      <Badge variant="outline">{rows.length}</Badge>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    {rows.map((q) => (
-                      <Card key={q.id} className="shadow-none">
-                        <CardHeader className="gap-2">
-                          <CardDescription className="text-xs">{q.number}</CardDescription>
-                          <CardTitle className="text-sm">
-                            {data.customers.find((c) => c.id === q.customerId)?.name}
-                          </CardTitle>
-                          <p className="text-lg font-semibold tabular-nums">
-                            {money(q.totalCents)}
-                          </p>
-                          <div className="flex items-center justify-between">
-                            <Badge variant={q.risk === "HIGH" ? "destructive" : "secondary"}>
-                              {q.risk === "NONE" ? "Within policy" : `${q.risk} risk`}
-                            </Badge>
-                            <Button
-                              size="icon-sm"
-                              variant="ghost"
-                              nativeButton={false}
-                              render={
-                                <Link
-                                  aria-label={`Open ${q.number}`}
-                                  href={`/quotations/${q.id}`}
-                                />
-                              }
-                            >
-                              <ArrowUpRight />
-                            </Button>
-                          </div>
-                        </CardHeader>
-                      </Card>
-                    ))}
-                    {!rows.length && (
-                      <p className="py-6 text-center text-sm text-muted-foreground">
-                        No deals in this stage
-                      </p>
-                    )}
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
+        <TabsContent value="board" className="overflow-visible">
+          <QuoteBoard
+            quotes={visible}
+            customers={data.customers}
+            role={data.actor.role}
+            mutate={mutate}
+          />
         </TabsContent>
         <TabsContent value="table">
           <Card>

@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { ThemeToggle } from "@/features/shell/theme-toggle";
 import { apiClient, apiData } from "@/lib/api/client";
 import { authClient } from "@/lib/auth/client";
 
@@ -60,7 +61,10 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
   }
 
   return (
-    <main className="flex min-h-svh flex-col items-center justify-center gap-8 bg-muted p-6 md:p-10">
+    <main className="relative flex min-h-svh flex-col items-center justify-center gap-8 bg-muted p-6 md:p-10">
+      <div className="absolute top-4 right-4">
+        <ThemeToggle />
+      </div>
       <div className="flex w-full max-w-sm flex-col gap-6">
         <Link href="/" className="flex items-center justify-center self-center py-2">
           <Image
