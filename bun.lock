@@ -15,7 +15,6 @@
         "class-variance-authority": "0.7.1",
         "clsx": "2.1.1",
         "cmdk": "^1.1.1",
-        "cn": "^0.2.5",
         "drizzle-orm": "0.45.2",
         "drizzle-seed": "0.3.1",
         "elysia": "1.4.30",

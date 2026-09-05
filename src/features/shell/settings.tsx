@@ -58,7 +58,11 @@ function PolicyForm({
       <CardHeader>
         <CardTitle>{displayStatus(setting.id)}</CardTitle>
         <CardDescription>
-          Percentage policies use basis points: 100 basis points = 1%.
+          {setting.id === "pricelists"
+            ? "Hardware price factors: 9,000 basis points means 90% of the catalog price. New and edited drafts use these prices."
+            : setting.id === "health"
+              ? "Day thresholds control follow-ups; the anomaly threshold uses basis points (100 = 1%)."
+              : "Percentage policies use basis points: 100 basis points = 1%."}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -73,9 +77,23 @@ function PolicyForm({
                     name={key}
                     type="number"
                     required
-                    min="0"
+                    min={
+                      (setting.id === "health" && key !== "anomalyBps") || key.startsWith("high")
+                        ? 1
+                        : 0
+                    }
                     step="1"
-                    max="10000"
+                    max={
+                      setting.id === "health"
+                        ? key === "historyDays"
+                          ? 365
+                          : key === "staleDays"
+                            ? 90
+                            : key === "approvalDays" || key === "overdueDays"
+                              ? 60
+                              : 10000
+                        : 10000
+                    }
                     defaultValue={value}
                   />
                 </Field>

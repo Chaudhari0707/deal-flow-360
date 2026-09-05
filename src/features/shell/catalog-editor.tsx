@@ -12,7 +12,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
+import {
+  Field,
+  FieldDescription,
+  FieldGroup,
+  FieldLabel,
+  FieldLegend,
+  FieldSet,
+} from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -22,6 +29,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { useWorkspace } from "@/features/shell/use-workspace";
 import type { Workspace } from "@/lib/domain/_types/workspace";
 import { fetchJson, HttpResponseError } from "@/lib/swr/fetcher";
 
@@ -43,6 +51,11 @@ export function CatalogEditor({
   const [stockable, setStockable] = useState(product?.stockable ?? false);
   const [active, setActive] = useState(product?.active ?? true);
   const [promoted, setPromoted] = useState(product?.promoted ?? false);
+  const [pairedProductIds, setPairedProductIds] = useState(
+    () => product?.pairedProductIds.filter((id) => id !== product.id) ?? [],
+  );
+  const { data } = useWorkspace();
+  const pairingChoices = data?.products.filter((candidate) => candidate.id !== product?.id) ?? [];
   const existing = kind === "product" ? product : customer;
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -62,10 +75,7 @@ export function CatalogEditor({
             taxBps: numeric("tax", 100),
             intervalMonths: numeric("interval"),
             promotionBps: numeric("promotion", 100),
-            pairedProductIds: value("paired")
-              .split(",")
-              .map((id) => id.trim())
-              .filter(Boolean),
+            pairedProductIds,
             stockable,
             active,
             promoted,
@@ -110,7 +120,7 @@ export function CatalogEditor({
           </DialogTitle>
           <DialogDescription>
             {kind === "product"
-              ? "Catalog changes apply to new quotation lines. Existing quotes keep their pricing snapshots."
+              ? "Each variant is a separate SKU with its own final unit price. Catalog changes apply to new quotation lines; existing quotes keep their pricing snapshots."
               : "Manage the customer details used for quotations and billing."}
           </DialogDescription>
         </DialogHeader>
@@ -281,17 +291,44 @@ export function CatalogEditor({
                     />
                   </Field>
                 </div>
-                <Field>
-                  <FieldLabel htmlFor="catalog-paired">
-                    Paired product IDs (comma separated)
-                  </FieldLabel>
-                  <Input
-                    id="catalog-paired"
-                    name="paired"
-                    maxLength={2000}
-                    defaultValue={product?.pairedProductIds.join(", ")}
-                  />
-                </Field>
+                <FieldSet>
+                  <FieldLegend>Suggested pairings</FieldLegend>
+                  <FieldDescription>
+                    Optionally choose up to 20 products to recommend alongside this item.
+                  </FieldDescription>
+                  <FieldGroup className="max-h-48 gap-3 overflow-y-auto rounded-lg border p-3">
+                    {pairingChoices.map((candidate) => {
+                      const checked = pairedProductIds.includes(candidate.id);
+                      return (
+                        <Field key={candidate.id} orientation="horizontal">
+                          <Checkbox
+                            id={`catalog-pair-${candidate.id}`}
+                            checked={checked}
+                            disabled={!checked && pairedProductIds.length >= 20}
+                            onCheckedChange={(selected) =>
+                              setPairedProductIds((current) =>
+                                selected
+                                  ? current.includes(candidate.id)
+                                    ? current
+                                    : [...current, candidate.id]
+                                  : current.filter((id) => id !== candidate.id),
+                              )
+                            }
+                          />
+                          <FieldLabel htmlFor={`catalog-pair-${candidate.id}`}>
+                            {candidate.name} · {candidate.variant}
+                            {candidate.active ? "" : " (inactive)"}
+                          </FieldLabel>
+                        </Field>
+                      );
+                    })}
+                    {!pairingChoices.length && (
+                      <FieldDescription>
+                        No other products are available to pair yet.
+                      </FieldDescription>
+                    )}
+                  </FieldGroup>
+                </FieldSet>
                 <div className="flex flex-wrap gap-6">
                   <Field orientation="horizontal">
                     <Checkbox

@@ -13,5 +13,7 @@
   announcements when adapting generated components.
 - Use theme tokens rather than one-off colors and the shared `cn` helper for class composition.
 - Do not edit generated primitives for a single screen when composition or a feature wrapper suffices.
+- Give submit buttons `type="submit"`; Base UI buttons otherwise use button behavior. Set
+  `nativeButton={false}` when a Button renders a link. Preserve real disabled behavior for links.
 - Prefer composition from the inspected block and existing primitives. Extract shared behavior only
   after a repeated use case proves the abstraction; do not duplicate component variants per screen.
