@@ -8,7 +8,7 @@ function securityHeaders() {
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: blob:",
     "font-src 'self' data:",
-    "connect-src 'self'",
+    "connect-src 'self' ws://127.0.0.1:3101 ws://127.0.0.1:3102",
     "frame-src 'self'",
     "object-src 'none'",
     "base-uri 'self'",
@@ -31,6 +31,9 @@ function securityHeaders() {
 }
 
 const nextConfig: NextConfig = {
+  distDir: Bun.env.NEXT_DIST_DIR ?? ".next",
+  logging: { incomingRequests: { ignore: [/\/portal\/access/] } },
+  serverExternalPackages: ["exceljs", "pdf-lib"],
   allowedDevOrigins: ["127.0.0.1"],
   cacheComponents: true,
   reactCompiler: true,

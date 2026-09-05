@@ -1,5 +1,6 @@
 /node_modules/
 /.next/
+/.next-test/
 /out/
 /build/
 /coverage/
@@ -21,3 +22,4 @@ next-env.d.ts
 !.env.test.example
 
 .vercel/
+.local/
