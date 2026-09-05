@@ -2,6 +2,7 @@ import { desc, eq } from "drizzle-orm";
 import { Elysia, t } from "elysia";
 
 import { sendQuotation } from "@/features/quotes/email";
+import { purchaseRecommendations } from "@/features/quotes/recommendations";
 import { approvalAction, confirmQuote, saveQuote, submitQuote } from "@/features/quotes/service";
 import { db } from "@/lib/db/connection";
 import { auditEntries, messages, quotes } from "@/lib/db/schema";
@@ -32,6 +33,15 @@ const body = t.Object(
 );
 
 export const quoteRoutes = new Elysia({ name: "quotes" })
+  .get(
+    "/quotes/recommendations",
+    async ({ query, request, set }) => {
+      await requireActor(request, ["rep", "manager", "admin"]);
+      set.headers["cache-control"] = "private, no-store";
+      return purchaseRecommendations(query.customerId);
+    },
+    { query: t.Object({ customerId: id }) },
+  )
   .post(
     "/quotes",
     async ({ body: b, request }) =>
