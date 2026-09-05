@@ -85,7 +85,7 @@ test("real socket authenticates, delivers committed restock, and reloads latest 
   await db.insert(warehouses).values({ id, name: "Socket Warehouse", shippingWeight: 100 });
   await db.insert(stocks).values({ id, productId: id, warehouseId: id, onHand: 1 });
   const server = Bun.spawn(["bun", "run", "scripts/realtime.ts"], {
-    cwd: import.meta.dir.replace(/\/test\/integration$/, ""),
+    cwd: import.meta.dir.replace(/[\\/]test[\\/]integration$/, ""),
     env: {
       ...Object.fromEntries(
         Object.entries(Bun.env).filter(

@@ -38,7 +38,7 @@ async function successfulRun() {
 
 async function startAndCompleteRun() {
   const child = Bun.spawn(["bun", "run", "scripts/realtime.ts"], {
-    cwd: import.meta.dir.replace(/\/test\/integration$/, ""),
+    cwd: import.meta.dir.replace(/[\\/]test[\\/]integration$/, ""),
     env: {
       ...Object.fromEntries(
         Object.entries(Bun.env).filter(
