@@ -22,6 +22,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
@@ -275,17 +276,19 @@ export function QuoteBoard({
                               Move
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="start">
-                              <DropdownMenuLabel>Move to stage</DropdownMenuLabel>
-                              <DropdownMenuSeparator />
-                              {targets.map((targetId) => (
-                                <DropdownMenuItem
-                                  key={targetId}
-                                  variant={targetId === "rejected" ? "destructive" : "default"}
-                                  onClick={() => requestMove(quote, targetId)}
-                                >
-                                  {BOARD_COLUMNS.find((item) => item.id === targetId)?.label}
-                                </DropdownMenuItem>
-                              ))}
+                              <DropdownMenuGroup>
+                                <DropdownMenuLabel>Move to stage</DropdownMenuLabel>
+                                <DropdownMenuSeparator />
+                                {targets.map((targetId) => (
+                                  <DropdownMenuItem
+                                    key={targetId}
+                                    variant={targetId === "rejected" ? "destructive" : "default"}
+                                    onClick={() => requestMove(quote, targetId)}
+                                  >
+                                    {BOARD_COLUMNS.find((item) => item.id === targetId)?.label}
+                                  </DropdownMenuItem>
+                                ))}
+                              </DropdownMenuGroup>
                             </DropdownMenuContent>
                           </DropdownMenu>
                         )}

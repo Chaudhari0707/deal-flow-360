@@ -30,9 +30,9 @@ export function DataTableViewOptions<TData extends RowData>({
         View
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-37.5">
-        <DropdownMenuLabel>Toggle columns</DropdownMenuLabel>
-        <DropdownMenuSeparator />
         <DropdownMenuGroup>
+          <DropdownMenuLabel>Toggle columns</DropdownMenuLabel>
+          <DropdownMenuSeparator />
           {table
             .getAllColumns()
             .filter((column) => typeof column.accessorFn !== "undefined" && column.getCanHide())

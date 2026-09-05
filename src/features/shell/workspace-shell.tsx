@@ -45,6 +45,7 @@ import {
   SidebarTrigger,
   useSidebar,
 } from "@/components/ui/sidebar";
+import { ThemeToggle } from "@/features/shell/theme-toggle";
 import { authClient } from "@/lib/auth/client";
 import type { Actor } from "@/lib/domain/_types/domain";
 
@@ -224,10 +225,13 @@ export function WorkspaceShell({ children, actor }: { children: ReactNode; actor
               </BreadcrumbItem>
             </BreadcrumbList>
           </Breadcrumb>
-          <Badge variant="outline" className="ml-auto gap-1.5">
-            <CircleCheck className="text-primary" />
-            Local workspace
-          </Badge>
+          <div className="ml-auto flex items-center gap-2">
+            <ThemeToggle />
+            <Badge variant="outline" className="hidden gap-1.5 sm:flex">
+              <CircleCheck className="text-primary" />
+              Local workspace
+            </Badge>
+          </div>
         </header>
         <div className="@container/main flex flex-1 flex-col gap-6 p-4 md:p-6 lg:p-8">
           {children}
