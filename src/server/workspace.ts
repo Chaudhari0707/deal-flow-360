@@ -1,13 +1,18 @@
 import { desc, eq, inArray, not, or } from "drizzle-orm";
 import { Elysia } from "elysia";
 
+import { meResponseModel, workspaceResponseModel } from "@/features/workspace/model";
 import { db } from "@/lib/db/connection";
 import * as s from "@/lib/db/schema";
 import { actorContext } from "@/server/access";
+import { apiErrorResponses } from "@/server/models";
 
-export const workspaceRoutes = new Elysia({ name: "workspace" })
+export const workspaceRoutes = new Elysia({ name: "workspace", tags: ["Workspace"] })
   .use(actorContext)
-  .get("/me", ({ actor }) => ({ actor }), { authorize: true })
+  .get("/me", ({ actor }) => ({ actor }), {
+    authorize: true,
+    response: { 200: meResponseModel, ...apiErrorResponses },
+  })
   .get(
     "/workspace",
     async ({ actor, set }) => {
@@ -182,5 +187,8 @@ export const workspaceRoutes = new Elysia({ name: "workspace" })
         deliveries,
       };
     },
-    { authorize: ["rep", "manager", "finance", "ops", "admin"] },
+    {
+      authorize: ["rep", "manager", "finance", "ops", "admin"],
+      response: { 200: workspaceResponseModel, ...apiErrorResponses },
+    },
   );

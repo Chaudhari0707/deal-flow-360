@@ -2,37 +2,25 @@ import { desc, eq } from "drizzle-orm";
 import { Elysia, t } from "elysia";
 
 import { sendQuotation } from "@/features/quotes/email";
+import {
+  deliveryResultModel,
+  quoteDetailModel,
+  quoteInputModel,
+  recommendationsModel,
+} from "@/features/quotes/model";
 import { purchaseRecommendations } from "@/features/quotes/recommendations";
 import { approvalAction, confirmQuote, saveQuote, submitQuote } from "@/features/quotes/service";
 import { db } from "@/lib/db/connection";
 import { auditEntries, messages, quotes } from "@/lib/db/schema";
 import { actorContext } from "@/server/access";
 import { DomainError } from "@/server/errors";
+import { apiErrorResponses, orderModel, quoteModel } from "@/server/models";
 
 const id = t.String({ minLength: 1, maxLength: 100 }),
   revision = t.Integer({ minimum: 1 });
-const body = t.Object(
-  {
-    customerId: id,
-    lines: t.Array(
-      t.Object({
-        id: t.Optional(id),
-        productId: id,
-        quantity: t.Integer({ minimum: 1, maximum: 10000 }),
-        discountBps: t.Integer({ minimum: 0, maximum: 10000 }),
-        upsell: t.Optional(t.Boolean()),
-      }),
-      { minItems: 1, maxItems: 100 },
-    ),
-    orderDiscountBps: t.Integer({ minimum: 0, maximum: 10000 }),
-    notes: t.Optional(t.String({ maxLength: 2000 })),
-    promisedDate: t.Optional(t.String({ pattern: "^\\d{4}-\\d{2}-\\d{2}$" })),
-    revision: t.Optional(revision),
-  },
-  { additionalProperties: false },
-);
+const body = quoteInputModel;
 
-export const quoteRoutes = new Elysia({ name: "quotes" })
+export const quoteRoutes = new Elysia({ name: "quotes", tags: ["Quotes"] })
   .use(actorContext)
   .get(
     "/quotes/recommendations",
@@ -40,16 +28,22 @@ export const quoteRoutes = new Elysia({ name: "quotes" })
       set.headers["cache-control"] = "private, no-store";
       return purchaseRecommendations(query.customerId);
     },
-    { authorize: ["rep", "manager", "admin"], query: t.Object({ customerId: id }) },
+    {
+      authorize: ["rep", "manager", "admin"],
+      query: t.Object({ customerId: id }),
+      response: { 200: recommendationsModel, ...apiErrorResponses },
+    },
   )
   .post("/quotes", ({ actor, body: b }) => saveQuote(b, actor), {
     authorize: ["rep", "manager", "admin"],
     body,
+    response: { 200: quoteModel, ...apiErrorResponses },
   })
   .patch("/quotes/:id", ({ actor, body: b, params }) => saveQuote(b, actor, params.id), {
     authorize: ["rep", "manager", "admin"],
     body,
     params: t.Object({ id }),
+    response: { 200: quoteModel, ...apiErrorResponses },
   })
   .get(
     "/quotes/:id",
@@ -73,7 +67,11 @@ export const quoteRoutes = new Elysia({ name: "quotes" })
       ]);
       return { quote, activity, messages: thread };
     },
-    { authorize: ["rep", "manager", "finance", "ops", "admin"], params: t.Object({ id }) },
+    {
+      authorize: ["rep", "manager", "finance", "ops", "admin"],
+      params: t.Object({ id }),
+      response: { 200: quoteDetailModel, ...apiErrorResponses },
+    },
   )
   .post(
     "/quotes/:id/submit",
@@ -86,6 +84,7 @@ export const quoteRoutes = new Elysia({ name: "quotes" })
       authorize: ["rep", "manager", "admin"],
       params: t.Object({ id }),
       body: t.Object({ revision }),
+      response: { 200: quoteModel, ...apiErrorResponses },
     },
   )
   .post(
@@ -103,6 +102,7 @@ export const quoteRoutes = new Elysia({ name: "quotes" })
         action: t.Union([t.Literal("approve"), t.Literal("return"), t.Literal("reject")]),
         reason: t.String({ minLength: 3, maxLength: 1000 }),
       }),
+      response: { 200: quoteModel, ...apiErrorResponses },
     },
   )
   .post(
@@ -119,10 +119,16 @@ export const quoteRoutes = new Elysia({ name: "quotes" })
       body: t.Optional(
         t.Object({ renew: t.Optional(t.Boolean()) }, { additionalProperties: false }),
       ),
+      response: { 200: deliveryResultModel, ...apiErrorResponses },
     },
   )
   .post(
     "/quotes/:id/confirm",
     ({ actor, params, body: b }) => confirmQuote(params.id, b.revision, actor),
-    { authorize: ["admin"], params: t.Object({ id }), body: t.Object({ revision }) },
+    {
+      authorize: ["admin"],
+      params: t.Object({ id }),
+      body: t.Object({ revision }),
+      response: { 200: orderModel, ...apiErrorResponses },
+    },
   );

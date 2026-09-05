@@ -37,6 +37,7 @@ export function requireMutationOrigin(request: Request) {
 export const actorContext = new Elysia({ name: "actor-context" }).macro({
   authorize(roles: true | Role[]) {
     return {
+      detail: { security: [{ SessionCookie: [] }] },
       resolve: async ({ request }) => ({
         actor: await requireActor(request, roles === true ? undefined : roles),
       }),

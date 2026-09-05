@@ -2,6 +2,14 @@ import { eq, sql } from "drizzle-orm";
 import { Elysia, t } from "elysia";
 
 import {
+  allocationPlanModel,
+  fulfillmentDetailModel,
+  fulfillmentListModel,
+  inventorySnapshotModel,
+  movementResponseModel,
+  statusResponseModel,
+} from "@/features/inventory/model";
+import {
   acceptSplit,
   consolidateBackorder,
   overrideSplit,
@@ -20,6 +28,7 @@ import { stocks, warehouses } from "@/lib/db/schema/inventory";
 import { actorContext } from "@/server/access";
 import { audit } from "@/server/audit";
 import { DomainError } from "@/server/errors";
+import { apiErrorResponses, orderModel, stockModel, warehouseModel } from "@/server/models";
 
 const id = t.String({ minLength: 1, maxLength: 100 });
 const positive = t.Integer({ minimum: 1, maximum: 1_000_000 });
@@ -40,28 +49,40 @@ const warehouseBody = t.Object(
   { additionalProperties: false },
 );
 
-export const inventoryRoutes = new Elysia({ name: "inventory", normalize: false })
+export const inventoryRoutes = new Elysia({
+  name: "inventory",
+  normalize: false,
+  tags: ["Inventory"],
+})
   .use(actorContext)
   .get("/inventory", ({ query }) => inventorySnapshot(query.page, query.pageSize), {
     authorize: ["admin", "ops", "manager", "rep"],
     query: paging,
+    response: { 200: inventorySnapshotModel, ...apiErrorResponses },
   })
   .get("/fulfillment/orders", ({ query }) => fulfillmentList(query.page, query.pageSize), {
     authorize: ["admin", "ops", "manager", "rep"],
     query: paging,
+    response: { 200: fulfillmentListModel, ...apiErrorResponses },
   })
   .get("/fulfillment/:id", ({ params: p }) => fulfillmentDetail(p.id), {
     authorize: ["admin", "ops", "manager", "rep"],
     params,
+    response: { 200: fulfillmentDetailModel, ...apiErrorResponses },
   })
   .post("/fulfillment/:id/accept", ({ actor, params: p }) => acceptSplit(p.id, actor), {
     authorize: ["admin", "ops"],
     params,
+    response: { 200: orderModel, ...apiErrorResponses },
   })
   .post(
     "/fulfillment/:id/consolidate",
     ({ actor, params: p }) => consolidateBackorder(p.id, actor),
-    { authorize: ["admin", "ops"], params },
+    {
+      authorize: ["admin", "ops"],
+      params,
+      response: { 200: allocationPlanModel, ...apiErrorResponses },
+    },
   )
   .post(
     "/fulfillment/:id/override",
@@ -78,6 +99,7 @@ export const inventoryRoutes = new Elysia({ name: "inventory", normalize: false 
         },
         { additionalProperties: false },
       ),
+      response: { 200: statusResponseModel, ...apiErrorResponses },
     },
   )
   .post(
@@ -90,6 +112,7 @@ export const inventoryRoutes = new Elysia({ name: "inventory", normalize: false 
         { operationKey: id, quantity: positive, reservationId: id },
         { additionalProperties: false },
       ),
+      response: { 200: movementResponseModel, ...apiErrorResponses },
     },
   )
   .post("/inventory/restock", ({ actor, body }) => restock(body, actor), {
@@ -98,16 +121,26 @@ export const inventoryRoutes = new Elysia({ name: "inventory", normalize: false 
       { operationKey: id, productId: id, quantity: positive, reason, warehouseId: id },
       { additionalProperties: false },
     ),
+    response: { 200: movementResponseModel, ...apiErrorResponses },
   })
   .post(
     "/inventory/warehouses",
     ({ actor, body }) => saveWarehouse(undefined, { ...body, id: crypto.randomUUID() }, actor),
-    { authorize: ["admin"], body: warehouseBody },
+    {
+      authorize: ["admin"],
+      body: warehouseBody,
+      response: { 200: warehouseModel, ...apiErrorResponses },
+    },
   )
   .patch(
     "/inventory/warehouses/:id",
     ({ actor, params: p, body }) => saveWarehouse(p.id, { ...body, id: p.id }, actor),
-    { authorize: ["admin"], params, body: warehouseBody },
+    {
+      authorize: ["admin"],
+      params,
+      body: warehouseBody,
+      response: { 200: warehouseModel, ...apiErrorResponses },
+    },
   )
   .post(
     "/inventory/stocks",
@@ -135,5 +168,6 @@ export const inventoryRoutes = new Elysia({ name: "inventory", normalize: false 
     {
       authorize: ["admin"],
       body: t.Object({ productId: id, warehouseId: id }, { additionalProperties: false }),
+      response: { 200: stockModel, ...apiErrorResponses },
     },
   );

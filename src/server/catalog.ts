@@ -6,6 +6,7 @@ import { customers, products, settings } from "@/lib/db/schema";
 import { actorContext } from "@/server/access";
 import { audit } from "@/server/audit";
 import { DomainError } from "@/server/errors";
+import { apiErrorResponses, customerModel, productModel, settingModel } from "@/server/models";
 
 const id = t.String({ minLength: 1, maxLength: 100 }),
   name = t.String({ minLength: 1, maxLength: 120 }),
@@ -39,7 +40,7 @@ const customerBody = t.Object(
   { additionalProperties: false },
 );
 
-export const catalogRoutes = new Elysia({ name: "catalog" })
+export const catalogRoutes = new Elysia({ name: "catalog", tags: ["Catalog"] })
   .use(actorContext)
   .post(
     "/catalog/products",
@@ -55,7 +56,11 @@ export const catalogRoutes = new Elysia({ name: "catalog" })
         return p;
       });
     },
-    { authorize: ["admin"], body: productBody },
+    {
+      authorize: ["admin"],
+      body: productBody,
+      response: { 200: productModel, ...apiErrorResponses },
+    },
   )
   .patch(
     "/catalog/products/:id",
@@ -73,7 +78,12 @@ export const catalogRoutes = new Elysia({ name: "catalog" })
         return p;
       });
     },
-    { authorize: ["admin"], params: t.Object({ id }), body: productBody },
+    {
+      authorize: ["admin"],
+      params: t.Object({ id }),
+      body: productBody,
+      response: { 200: productModel, ...apiErrorResponses },
+    },
   )
   .post(
     "/customers",
@@ -87,7 +97,11 @@ export const catalogRoutes = new Elysia({ name: "catalog" })
         return customer;
       });
     },
-    { authorize: ["rep", "manager", "admin"], body: customerBody },
+    {
+      authorize: ["rep", "manager", "admin"],
+      body: customerBody,
+      response: { 200: customerModel, ...apiErrorResponses },
+    },
   )
   .patch(
     "/customers/:id",
@@ -110,7 +124,12 @@ export const catalogRoutes = new Elysia({ name: "catalog" })
         return customer;
       });
     },
-    { authorize: ["manager", "admin"], params: t.Object({ id }), body: customerBody },
+    {
+      authorize: ["manager", "admin"],
+      params: t.Object({ id }),
+      body: customerBody,
+      response: { 200: customerModel, ...apiErrorResponses },
+    },
   )
   .patch(
     "/settings/:id",
@@ -191,5 +210,6 @@ export const catalogRoutes = new Elysia({ name: "catalog" })
       authorize: ["manager", "admin"],
       params: t.Object({ id }),
       body: t.Object({ value: t.Record(t.String(), t.Number()) }, { additionalProperties: false }),
+      response: { 200: settingModel, ...apiErrorResponses },
     },
   );

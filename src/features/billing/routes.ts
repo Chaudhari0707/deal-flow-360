@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 import { Elysia, t } from "elysia";
 
 import { invoicePdf, reportPdf, reportSpreadsheet } from "@/features/billing/documents";
+import { billingRunModel, paymentResultModel } from "@/features/billing/model";
 import { financialReport } from "@/features/billing/reports";
 import { reportOptions, salesReport } from "@/features/billing/sales-report";
 import { changeSubscription, recordPayment, runDueBilling } from "@/features/billing/service";
@@ -10,6 +11,7 @@ import { invoices } from "@/lib/db/schema/billing";
 import { customers, orders, quotes } from "@/lib/db/schema/commerce";
 import { actorContext } from "@/server/access";
 import { DomainError } from "@/server/errors";
+import { apiErrorResponses, openApiErrorResponses, subscriptionModel } from "@/server/models";
 
 const id = t.Object({ id: t.String({ minLength: 1, maxLength: 100 }) });
 const key = t.String({ minLength: 8, maxLength: 100 });
@@ -45,7 +47,7 @@ function download(bytes: Uint8Array, name: string, type: string) {
   });
 }
 
-export const billingRoutes = new Elysia({ name: "billing" })
+export const billingRoutes = new Elysia({ name: "billing", tags: ["Billing"] })
   .use(actorContext)
   .post(
     "/invoices/:id/pay",
@@ -54,10 +56,12 @@ export const billingRoutes = new Elysia({ name: "billing" })
       authorize: ["admin", "finance"],
       body: t.Object({ operationKey: key, reference: t.String({ minLength: 3, maxLength: 100 }) }),
       params: id,
+      response: { 200: paymentResultModel, ...apiErrorResponses },
     },
   )
   .post("/subscriptions/run-due", ({ actor }) => runDueBilling(actor), {
     authorize: ["admin", "finance"],
+    response: { 200: billingRunModel, ...apiErrorResponses },
   })
   .post(
     "/subscriptions/:id/change",
@@ -72,6 +76,7 @@ export const billingRoutes = new Elysia({ name: "billing" })
         version: t.Number({ minimum: 1, multipleOf: 1 }),
       }),
       params: id,
+      response: { 200: subscriptionModel, ...apiErrorResponses },
     },
   )
   .post(
@@ -85,6 +90,7 @@ export const billingRoutes = new Elysia({ name: "billing" })
         version: t.Number({ minimum: 1, multipleOf: 1 }),
       }),
       params: id,
+      response: { 200: subscriptionModel, ...apiErrorResponses },
     },
   )
   .get(
@@ -124,7 +130,21 @@ export const billingRoutes = new Elysia({ name: "billing" })
       });
       return download(bytes, `${invoice.number}.pdf`, "application/pdf");
     },
-    { authorize: true, params: id },
+    {
+      authorize: true,
+      detail: {
+        responses: {
+          200: {
+            description: "Invoice PDF",
+            content: {
+              "application/pdf": { schema: { type: "string", format: "binary" } },
+            },
+          },
+          ...openApiErrorResponses,
+        },
+      },
+      params: id,
+    },
   )
   .get(
     "/reports/financial",
@@ -150,5 +170,25 @@ export const billingRoutes = new Elysia({ name: "billing" })
         );
       return result;
     },
-    { authorize: ["admin", "finance", "manager"], query: reportQuery },
+    {
+      authorize: ["admin", "finance", "manager"],
+      detail: {
+        responses: {
+          200: {
+            description: "Financial report JSON, PDF, or XLSX according to the format query",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/FinancialReport" },
+              },
+              "application/pdf": { schema: { type: "string", format: "binary" } },
+              "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": {
+                schema: { type: "string", format: "binary" },
+              },
+            },
+          },
+          ...openApiErrorResponses,
+        },
+      },
+      query: reportQuery,
+    },
   );
