@@ -20,7 +20,7 @@ Load only what the task touches.
 | Seed, reset, fixture, demo/reference data | `.agents/seeding.md` |
 | UI, forms, accessibility, client state | `.agents/frontend.md` |
 | Authentication, authorization, secrets, hostile input | `.agents/security.md` |
-| Architecture docs, public docs, diagrams | `.agents/docs.md` |
+| User-flow changes, architecture docs, public docs, diagrams | `.agents/docs.md` |
 | Agent instruction or harness changes | `.agents/instructions.md` |
 | Lessons, durable repository memory | `.agents/memory.md` |
 

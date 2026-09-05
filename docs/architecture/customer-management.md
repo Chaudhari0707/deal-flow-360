@@ -5,18 +5,23 @@ Sales representatives can create and read customer records. Managers and admins 
 also edit and delete. Other roles do not have directory mutation rights. Existing rep
 rows are read-only; the server enforces the same policy as the UI.
 
-`POST /api/v1/customers` creates a contact, not a login invitation.
+`POST /api/v1/customers` atomically creates a customer, Better Auth credential login,
+customer profile, and encrypted welcome-email intent. The response includes an `invitation`
+status; provider failure preserves the login and can be retried without creating a duplicate.
+Customers must replace the generated temporary password before credential-based portal use.
+See [customer onboarding](customer-onboarding.md) for delivery, retry and migration details.
 `PATCH /api/v1/customers/:id` updates name, email, tier and team. A changed email is
 normalized and updates the single linked customer login in the same transaction,
 clears its verified-email flag and revokes its sessions. Passwords remain unchanged.
 Conflicting emails or ambiguous multiple/non-customer login links return 409 without
-partial changes. Customer login provisioning is a separate workflow.
+partial changes. Tier/contact edits do not send another welcome email.
 
 `DELETE /api/v1/customers/:id` returns the deleted customer (200), 404 for missing
 records, or 409 for customers with quotations, linked logins or other FK references.
 Deletion requires UI confirmation. A row lock and database foreign keys protect
 against concurrent new references. Successful deletion writes an audit event; linked
-commercial history is never cascaded. There is no archive flag or database migration.
+commercial history is never cascaded. New customers have linked logins, so their deletion is
+protected; only unused legacy contacts remain deletable. There is no archive flag.
 
 Gold/Silver/Bronze are pricing tiers, not recurring subscription plans. Configurable
 tier ceilings govern discretionary discounts; the effective ceiling is the lower of

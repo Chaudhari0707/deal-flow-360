@@ -87,6 +87,8 @@ export async function portalIdentity(
   const actor = await requireActor(request);
   if (actor.role !== "customer")
     throw new DomainError("The customer portal is available only to customer accounts.", 403);
+  if (actor.mustChangePassword)
+    throw new DomainError("Change your temporary password before continuing.", 403);
   return { actor };
 }
 

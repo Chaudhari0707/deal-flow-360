@@ -52,7 +52,13 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
       }
       const { actor } = apiData(await apiClient.api.v1.me.get());
       // A full navigation clears the previous account's client data.
-      window.location.assign(actor.role === "customer" ? "/portal" : "/dashboard");
+      window.location.assign(
+        actor.mustChangePassword
+          ? "/change-password"
+          : actor.role === "customer"
+            ? "/portal"
+            : "/dashboard",
+      );
     } catch {
       setError("Unable to connect. Check that the local server is running and try again.");
     } finally {

@@ -21,7 +21,8 @@ flowchart LR
 ```
 
 Elysia owns `/api/v1`; Better Auth owns `/api/auth`. Resource permissions are checked on the server.
-Self-signup grants Sales Rep only. Customer profiles are seeded or administered. Customer access is
+Self-signup grants Sales Rep only. Staff customer creation provisions a customer-bound credential
+login with an emailed temporary password and required replacement. Customer access is
 restricted to their quotes and excludes internal margins, costs, policy audit and unrelated stock.
 Email access is a separate quote-scoped token exchanged for a restricted session, not a new account
 login provider. Its digest and expiry are persisted; raw tokens are never logged.

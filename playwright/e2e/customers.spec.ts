@@ -40,7 +40,7 @@ test("customer switching updates hardware tier pricing and approval limits", asy
   await expect(page.getByText("MEDIUM", { exact: true })).toBeVisible();
 });
 
-test("rep creates a customer; manager edits tier and deletes an unused customer", async ({
+test("rep creates a customer; manager edits tier and protects the linked login", async ({
   browser,
   baseURL,
 }) => {
@@ -83,8 +83,7 @@ test("rep creates a customer; manager edits tier and deletes an unused customer"
     await staff.getByRole("button", { name: "Edit customer", exact: true }).click();
     await staff.getByRole("button", { name: "Delete customer", exact: true }).click();
     await staff.getByRole("button", { name: "Confirm deletion", exact: true }).click();
-    await expect(staff.getByRole("dialog")).toHaveCount(0);
-    await expect(staff.getByRole("row").filter({ hasText: name })).toHaveCount(0);
+    await expect(staff.getByRole("alert")).toContainText("linked portal account");
   } finally {
     await rep.close();
     await manager.close();

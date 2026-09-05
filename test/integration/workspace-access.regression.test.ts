@@ -3,7 +3,7 @@ import { beforeAll, describe, expect, test } from "bun:test";
 import { eq } from "drizzle-orm";
 
 import { changeSubscription, recordPayment } from "@/features/billing/service";
-import { tokenDigest } from "@/features/quotes/email";
+import { sendQuotation, tokenDigest } from "@/features/quotes/email";
 import { confirmQuote, counterQuote, saveQuote, submitQuote } from "@/features/quotes/service";
 import { createAuth } from "@/lib/auth/create-auth";
 import { db } from "@/lib/db/connection";
@@ -228,6 +228,94 @@ describe("internal and portal ownership boundaries", () => {
       "not found",
     );
   });
+  test("Finance cannot read stock through inventory or the workspace aggregate", async () => {
+    for (const path of ["/inventory", "/fulfillment/orders"])
+      expect((await request(path, "finance")).status).toBe(403);
+    const data = (await (await request("/workspace", "finance")).json()) as Workspace;
+    expect([data.stocks, data.warehouses, data.reservations]).toEqual([[], [], []]);
+  });
+  test("Admin cannot mutate deals, approvals, customer terms, finance or warehouse operations", async () => {
+    const fixture = fixtures[0]!;
+    const [before] = await db.select().from(quotes).where(eq(quotes.id, fixture.openId));
+    const input = {
+      customerId,
+      lines: [{ discountBps: 0, productId, quantity: 1 }],
+      orderDiscountBps: 0,
+    };
+    const attempts: [string, string, unknown?][] = [
+      ["/quotes", "POST", input],
+      [`/quotes/${fixture.draftId}`, "PATCH", { ...input, revision: 1 }],
+      [`/quotes/${fixture.draftId}/submit`, "POST", { revision: 1 }],
+      [`/quotes/${fixture.openId}/send`, "POST"],
+      ...["approve", "return", "reject"].map((action): [string, string, unknown] => [
+        `/quotes/${fixture.openId}/approval`,
+        "POST",
+        { revision: before!.revision, action, reason: "Forbidden admin action" },
+      ]),
+      [
+        `/invoices/${fixture.invoiceId}/pay`,
+        "POST",
+        { operationKey: crypto.randomUUID(), reference: "Forbidden payment" },
+      ],
+      ["/subscriptions/run-due", "POST"],
+      [
+        `/subscriptions/${fixture.subscriptionId}/change`,
+        "POST",
+        { operationKey: crypto.randomUUID(), quantity: 2, version: 1, reason: "Forbidden change" },
+      ],
+      [
+        `/subscriptions/${fixture.subscriptionId}/cancel`,
+        "POST",
+        { operationKey: crypto.randomUUID(), version: 1, reason: "Forbidden cancel" },
+      ],
+      [`/fulfillment/${fixture.orderId}/accept`, "POST"],
+      [`/fulfillment/${fixture.orderId}/consolidate`, "POST"],
+      [
+        `/fulfillment/${fixture.orderId}/override`,
+        "POST",
+        { allocations: [], reason: "Forbidden override" },
+      ],
+      [
+        `/fulfillment/${fixture.orderId}/ship`,
+        "POST",
+        { operationKey: crypto.randomUUID(), quantity: 1, reservationId: "none" },
+      ],
+      [
+        "/inventory/restock",
+        "POST",
+        {
+          operationKey: crypto.randomUUID(),
+          productId,
+          warehouseId: "none",
+          quantity: 1,
+          reason: "Forbidden receipt",
+        },
+      ],
+      [
+        "/health/nudge",
+        "POST",
+        { operationKey: crypto.randomUUID(), quoteId: fixture.openId, reason: "Forbidden nudge" },
+      ],
+    ];
+    for (const [path, method, body] of attempts) {
+      const response = await request(path, "admin", method, body);
+      expect(response.status, `${method} ${path}`).toBe(403);
+    }
+    expect(
+      (
+        await request(`/quotes/${fixture.openId}/confirm`, "admin", "POST", {
+          revision: before!.revision,
+        })
+      ).status,
+    ).toBe(404);
+    await expect(sendQuotation(fixture.openId, accounts.admin!.actor)).rejects.toThrow(
+      "cannot send",
+    );
+    const [after] = await db.select().from(quotes).where(eq(quotes.id, fixture.openId));
+    expect(after).toEqual(before);
+    expect((await request(`/quotes/${fixture.openId}`, "admin")).status).toBe(200);
+    expect((await request("/reports/financial", "admin")).status).toBe(200);
+  });
   test("portal lists and details are customer-only even when staff owns a quotation", async () => {
     for (const role of ["repA", "repB", "manager", "finance", "ops", "admin"])
       for (const path of ["/portal", `/portal/${fixtures[0]!.confirmedId}`])
@@ -257,7 +345,7 @@ describe("internal and portal ownership boundaries", () => {
         (await request(`/portal/${id}/confirm`, role, "POST", { revision: before!.revision }))
           .status,
       ).toBe(403);
-      if (role !== "admin") {
+      {
         await expect(confirmQuote(id, before!.revision, accounts[role]!.actor)).rejects.toThrow(
           "Only the customer",
         );

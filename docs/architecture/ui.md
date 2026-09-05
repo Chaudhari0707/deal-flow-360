@@ -42,7 +42,9 @@ flowchart LR
 ```
 
 - `/login` and `/signup` use real Better Auth credentials. Hackathon signup creates a sales rep;
-  customer roles are explicitly assigned. Successful sign-in uses a full navigation to discard
+  customer creation provisions a customer-bound login and welcome email. Its temporary password
+  must be replaced at `/change-password` before credential portal use. See
+  [onboarding](customer-onboarding.md). Successful sign-in uses a full navigation to discard
   the previous account's client data.
 - The `(workspace)` route group provides the shared sidebar, account sign-out, breadcrumb,
   responsive header, loading state, and error recovery. An authenticated server leaf under Suspense chooses the correct
@@ -60,6 +62,9 @@ flowchart LR
 - Administrators configure products, warehouses, stock locations, and policy, and can view reports.
   They cannot take an approval step, act as a customer, operate fulfillment, or mutate billing. The
   sidebar is filtered by the same role boundaries enforced by application APIs.
+- Forbidden deep links render a server-checked 403 screen; see [role access](role-access.md) for
+  streamed HTTP status behavior. Stock UI is embedded in Fulfillment for operating/read roles and
+  Settings for Admin; `/inventory` redirects to the appropriate surface.
 - The email token is redeemed once for an HttpOnly scoped session, then removed from browser
   history. Portal sign-out revokes that session. Confirmation sends the reviewed revision;
   the server rejects stale or unapproved terms.

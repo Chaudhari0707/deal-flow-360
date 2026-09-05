@@ -43,21 +43,13 @@ export async function saveCatalogProduct(
 export async function saveCatalogCustomer(
   input: CatalogCustomerInput,
   actor: Actor,
-  customerId?: string,
+  customerId: string,
 ) {
-  const roles = customerId ? ["manager", "admin"] : ["rep", "manager", "admin"];
+  const roles = ["manager", "admin"];
   if (!roles.includes(actor.role)) throw new DomainError("Your role cannot change customers", 403);
   input = { ...input, name: input.name.trim(), email: input.email.trim().toLowerCase() };
   try {
     return await db.transaction(async (tx) => {
-      if (!customerId) {
-        const [customer] = await tx
-          .insert(customers)
-          .values({ id: crypto.randomUUID(), ...input })
-          .returning();
-        await audit(tx, actor, customer!.id, "CUSTOMER_CREATED", "Customer record created", input);
-        return customer;
-      }
       const [existing] = await tx
         .select()
         .from(customers)

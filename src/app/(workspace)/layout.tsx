@@ -18,6 +18,7 @@ async function AuthenticatedWorkspace({ children }: { children: ReactNode }) {
     if (error instanceof DomainError && error.status === 401) redirect("/login");
     throw error;
   }
+  if (actor.mustChangePassword) redirect("/change-password");
   if (actor.role === "customer") redirect("/portal");
   return <WorkspaceShell actor={actor}>{children}</WorkspaceShell>;
 }

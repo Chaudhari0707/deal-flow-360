@@ -103,28 +103,27 @@ export function HealthWorkspace() {
                   {item.action}
                   <ArrowUpRightIcon />
                 </Button>
-                {item.quoteId &&
-                  ["admin", "manager", "finance", "rep"].includes(data.actor.role) && (
-                    <Button
-                      variant="outline"
-                      disabled={action.pending}
-                      onClick={() =>
-                        void action.run(
-                          async () =>
-                            apiData(
-                              await apiClient.api.v1.health.nudge.post({
-                                operationKey: crypto.randomUUID(),
-                                quoteId: item.quoteId!,
-                                reason: `Follow up: ${item.title}`,
-                              }),
-                            ),
-                          "Follow-up recorded for the deal owner in the activity feed.",
-                        )
-                      }
-                    >
-                      Record nudge
-                    </Button>
-                  )}
+                {item.quoteId && data.actor.role === "manager" && (
+                  <Button
+                    variant="outline"
+                    disabled={action.pending}
+                    onClick={() =>
+                      void action.run(
+                        async () =>
+                          apiData(
+                            await apiClient.api.v1.health.nudge.post({
+                              operationKey: crypto.randomUUID(),
+                              quoteId: item.quoteId!,
+                              reason: `Follow up: ${item.title}`,
+                            }),
+                          ),
+                        "Follow-up recorded for the deal owner in the activity feed.",
+                      )
+                    }
+                  >
+                    Record nudge
+                  </Button>
+                )}
                 <Button variant="ghost" onClick={() => setDismissed([...dismissed, item.id])}>
                   Dismiss
                 </Button>

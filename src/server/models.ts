@@ -36,6 +36,7 @@ export const actorModel = t.Object({
   id: t.String(),
   name: t.String(),
   role: roleModel,
+  mustChangePassword: t.Optional(t.Boolean()),
 });
 
 export const errorModel = t.Object({ error: t.String() });

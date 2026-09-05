@@ -29,8 +29,7 @@ test("the alternate loopback hostname supports real login and authenticated cust
     });
     expect(rejected.status()).toBe(403);
   }
-  await page.goto(`${origin.origin}/catalog`);
-  await page.getByRole("tab", { name: /^Customers ·/ }).click();
+  await page.goto(`${origin.origin}/customers`);
   await page.getByRole("button", { name: "Add customer", exact: true }).click();
   const name = `Loopback customer ${crypto.randomUUID()}`;
   await page.getByRole("textbox", { name: "Name", exact: true }).fill(name);

@@ -1,5 +1,8 @@
 # DealFlow360
 
+Read the [complete project flow guide](docs/flows/README.md) for every role's journey,
+worked examples, flow diagrams, permissions, failure paths and test coverage.
+
 A local sales-operations application that connects governed quotations, customer negotiation,
 warehouse fulfillment, recurring billing and payment reconciliation. The interface uses shadcn's
 dashboard block composition with tweakcn's Supabase theme.

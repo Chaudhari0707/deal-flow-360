@@ -9,6 +9,7 @@ import { changeSubscription, recordPayment, runDueBilling } from "@/features/bil
 import { db } from "@/lib/db/connection";
 import { invoices } from "@/lib/db/schema/billing";
 import { customers, orders, quotes } from "@/lib/db/schema/commerce";
+import { permissions } from "@/lib/domain/permissions";
 import { actorContext } from "@/server/access";
 import { DomainError } from "@/server/errors";
 import { apiErrorResponses, openApiErrorResponses, subscriptionModel } from "@/server/models";
@@ -54,21 +55,21 @@ export const billingRoutes = new Elysia({ name: "billing", tags: ["Billing"] })
     async ({ actor, params, body }) =>
       recordPayment(actor, params.id, body.operationKey, body.reference),
     {
-      authorize: ["finance"],
+      authorize: permissions.billingWrite,
       body: t.Object({ operationKey: key, reference: t.String({ minLength: 3, maxLength: 100 }) }),
       params: id,
       response: { 200: paymentResultModel, ...apiErrorResponses },
     },
   )
   .post("/subscriptions/run-due", async ({ actor }) => runDueBilling(actor), {
-    authorize: ["finance"],
+    authorize: permissions.billingWrite,
     response: { 200: billingRunModel, ...apiErrorResponses },
   })
   .post(
     "/subscriptions/:id/change",
     async ({ actor, params, body }) => changeSubscription(actor, params.id, body),
     {
-      authorize: ["finance"],
+      authorize: permissions.billingWrite,
       body: t.Object({
         operationKey: key,
         productId: t.Optional(t.String({ minLength: 1, maxLength: 100 })),
@@ -84,7 +85,7 @@ export const billingRoutes = new Elysia({ name: "billing", tags: ["Billing"] })
     "/subscriptions/:id/cancel",
     async ({ actor, params, body }) => changeSubscription(actor, params.id, body, true),
     {
-      authorize: ["finance"],
+      authorize: permissions.billingWrite,
       body: t.Object({
         operationKey: key,
         reason,
@@ -108,8 +109,7 @@ export const billingRoutes = new Elysia({ name: "billing", tags: ["Billing"] })
       const { invoice, customer, quote } = record;
       if (
         (actor.role === "customer" && actor.customerId !== customer.id) ||
-        (actor.role === "rep" && quote.ownerId !== actor.id) ||
-        ["admin", "ops"].includes(actor.role)
+        (actor.role === "rep" && quote.ownerId !== actor.id)
       )
         throw new DomainError("You cannot access this invoice", 403);
       const bytes = await invoicePdf({
@@ -132,7 +132,7 @@ export const billingRoutes = new Elysia({ name: "billing", tags: ["Billing"] })
       return download(bytes, `${invoice.number}.pdf`, "application/pdf");
     },
     {
-      authorize: true,
+      authorize: [...permissions.invoices, "customer"],
       detail: {
         responses: {
           200: {
@@ -172,7 +172,7 @@ export const billingRoutes = new Elysia({ name: "billing", tags: ["Billing"] })
       return result;
     },
     {
-      authorize: ["admin", "finance", "manager"],
+      authorize: permissions.reports,
       detail: {
         responses: {
           200: {
