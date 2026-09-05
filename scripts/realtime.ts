@@ -1,5 +1,6 @@
 import type { ServerWebSocket } from "bun";
 
+import { startBillingScheduler } from "@/features/billing/scheduler";
 import { inventorySnapshot } from "@/features/inventory/queries";
 import { requireActor } from "@/server/access";
 
@@ -13,14 +14,20 @@ if (!Number.isInteger(port) || port < 1024 || port > 65535)
 const clients = new Set<ServerWebSocket<StockSocketData>>();
 let previous = "";
 let reading = false;
+const billing = Bun.env.AUTOMATIC_BILLING === "true" ? startBillingScheduler() : null;
 const server = Bun.serve<StockSocketData>({
   hostname: "127.0.0.1",
   port,
   async fetch(request, server) {
     const url = new URL(request.url);
-    if (url.pathname === "/health") return Response.json({ status: "ok", clients: clients.size });
+    if (url.pathname === "/health")
+      return Response.json({
+        status: "ok",
+        clients: clients.size,
+        billing: billing?.state ?? { enabled: false },
+      });
     if (url.pathname !== "/stock") return new Response("Not found", { status: 404 });
-    if (request.headers.get("origin") !== Bun.env.BETTER_AUTH_URL)
+    if (request.headers.get("origin") !== new URL(Bun.env.BETTER_AUTH_URL!).origin)
       return new Response("Origin not allowed", { status: 403 });
     try {
       await requireActor(request, ["admin", "ops", "manager", "rep"]);

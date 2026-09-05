@@ -64,7 +64,15 @@ export function FulfillmentDetail({ id, back }: { id: string; back: () => void }
     [],
   );
   if (!data || !workspace.data)
-    return <WorkspaceState error={error ?? workspace.error} retry={() => void mutate()} />;
+    return (
+      <WorkspaceState
+        error={error ?? workspace.error}
+        retry={() => {
+          void mutate();
+          void workspace.mutate();
+        }}
+      />
+    );
   return (
     <>
       <PageHeader

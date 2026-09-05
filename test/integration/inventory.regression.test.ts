@@ -312,7 +312,11 @@ describe("inventory transaction regressions", () => {
     const denied = await api.handle(
       new Request("http://localhost/inventory/restock", {
         method: "POST",
-        headers: { cookie, "Content-Type": "application/json" },
+        headers: {
+          cookie,
+          origin: new URL(Bun.env.BETTER_AUTH_URL!).origin,
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({
           operationKey: crypto.randomUUID(),
           productId: f.productId,
@@ -326,7 +330,11 @@ describe("inventory transaction regressions", () => {
     const malformed = await api.handle(
       new Request("http://localhost/inventory/restock", {
         method: "POST",
-        headers: { cookie, "Content-Type": "application/json" },
+        headers: {
+          cookie,
+          origin: new URL(Bun.env.BETTER_AUTH_URL!).origin,
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({ quantity: -1 }),
       }),
     );
@@ -345,10 +353,27 @@ describe("inventory transaction regressions", () => {
     const request = (payload: unknown) =>
       new Request("http://localhost/inventory/restock", {
         method: "POST",
-        headers: { cookie, "Content-Type": "application/json" },
+        headers: {
+          cookie,
+          origin: new URL(Bun.env.BETTER_AUTH_URL!).origin,
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify(payload),
       });
-    expect((await api.handle(request(receipt))).status).toBe(200);
+    for (const origin of [undefined, "null", "https://untrusted.example"]) {
+      const forged = request(receipt);
+      if (origin === undefined) forged.headers.delete("origin");
+      else forged.headers.set("origin", origin);
+      expect((await api.handle(forged)).status).toBe(403);
+    }
+    expect((await balances(f.productId))[0]?.onHand).toBe(22);
+    const configuredUrl = Bun.env.BETTER_AUTH_URL;
+    try {
+      Bun.env.BETTER_AUTH_URL = `${new URL(configuredUrl!).origin}/`;
+      expect((await api.handle(request(receipt))).status).toBe(200);
+    } finally {
+      Bun.env.BETTER_AUTH_URL = configuredUrl;
+    }
     expect((await api.handle(request(receipt))).status).toBe(200);
     expect((await balances(f.productId))[0]?.onHand).toBe(25);
     expect((await api.handle(request({ ...receipt, quantity: 4 }))).status).toBe(409);

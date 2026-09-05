@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 test("customer reviews, discusses, counters and confirms their approved quotation @regression", async ({
+  baseURL,
   page,
   request,
 }) => {
@@ -11,6 +12,7 @@ test("customer reviews, discusses, counters and confirms their approved quotatio
   });
   expect(signedIn.ok()).toBe(true);
   const created = await request.post("/api/v1/quotes", {
+    headers: { origin: new URL(baseURL!).origin },
     data: {
       customerId: "acme",
       lines: [{ productId: "setup", quantity: 1, discountBps: 0 }],
@@ -21,6 +23,7 @@ test("customer reviews, discusses, counters and confirms their approved quotatio
   expect(created.ok()).toBe(true);
   const quote = (await created.json()) as { id: string; number: string; revision: number };
   const submitted = await request.post(`/api/v1/quotes/${quote.id}/submit`, {
+    headers: { origin: new URL(baseURL!).origin },
     data: { revision: quote.revision },
   });
   expect(submitted.ok()).toBe(true);

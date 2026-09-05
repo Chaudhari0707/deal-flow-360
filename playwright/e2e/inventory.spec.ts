@@ -98,7 +98,10 @@ test("Ops restock reaches another live tab, then consolidates and ships Northwin
   await observer.close();
 });
 
-test("a sales rep can inspect inventory but cannot receive or dispatch stock", async ({ page }) => {
+test("a sales rep can inspect inventory but cannot receive or dispatch stock", async ({
+  baseURL,
+  page,
+}) => {
   const login = await page.request.post("/api/auth/sign-in/email", {
     data: { email: "rep@dealflow360.demo", password: password() },
   });
@@ -109,6 +112,7 @@ test("a sales rep can inspect inventory but cannot receive or dispatch stock", a
   await page.getByRole("row").filter({ hasText: "Laptop Pro 13" }).click();
   await expect(page.getByRole("button", { name: "Receive stock", exact: true })).toHaveCount(0);
   const receipt = await page.request.post("/api/v1/inventory/restock", {
+    headers: { origin: new URL(baseURL!).origin },
     data: {
       operationKey: crypto.randomUUID(),
       productId: "laptop13",
@@ -119,6 +123,7 @@ test("a sales rep can inspect inventory but cannot receive or dispatch stock", a
   });
   expect(receipt.status()).toBe(403);
   const shipment = await page.request.post("/api/v1/fulfillment/order-Q-1022/ship", {
+    headers: { origin: new URL(baseURL!).origin },
     data: { operationKey: crypto.randomUUID(), reservationId: "northwind-east", quantity: 1 },
   });
   expect(shipment.status()).toBe(403);

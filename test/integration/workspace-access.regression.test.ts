@@ -46,6 +46,7 @@ async function request(
     new Request(`${Bun.env.BETTER_AUTH_URL}/api/v1${path}`, {
       ...(body === undefined ? {} : { body: JSON.stringify(body) }),
       headers: {
+        ...(method === "GET" ? {} : { origin: new URL(Bun.env.BETTER_AUTH_URL!).origin }),
         ...(account ? { cookie: accounts[account]!.cookie } : {}),
         ...(tokenCookie ? { cookie: tokenCookie } : {}),
         ...(body === undefined ? {} : { "content-type": "application/json" }),

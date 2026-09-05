@@ -34,6 +34,7 @@ const env = Object.fromEntries(
   ),
 );
 env.REALTIME_PORT = String(stockPort);
+env.AUTOMATIC_BILLING = Bun.env.AUTOMATIC_BILLING ?? "true";
 const database = postgres(Bun.env.DATABASE_URL!, {
   connect_timeout: 5,
   max: 1,
@@ -91,17 +92,7 @@ if (!args.includes("--check")) {
     for (const [name, command] of [
       [
         "Next.js",
-        [
-          "bun",
-          "--bun",
-          "next",
-          "dev",
-          "--webpack",
-          "--hostname",
-          "127.0.0.1",
-          "--port",
-          String(webPort),
-        ],
+        ["bun", "--bun", "next", "dev", "--hostname", "127.0.0.1", "--port", String(webPort)],
       ],
       ["Stock feed", ["bun", "run", "scripts/realtime.ts"]],
     ] as const) {
