@@ -61,7 +61,7 @@ test("hero quotation: builder, upsell, sequential approvals, customer counter an
     ).toBeDisabled();
     await rep.page.getByLabel("Order discount %", { exact: true }).fill("0");
     await expect(rep.page.getByText("HIGH", { exact: true })).toBeVisible();
-    await expect(rep.page.getByText("$26,815.14", { exact: true })).toBeVisible();
+    await expect(rep.page.getByText("₹26,815.14", { exact: true })).toBeVisible();
     await rep.page
       .getByLabel("Internal justification")
       .fill("Hackathon hero fixture: multi-site equipment and recurring care.");
@@ -105,7 +105,7 @@ test("hero quotation: builder, upsell, sequential approvals, customer counter an
     await expect(
       customer.page.getByRole("button", { name: "Confirm order", exact: true }),
     ).toHaveCount(0);
-    await expect(customer.page.getByText("$26,805.24", { exact: true })).toBeVisible();
+    await expect(customer.page.getByText("₹26,805.24", { exact: true })).toBeVisible();
     await approve(manager.page, quote.id, "Manager approved the revised warranty terms.");
     await approve(
       finance.page,
@@ -114,8 +114,8 @@ test("hero quotation: builder, upsell, sequential approvals, customer counter an
     );
     await customer.page.reload();
     await customer.page.getByRole("button", { name: "Confirm order", exact: true }).click();
-    await expect(customer.page.getByRole("alertdialog")).toContainText("$26,805.24");
-    await expect(customer.page.getByRole("alertdialog")).toContainText("$46.00 monthly");
+    await expect(customer.page.getByRole("alertdialog")).toContainText("₹26,805.24");
+    await expect(customer.page.getByRole("alertdialog")).toContainText("₹46.00 monthly");
     await customer.page.getByRole("button", { name: "Confirm this order", exact: true }).click();
     await expect(customer.page.getByText("Order confirmed", { exact: true })).toBeVisible();
 

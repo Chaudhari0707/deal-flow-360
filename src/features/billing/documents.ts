@@ -4,10 +4,7 @@ import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
 import type { InvoiceDocument, ReportRow } from "@/features/billing/_types/documents";
 import type { SalesReport } from "@/features/billing/_types/reports";
 import { invoiceOutstanding } from "@/features/billing/rules";
-
-function money(cents: number) {
-  return new Intl.NumberFormat("en-US", { currency: "USD", style: "currency" }).format(cents / 100);
-}
+import { documentMoney as money } from "@/lib/money";
 
 /** Standard PDF fonts cannot encode arbitrary Unicode; escape unsupported codepoints visibly. */
 function printable(value: string): string {
@@ -276,7 +273,7 @@ export async function invoicePdf(invoice: InvoiceDocument): Promise<Uint8Array> 
   y = 40;
   drawHorizontalLine(page, y + 16, ML, W - MR);
   page.drawText(
-    "Currency: USD. A credit note is not a cash refund. Fulfillment is tracked separately.",
+    "Currency: INR. A credit note is not a cash refund. Fulfillment is tracked separately.",
     {
       x: ML,
       y,
@@ -316,7 +313,7 @@ export function reportPdf(
           "Financial records (issue dates UTC):",
         ]
       : []),
-    `Rows: ${rows.length}. Dates use invoice issue date in UTC. Currency: USD.`,
+    `Rows: ${rows.length}. Dates use invoice issue date in UTC. Currency: INR.`,
     "",
     ...rows.flatMap((row) => [
       `${row.number} | ${row.date.slice(0, 10)} | ${row.customer} | ${row.category} | ${row.kind} | ${row.status}`,
@@ -344,9 +341,9 @@ export async function reportSpreadsheet(
     { header: "Category", key: "category", width: 18 },
     { header: "Kind", key: "kind", width: 15 },
     { header: "Status", key: "status", width: 15 },
-    { header: "Total USD", key: "total", width: 18 },
-    { header: "Paid USD", key: "paid", width: 18 },
-    { header: "Outstanding USD", key: "outstanding", width: 18 },
+    { header: "Total INR", key: "total", width: 18 },
+    { header: "Paid INR", key: "paid", width: 18 },
+    { header: "Outstanding INR", key: "outstanding", width: 18 },
   ];
   for (const row of rows)
     sheet.addRow({
@@ -366,7 +363,7 @@ export async function reportSpreadsheet(
       ["Metric", "Value"],
       ["Quotes created", sales.metrics.quotesCreated],
       ["Orders confirmed", sales.metrics.ordersConfirmed],
-      ["Ordered USD", sales.metrics.orderedCents / 100],
+      ["Ordered INR", sales.metrics.orderedCents / 100],
       ["Average approval hours", sales.metrics.averageApprovalHours],
       ["Completed approval cycles", sales.metrics.completedApprovalCycles],
       ["Top upsold product", sales.metrics.topUpsoldProduct?.name ?? "None"],
@@ -384,7 +381,7 @@ export async function reportSpreadsheet(
         { header: "Representative", key: "representative", width: 25 },
         { header: "Team", key: "team", width: 20 },
         { header: "Status", key: "status", width: 22 },
-        { header: "Amount USD", key: "amount", width: 18 },
+        { header: "Amount INR", key: "amount", width: 18 },
       ];
       salesSheet.addRows(
         records.map((row) => ({

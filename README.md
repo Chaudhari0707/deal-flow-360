@@ -72,7 +72,7 @@ Leave that override out only when the actual sender/recipient configuration is r
 
 ## Boundaries
 
-This release runs locally with USD, one selling organization, three active warehouses, manual
+This release runs locally with INR, one selling organization, three active warehouses, manual
 full-balance payments and credit notes. Same-cadence subscription changes are supported; cash refunds,
 cross-cadence conversion, cross-invoice credit application, multi-company and external payment rails
 are documented follow-ups. Large workspace summaries are bounded; production capacity is not claimed.

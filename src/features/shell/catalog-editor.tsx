@@ -245,14 +245,14 @@ export function CatalogEditor({
                   {[
                     {
                       name: "price",
-                      label: "Unit price ($)",
+                      label: "Unit price (₹)",
                       value: (product?.priceCents ?? 0) / 100,
                       step: "0.01",
                       max: 100000,
                     },
                     {
                       name: "cost",
-                      label: "Unit cost ($)",
+                      label: "Unit cost (₹)",
                       value: (product?.costCents ?? 0) / 100,
                       step: "0.01",
                       max: 100000,

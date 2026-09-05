@@ -34,7 +34,7 @@ operation keys. No Redis, broker, microservices or speculative persistence abstr
 
 ## Product rules selected for implementation
 
-- USD cents and integer basis points. Apply variant/tier pricing, line discount, order discount,
+- INR paise and integer basis points. Apply variant/tier pricing, line discount, order discount,
   then per-line tax; half-up rounding. Promotions initialize a line discount rather than stack invisibly.
   Hardware tier factors are editable under Pricelists; new and edited drafts use them. Each variant
   is a canonical SKU with its own final catalog price, stock and descriptive attributes; accepted

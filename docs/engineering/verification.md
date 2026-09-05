@@ -28,7 +28,7 @@ customer mutation, live stock and logout; foreign and wrong-port sign-in attempt
 Unit and real HTTP/WebSocket integration checks also cover missing, `null` and unrelated origins,
 plus malformed configured URLs. The complete 11-check browser run passed in 51 seconds without retries.
 
-The HIGH journey verifies $26,805.24 one-time plus $46 recurring, one subscription and 22 Main / 2 East
+The HIGH journey verifies ₹26,805.24 one-time plus ₹46 recurring, one subscription and 22 Main / 2 East
 reservations. Real database tests include simultaneous operations, rollback, role/customer isolation,
 zero-balance invoices, rational price bases, actual-day proration, scheduler restarts and email retries.
 
@@ -82,5 +82,5 @@ upstream updates or compatibility-tested overrides; no unsupported major overrid
 Only the exercised macOS/Chromium/local PostgreSQL setup is verified. Other operating systems,
 mobile devices beyond the tested viewport, human inbox delivery, external payment networks, hosted
 availability and production backup/recovery objectives remain unverified or out of this release.
-The documented business limits include one selling organization, USD, three active warehouses,
+The documented business limits include one selling organization, INR, three active warehouses,
 same-cadence subscription changes and no cross-invoice credit application or cash refund.

@@ -58,6 +58,8 @@ describe("financial export artifacts", () => {
     expect(sheet.getCell("A2").value).toBe("INV-TEST");
     expect(sheet.getCell("C2").value).toBe('=HYPERLINK("https://example.com")');
     expect(sheet.getCell("G2").value).toBe(46);
+    expect(sheet.getCell("G1").value).toBe("Total INR");
+    expect(sheet.getCell("I1").value).toBe("Outstanding INR");
     expect(sheet.getCell("I2").value).toBe(46);
     expect(workbook.getWorksheet("Filters")?.getCell("B1").value).toBe("September 2026");
   });

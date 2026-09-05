@@ -21,8 +21,8 @@ test("admin creates and edits a product through the searchable catalog", async (
   await page.getByRole("textbox", { name: "Name", exact: true }).fill(name);
   await page.getByLabel("Category", { exact: true }).click();
   await page.getByRole("option", { name: "Services", exact: true }).click();
-  await page.getByLabel("Unit price ($)", { exact: true }).fill("125");
-  await page.getByLabel("Unit cost ($)", { exact: true }).fill("50");
+  await page.getByLabel("Unit price (₹)", { exact: true }).fill("125");
+  await page.getByLabel("Unit cost (₹)", { exact: true }).fill("50");
   await page.getByLabel("Tax (%)", { exact: true }).fill("10");
   await page.getByRole("checkbox", { name: pairingLabel, exact: true }).check();
   const createResponse = page.waitForResponse(
@@ -48,7 +48,7 @@ test("admin creates and edits a product through the searchable catalog", async (
   await expect(page.getByRole("checkbox", { name: `${name} · Standard`, exact: true })).toHaveCount(
     0,
   );
-  await page.getByLabel("Unit price ($)", { exact: true }).fill("150");
+  await page.getByLabel("Unit price (₹)", { exact: true }).fill("150");
   const updateResponse = page.waitForResponse(
     (response) =>
       response.url().endsWith(`/api/v1/catalog/products/${product.id}`) &&
@@ -57,5 +57,5 @@ test("admin creates and edits a product through the searchable catalog", async (
   await page.getByRole("button", { name: "Save product", exact: true }).click();
   expect((await updateResponse).ok()).toBe(true);
   await expect(page.getByRole("dialog")).toHaveCount(0);
-  await expect(page.getByRole("row").filter({ hasText: name })).toContainText("$150.00");
+  await expect(page.getByRole("row").filter({ hasText: name })).toContainText("₹150.00");
 });

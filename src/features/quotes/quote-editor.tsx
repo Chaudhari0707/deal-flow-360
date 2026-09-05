@@ -212,7 +212,7 @@ export function QuoteEditor({
           <CardHeader>
             <CardTitle>Quotation lines</CardTitle>
             <CardDescription>
-              Prices in USD. Discounts update line status, totals and margin immediately.
+              Prices in INR. Discounts update line status, totals and margin immediately.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
