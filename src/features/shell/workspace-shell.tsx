@@ -1,6 +1,7 @@
 "use client";
 
 import { type CSSProperties, type ReactNode, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -10,7 +11,6 @@ import {
   CircleCheck,
   FileText,
   House,
-  Layers3,
   LogOut,
   PackageCheck,
   Receipt,
@@ -121,13 +121,19 @@ function WorkspaceSidebar({ actor, pathname }: { actor: Actor; pathname: string 
       <SidebarHeader className="px-4 py-5">
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton size="lg" render={<Link href="/dashboard" />}>
-              <Badge className="size-9 rounded-xl p-2">
-                <Layers3 className="size-5!" />
-              </Badge>
-              <span className="text-lg font-semibold tracking-tight text-foreground">
-                DealFlow360
-              </span>
+            <SidebarMenuButton
+              size="lg"
+              className="h-14 hover:bg-transparent"
+              render={<Link href="/dashboard" />}
+            >
+              <Image
+                src="/logo.png"
+                alt="DealFlow360"
+                width={180}
+                height={60}
+                className="h-10 w-auto object-contain"
+                priority
+              />
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>

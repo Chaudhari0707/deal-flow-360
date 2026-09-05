@@ -8,6 +8,11 @@ import { AppProviders } from "@/components/providers/app-providers";
 export const metadata: Metadata = {
   title: { default: "DealFlow360", template: "%s · DealFlow360" },
   description: "One connected workspace, from the first quote to recurring revenue.",
+  icons: {
+    icon: "/images/favicon.png",
+    shortcut: "/images/favicon.png",
+    apple: "/images/favicon.png",
+  },
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
