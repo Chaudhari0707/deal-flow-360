@@ -155,6 +155,7 @@ export const workspaceRoutes = new Elysia({ name: "workspace" })
     ]);
     return {
       actor,
+      asOf: new Date().toISOString(),
       customers,
       products,
       quotes,
