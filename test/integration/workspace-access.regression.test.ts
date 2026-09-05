@@ -228,12 +228,10 @@ describe("internal and portal ownership boundaries", () => {
       "not found",
     );
   });
-  test("portal lists and details enforce representative ownership and customer scope", async () => {
-    const own = (await (await request("/portal", "repA")).json()) as { quotes: { id: string }[] };
-    expect(own.quotes.some((quote) => quote.id === fixtures[0]!.confirmedId)).toBe(true);
-    expect(own.quotes.some((quote) => quote.id === fixtures[1]!.confirmedId)).toBe(false);
-    expect((await request(`/portal/${fixtures[1]!.confirmedId}`, "repA")).status).toBe(404);
-    expect((await request(`/portal/${fixtures[0]!.confirmedId}`, "repA")).status).toBe(200);
+  test("portal lists and details are customer-only even when staff owns a quotation", async () => {
+    for (const role of ["repA", "repB", "manager", "finance", "ops", "admin"])
+      for (const path of ["/portal", `/portal/${fixtures[0]!.confirmedId}`])
+        expect((await request(path, role)).status).toBe(403);
     expect((await request(`/portal/${fixtures[0]!.confirmedId}`, "otherCustomer")).status).toBe(
       404,
     );
@@ -243,10 +241,10 @@ describe("internal and portal ownership boundaries", () => {
     expect(customer.quotes.some((quote) => quote.id === fixtures[0]!.confirmedId)).toBe(true);
     expect(customer.quotes.some((quote) => quote.id === fixtures[1]!.confirmedId)).toBe(true);
   });
-  test("staff cannot masquerade as a customer when countering or accepting; finance and Ops cannot message", async () => {
+  test("staff cannot masquerade as a customer through any portal mutation", async () => {
     const id = fixtures[0]!.openId;
     const [before] = await db.select().from(quotes).where(eq(quotes.id, id));
-    for (const role of ["repA", "manager", "finance", "ops"]) {
+    for (const role of ["repA", "manager", "finance", "ops", "admin"]) {
       expect(
         (
           await request(`/portal/${id}/counter`, role, "POST", {
@@ -259,23 +257,24 @@ describe("internal and portal ownership boundaries", () => {
         (await request(`/portal/${id}/confirm`, role, "POST", { revision: before!.revision }))
           .status,
       ).toBe(403);
-      await expect(confirmQuote(id, before!.revision, accounts[role]!.actor)).rejects.toThrow(
-        "Only the customer",
-      );
-      await expect(counterQuote(id, before!.revision, [], accounts[role]!.actor)).rejects.toThrow(
-        "Only the customer",
-      );
+      if (role !== "admin") {
+        await expect(confirmQuote(id, before!.revision, accounts[role]!.actor)).rejects.toThrow(
+          "Only the customer",
+        );
+        await expect(counterQuote(id, before!.revision, [], accounts[role]!.actor)).rejects.toThrow(
+          "Only the customer",
+        );
+      }
     }
-    for (const role of ["finance", "ops"])
+    for (const role of ["repA", "manager", "finance", "ops", "admin"])
       expect(
         (await request(`/portal/${id}/message`, role, "POST", { body: "Unauthorized message" }))
           .status,
       ).toBe(403);
-    for (const role of ["repA", "manager", "admin", "customer"])
-      expect(
-        (await request(`/portal/${id}/message`, role, "POST", { body: "Authorized follow-up" }))
-          .status,
-      ).toBe(200);
+    expect(
+      (await request(`/portal/${id}/message`, "customer", "POST", { body: "Authorized follow-up" }))
+        .status,
+    ).toBe(200);
     const [after] = await db.select().from(quotes).where(eq(quotes.id, id));
     expect(after?.revision).toBe(before?.revision);
     expect(after?.status).not.toBe("CONFIRMED");
