@@ -57,8 +57,13 @@ test("customer reviews, discusses, counters and confirms their approved quotatio
   const counter = (await response.json()) as { revision: number };
   await expect(page.getByText(new RegExp(`Version ${counter.revision} ·`))).toBeVisible();
   await page.getByRole("button", { name: "Confirm order", exact: true }).click();
-  await expect(page.getByRole("alertdialog")).toBeVisible();
-  await page.getByRole("button", { name: "Confirm this order", exact: true }).click();
+  const confirmation = page.getByRole("alertdialog");
+  await expect(confirmation).toBeVisible();
+  await expect(confirmation.locator("[data-slot='alert-dialog-footer']")).toHaveCSS(
+    "position",
+    "sticky",
+  );
+  await confirmation.getByRole("button", { name: "Confirm this order", exact: true }).click();
   await expect(page.getByText("Order confirmed", { exact: true })).toBeVisible();
   const saved = await request.get(`/api/v1/quotes/${quote.id}`);
   expect(((await saved.json()) as { quote: { status: string } }).quote.status).toBe("CONFIRMED");
