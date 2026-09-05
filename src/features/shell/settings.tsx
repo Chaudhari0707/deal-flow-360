@@ -13,8 +13,8 @@ import { displayStatus } from "@/features/shell/format";
 import { PageHeader } from "@/features/shell/page-header";
 import { useWorkspace } from "@/features/shell/use-workspace";
 import { WorkspaceState } from "@/features/shell/workspace-state";
+import { apiClient, apiData, HttpResponseError } from "@/lib/api/client";
 import type { Workspace } from "@/lib/domain/_types/workspace";
-import { fetchJson, HttpResponseError } from "@/lib/swr/fetcher";
 
 function PolicyForm({
   setting,
@@ -36,11 +36,7 @@ function PolicyForm({
     setError("");
     setNotice("");
     try {
-      await fetchJson(`/api/v1/settings/${setting.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ value }),
-      });
+      apiData(await apiClient.api.v1.settings({ id: setting.id }).patch({ value }));
       await saved();
       setNotice("Policy saved. New submissions will use the updated values.");
     } catch (failure) {

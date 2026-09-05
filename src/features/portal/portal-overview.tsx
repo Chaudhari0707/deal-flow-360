@@ -17,7 +17,7 @@ import { PortalForbidden } from "@/features/portal/portal-forbidden";
 import { displayDate, displayStatus, money } from "@/features/shell/format";
 import { PageHeader } from "@/features/shell/page-header";
 import { WorkspaceState } from "@/features/shell/workspace-state";
-import { HttpResponseError } from "@/lib/swr/fetcher";
+import { apiClient, apiData, HttpResponseError } from "@/lib/api/client";
 
 const columns: ColumnDef<DataTableFeatures, PortalWorkspace["quotes"][number]>[] = [
   {
@@ -66,7 +66,9 @@ const columns: ColumnDef<DataTableFeatures, PortalWorkspace["quotes"][number]>[]
 ];
 
 export function PortalOverview() {
-  const { data, error, mutate } = useSWR<PortalWorkspace>("/api/v1/portal");
+  const { data, error, mutate } = useSWR("/api/v1/portal", async () =>
+    apiData(await apiClient.api.v1.portal.get()),
+  );
   const router = useRouter();
   if (error instanceof HttpResponseError && error.status === 403) return <PortalForbidden />;
   if (error instanceof HttpResponseError && error.status === 401)

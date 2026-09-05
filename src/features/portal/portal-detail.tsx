@@ -39,7 +39,7 @@ import { PortalForbidden } from "@/features/portal/portal-forbidden";
 import { displayDate, displayStatus, money } from "@/features/shell/format";
 import { PageHeader } from "@/features/shell/page-header";
 import { WorkspaceState } from "@/features/shell/workspace-state";
-import { fetchJson, HttpResponseError } from "@/lib/swr/fetcher";
+import { apiClient, apiData, HttpResponseError } from "@/lib/api/client";
 
 const columns: ColumnDef<DataTableFeatures, PortalDetailData["quote"]["lines"][number]>[] = [
   {
@@ -76,9 +76,11 @@ const columns: ColumnDef<DataTableFeatures, PortalDetailData["quote"]["lines"][n
 ];
 
 export function PortalDetail({ id }: { id: string }) {
-  const { data, error, mutate } = useSWR<PortalDetailData>(`/api/v1/portal/${id}`, {
-    refreshInterval: 15000,
-  });
+  const { data, error, mutate } = useSWR(
+    `/api/v1/portal/${id}`,
+    async () => apiData(await apiClient.api.v1.portal({ id }).get()),
+    { refreshInterval: 15000 },
+  );
   const [pending, setPending] = useState(false);
   const [failure, setFailure] = useState("");
   const [notice, setNotice] = useState("");
@@ -123,11 +125,7 @@ export function PortalDetail({ id }: { id: string }) {
     setFailure("");
     setNotice("");
     try {
-      await fetchJson(`/api/v1/portal/${id}/confirm`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ revision: quote.revision }),
-      });
+      apiData(await apiClient.api.v1.portal({ id }).confirm.post({ revision: quote.revision }));
       await mutate();
       setNotice(
         "Your order is confirmed. Your account manager will coordinate delivery and billing.",

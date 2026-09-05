@@ -5,8 +5,8 @@ import useSWR from "swr";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import type { LineInput } from "@/features/quotes/_types/quotes";
-import type { PurchaseRecommendations as Recommendations } from "@/features/quotes/_types/recommendations";
 import { calculateQuote, defaultDiscounts, money, priceLines } from "@/features/quotes/rules";
+import { apiClient, apiData } from "@/lib/api/client";
 import type { Workspace } from "@/lib/domain/_types/workspace";
 
 export function PurchaseRecommendations({
@@ -30,10 +30,12 @@ export function PurchaseRecommendations({
   pricelists?: Record<string, number>;
   tier: string;
 }) {
-  const { data, error, isLoading, mutate } = useSWR<Recommendations>(
+  const { data, error, isLoading, mutate } = useSWR(
     customerId
       ? `/api/v1/quotes/recommendations?customerId=${encodeURIComponent(customerId)}`
       : null,
+    async () =>
+      apiData(await apiClient.api.v1.quotes.recommendations.get({ query: { customerId } })),
     { keepPreviousData: false },
   );
   const suggestions = (data?.productIds ?? []).flatMap((id) => {

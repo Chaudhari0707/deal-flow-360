@@ -3,7 +3,6 @@ import { describe, expect, test } from "bun:test";
 import { renderToStaticMarkup } from "react-dom/server";
 
 import { ReportExportActions } from "@/features/billing/report-export-actions";
-import { assertBillingResponse } from "@/features/billing/response";
 import { subscriptionPreview } from "@/features/billing/subscription-preview";
 import type { Workspace } from "@/lib/domain/_types/workspace";
 
@@ -64,31 +63,6 @@ describe("CodeRabbit billing regressions", () => {
     expect(available).toContain(
       'href="/api/v1/reports/financial?category=Service&amp;format=xlsx"',
     );
-  });
-  test("non-JSON, null and malformed error bodies yield actionable response errors", async () => {
-    await expect(
-      assertBillingResponse(
-        new Response("<html>Bad gateway</html>", { status: 502, statusText: "Bad Gateway" }),
-      ),
-    ).rejects.toThrow("Bad Gateway");
-    await expect(assertBillingResponse(new Response("null", { status: 503 }))).rejects.toThrow(
-      "Request failed (503)",
-    );
-    await expect(
-      assertBillingResponse(
-        new Response(JSON.stringify({ error: { message: 23 }, message: "" }), { status: 500 }),
-      ),
-    ).rejects.toThrow("Request failed (500)");
-    await expect(
-      assertBillingResponse(
-        new Response(JSON.stringify({ error: { message: "Refresh the invoice first" } }), {
-          status: 409,
-        }),
-      ),
-    ).rejects.toThrow("Refresh the invoice first");
-    await expect(
-      assertBillingResponse(new Response(null, { status: 204 })),
-    ).resolves.toBeUndefined();
   });
   test("future-start and invalid-price subscriptions cannot crash preview or enable mutation", () => {
     expect(

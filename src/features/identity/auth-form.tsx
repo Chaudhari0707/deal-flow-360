@@ -10,9 +10,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { apiClient, apiData } from "@/lib/api/client";
 import { authClient } from "@/lib/auth/client";
-import type { Actor } from "@/lib/domain/_types/domain";
-import { fetchJson } from "@/lib/swr/fetcher";
 
 function subscribeHydration() {
   return () => {};
@@ -50,7 +49,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
         setError(result.error.message ?? "We couldn't sign you in. Please check your details.");
         return;
       }
-      const { actor } = await fetchJson<{ actor: Actor }>("/api/v1/me");
+      const { actor } = apiData(await apiClient.api.v1.me.get());
       // A full navigation clears the previous account's client data.
       window.location.assign(actor.role === "customer" ? "/portal" : "/dashboard");
     } catch {

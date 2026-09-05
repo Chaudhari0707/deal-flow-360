@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import type { PortalDetail } from "@/features/portal/_types/portal";
-import { fetchJson, HttpResponseError } from "@/lib/swr/fetcher";
+import { apiClient, apiData, HttpResponseError } from "@/lib/api/client";
 
 export function PortalCounter({
   data,
@@ -32,15 +32,13 @@ export function PortalCounter({
     setError("");
     setNotice("");
     try {
-      await fetchJson(`/api/v1/portal/${data.quote.id}/counter`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+      apiData(
+        await apiClient.api.v1.portal({ id: data.quote.id }).counter.post({
           revision: data.quote.revision,
           lines,
           ...(promisedDate ? { promisedDate } : {}),
         }),
-      });
+      );
       await saved();
       setNotice("Your requested changes were sent for review. We'll keep the conversation here.");
     } catch (failure) {

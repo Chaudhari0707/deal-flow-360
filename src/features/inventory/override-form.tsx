@@ -17,8 +17,8 @@ import {
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import type { FulfillmentDetail } from "@/features/inventory/_types/ui";
+import { apiClient, apiData } from "@/lib/api/client";
 import type { Workspace } from "@/lib/domain/_types/workspace";
-import { fetchJson } from "@/lib/swr/fetcher";
 
 export function OverrideForm({
   detail,
@@ -84,14 +84,12 @@ export function OverrideForm({
           onSubmit={form.handleSubmit(async (values) => {
             setError("");
             try {
-              await fetchJson(`/api/v1/fulfillment/${detail.order.id}/override`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
+              apiData(
+                await apiClient.api.v1.fulfillment({ id: detail.order.id }).override.post({
                   ...values,
                   allocations: values.allocations.filter((a) => a.quantity > 0),
                 }),
-              });
+              );
               refresh();
               setOpen(false);
             } catch (e) {

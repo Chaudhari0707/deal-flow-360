@@ -31,8 +31,23 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useWorkspace } from "@/features/shell/use-workspace";
+import { apiClient, apiData, HttpResponseError } from "@/lib/api/client";
 import type { Workspace } from "@/lib/domain/_types/workspace";
-import { fetchJson, HttpResponseError } from "@/lib/swr/fetcher";
+
+function productCategory(value: string): "Hardware" | "Services" | "Subscription" {
+  if (value === "Hardware" || value === "Services" || value === "Subscription") return value;
+  throw new Error("Choose a valid product category");
+}
+
+function intervalMonths(value: number): 0 | 1 | 3 | 12 {
+  if (value === 0 || value === 1 || value === 3 || value === 12) return value;
+  throw new Error("Choose a valid billing interval");
+}
+
+function customerTier(value: string): "Bronze" | "Gold" | "Silver" {
+  if (value === "Bronze" || value === "Silver" || value === "Gold") return value;
+  throw new Error("Choose a valid customer tier");
+}
 
 export function CatalogEditor({
   kind,
@@ -63,25 +78,6 @@ export function CatalogEditor({
     const form = new FormData(event.currentTarget);
     const value = (name: string) => String(form.get(name) ?? "").trim();
     const numeric = (name: string, scale = 1) => Math.round(Number(value(name)) * scale);
-    const body =
-      kind === "product"
-        ? {
-            name: value("name"),
-            category: value("category"),
-            description: value("description"),
-            unit: value("unit"),
-            variant: value("variant"),
-            priceCents: numeric("price", 100),
-            costCents: numeric("cost", 100),
-            taxBps: numeric("tax", 100),
-            intervalMonths: numeric("interval"),
-            promotionBps: numeric("promotion", 100),
-            pairedProductIds,
-            stockable,
-            active,
-            promoted,
-          }
-        : { name: value("name"), email: value("email"), tier: value("tier"), team: value("team") };
     if (kind === "product" && stockable && numeric("interval") > 0) {
       setError("Recurring subscriptions cannot track warehouse inventory.");
       return;
@@ -89,12 +85,37 @@ export function CatalogEditor({
     setPending(true);
     setError("");
     try {
-      const base = kind === "product" ? "/api/v1/catalog/products" : "/api/v1/customers";
-      await fetchJson(existing ? `${base}/${existing.id}` : base, {
-        method: existing ? "PATCH" : "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
+      if (kind === "product") {
+        const body = {
+          name: value("name"),
+          category: productCategory(value("category")),
+          description: value("description"),
+          unit: value("unit"),
+          variant: value("variant"),
+          priceCents: numeric("price", 100),
+          costCents: numeric("cost", 100),
+          taxBps: numeric("tax", 100),
+          intervalMonths: intervalMonths(numeric("interval")),
+          promotionBps: numeric("promotion", 100),
+          pairedProductIds,
+          stockable,
+          active,
+          promoted,
+        };
+        const products = apiClient.api.v1.catalog.products;
+        if (product) apiData(await products({ id: product.id }).patch(body));
+        else apiData(await products.post(body));
+      } else {
+        const body = {
+          name: value("name"),
+          email: value("email"),
+          tier: customerTier(value("tier")),
+          team: value("team"),
+        };
+        const customers = apiClient.api.v1.customers;
+        if (customer) apiData(await customers({ id: customer.id }).patch(body));
+        else apiData(await customers.post(body));
+      }
       await saved();
       close();
     } catch (failure) {

@@ -4,11 +4,10 @@ import type { ReactNode } from "react";
 import { SWRConfig } from "swr";
 
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { fetchJson, HttpResponseError } from "@/lib/swr/fetcher";
+import { HttpResponseError } from "@/lib/api/client";
 
 const swrConfig = {
   dedupingInterval: 2_000,
-  fetcher: fetchJson,
   keepPreviousData: true,
   revalidateOnFocus: true,
   shouldRetryOnError(error: unknown) {

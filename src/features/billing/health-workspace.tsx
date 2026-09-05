@@ -14,6 +14,7 @@ import { useBillingAction } from "@/features/billing/use-billing-action";
 import { PageHeader } from "@/features/shell/page-header";
 import { useWorkspace } from "@/features/shell/use-workspace";
 import { WorkspaceState } from "@/features/shell/workspace-state";
+import { apiClient, apiData } from "@/lib/api/client";
 
 export function HealthWorkspace() {
   const { data, error, mutate } = useWorkspace();
@@ -109,12 +110,14 @@ export function HealthWorkspace() {
                       disabled={action.pending}
                       onClick={() =>
                         void action.run(
-                          "/health/nudge",
-                          {
-                            operationKey: crypto.randomUUID(),
-                            quoteId: item.quoteId,
-                            reason: `Follow up: ${item.title}`,
-                          },
+                          async () =>
+                            apiData(
+                              await apiClient.api.v1.health.nudge.post({
+                                operationKey: crypto.randomUUID(),
+                                quoteId: item.quoteId!,
+                                reason: `Follow up: ${item.title}`,
+                              }),
+                            ),
                           "Follow-up recorded for the deal owner in the activity feed.",
                         )
                       }
@@ -153,7 +156,11 @@ export function HealthWorkspace() {
               className="space-y-4"
               onSubmit={(event) => {
                 event.preventDefault();
-                if (valid) void action.run("/health/rules", values, "Health thresholds saved.");
+                if (valid)
+                  void action.run(
+                    async () => apiData(await apiClient.api.v1.health.rules.post(values)),
+                    "Health thresholds saved.",
+                  );
               }}
             >
               <div className="grid gap-4 sm:grid-cols-3">

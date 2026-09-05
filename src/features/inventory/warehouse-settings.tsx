@@ -17,7 +17,7 @@ import {
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import type { WarehouseRow } from "@/features/inventory/_types/ui";
-import { fetchJson } from "@/lib/swr/fetcher";
+import { apiClient, apiData } from "@/lib/api/client";
 
 export function WarehouseSettings({
   warehouse = { id: "", name: "", active: false, replenishmentThreshold: 5, shippingWeight: 100 },
@@ -53,16 +53,9 @@ export function WarehouseSettings({
           onSubmit={form.handleSubmit(async (values) => {
             setError("");
             try {
-              await fetchJson(
-                warehouse.id
-                  ? `/api/v1/inventory/warehouses/${warehouse.id}`
-                  : "/api/v1/inventory/warehouses",
-                {
-                  method: warehouse.id ? "PATCH" : "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify(values),
-                },
-              );
+              const warehouses = apiClient.api.v1.inventory.warehouses;
+              if (warehouse.id) apiData(await warehouses({ id: warehouse.id }).patch(values));
+              else apiData(await warehouses.post(values));
               refresh();
               setOpen(false);
             } catch (e) {

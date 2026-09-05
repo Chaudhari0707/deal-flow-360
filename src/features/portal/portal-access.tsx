@@ -6,7 +6,7 @@ import Link from "next/link";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { WorkspaceState } from "@/features/shell/workspace-state";
-import { fetchJson } from "@/lib/swr/fetcher";
+import { apiClient, apiData } from "@/lib/api/client";
 
 export function PortalAccess() {
   const started = useRef(false);
@@ -19,11 +19,7 @@ export function PortalAccess() {
     window.history.replaceState(null, "", "/portal/access");
     async function redeem() {
       if (!token) throw new Error("Missing quotation access token");
-      return fetchJson<{ quoteId: string }>("/api/v1/portal/redeem", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token }),
-      });
+      return apiData(await apiClient.api.v1.portal.redeem.post({ token }));
     }
     void redeem()
       .then((result) => {

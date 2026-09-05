@@ -24,7 +24,7 @@ import { OverrideForm } from "@/features/inventory/override-form";
 import { PageHeader } from "@/features/shell/page-header";
 import { useWorkspace } from "@/features/shell/use-workspace";
 import { WorkspaceState } from "@/features/shell/workspace-state";
-import { fetchJson } from "@/lib/swr/fetcher";
+import { apiClient, apiData } from "@/lib/api/client";
 
 export function FulfillmentDetail({
   id,
@@ -35,22 +35,27 @@ export function FulfillmentDetail({
   back: () => void;
   compact?: boolean;
 }) {
-  const { data, error, mutate } = useSWR<Detail>(`/api/v1/fulfillment/${id}`);
+  const { data, error, mutate } = useSWR(`/api/v1/fulfillment/${id}`, async () =>
+    apiData(await apiClient.api.v1.fulfillment({ id }).get()),
+  );
   const workspace = useWorkspace();
   const [pending, setPending] = useState(false);
   const [notice, setNotice] = useState("");
   const [failed, setFailed] = useState(false);
   const [operations, setOperations] = useState<Record<string, string>>({});
   const canOperate = ["admin", "ops"].includes(workspace.data?.actor.role ?? "");
-  async function action(kind: string, body?: unknown) {
+  async function action(
+    kind: "accept" | "consolidate" | "ship",
+    body?: { operationKey: string; quantity: number; reservationId: string },
+  ) {
     setPending(true);
     setNotice("");
     try {
-      await fetchJson(`/api/v1/fulfillment/${id}/${kind}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        ...(body ? { body: JSON.stringify(body) } : {}),
-      });
+      const endpoint = apiClient.api.v1.fulfillment({ id });
+      if (kind === "accept") apiData(await endpoint.accept.post());
+      else if (kind === "consolidate") apiData(await endpoint.consolidate.post());
+      else if (body) apiData(await endpoint.ship.post(body));
+      else throw new Error("Shipment details are required");
       await Promise.all([mutate(), workspace.mutate()]);
       setFailed(false);
       setNotice(

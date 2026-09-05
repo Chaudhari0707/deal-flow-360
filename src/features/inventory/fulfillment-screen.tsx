@@ -13,6 +13,7 @@ import { FulfillmentDetailDialog } from "@/features/inventory/fulfillment-detail
 import { useStockFeed } from "@/features/inventory/use-stock-feed";
 import { PageHeader } from "@/features/shell/page-header";
 import { WorkspaceState } from "@/features/shell/workspace-state";
+import { apiClient, apiData } from "@/lib/api/client";
 
 const columns: ColumnDef<DataTableFeatures, FulfillmentList["items"][number]>[] = [
   {
@@ -45,8 +46,14 @@ const columns: ColumnDef<DataTableFeatures, FulfillmentList["items"][number]>[] 
 export function FulfillmentScreen() {
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 20 });
   const [selected, setSelected] = useState<string>();
-  const { data, error, mutate } = useSWR<FulfillmentList>(
+  const { data, error, mutate } = useSWR(
     `/api/v1/fulfillment/orders?page=${pagination.pageIndex}&pageSize=${pagination.pageSize}`,
+    async () =>
+      apiData(
+        await apiClient.api.v1.fulfillment.orders.get({
+          query: { page: pagination.pageIndex, pageSize: pagination.pageSize },
+        }),
+      ),
     { keepPreviousData: true },
   );
   const live = useStockFeed();

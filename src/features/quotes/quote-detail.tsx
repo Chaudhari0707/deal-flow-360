@@ -21,20 +21,19 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { quoteRequest } from "@/features/quotes/client-action";
 import { QuoteEditor } from "@/features/quotes/quote-editor";
 import { money } from "@/features/quotes/rules";
 import { PageHeader } from "@/features/shell/page-header";
 import { useWorkspace } from "@/features/shell/use-workspace";
 import { WorkspaceState } from "@/features/shell/workspace-state";
-import type { Workspace } from "@/lib/domain/_types/workspace";
+import { apiClient, apiData } from "@/lib/api/client";
 
 export function QuoteDetail({ isNew = false }: { isNew?: boolean }) {
   const router = useRouter();
   const params = useParams<{ id: string }>(),
     { data, error, mutate } = useWorkspace();
-  const detail = useSWR<{ activity: Workspace["activity"]; messages: Workspace["messages"] }>(
-    !isNew && params.id ? `/api/v1/quotes/${params.id}` : null,
+  const detail = useSWR(!isNew && params.id ? `/api/v1/quotes/${params.id}` : null, async () =>
+    apiData(await apiClient.api.v1.quotes({ id: params.id }).get()),
   );
   const [editing, setEditing] = useState(false),
     [pending, setPending] = useState(false),
@@ -69,19 +68,22 @@ export function QuoteDetail({ isNew = false }: { isNew?: boolean }) {
     setPending(true);
     setFailure("");
     try {
-      const saved = await quoteRequest<{ id: string }>("/quotes", {
-        customerId: quote.customerId,
-        lines: quote.lines.map((line) => ({
-          id: crypto.randomUUID(),
-          productId: line.productId,
-          quantity: line.quantity,
-          discountBps: line.discountBps,
-          upsell: line.upsell,
-        })),
-        orderDiscountBps: quote.orderDiscountBps,
-        notes: quote.notes,
-        ...(quote.promisedDate ? { promisedDate: quote.promisedDate } : {}),
-      });
+      const saved = apiData(
+        await apiClient.api.v1.quotes.post({
+          customerId: quote.customerId,
+          lines: quote.lines.map((line) => ({
+            id: crypto.randomUUID(),
+            productId: line.productId,
+            quantity: line.quantity,
+            discountBps: line.discountBps,
+            upsell: line.upsell,
+          })),
+          orderDiscountBps: quote.orderDiscountBps,
+          notes: quote.notes,
+          ...(quote.promisedDate ? { promisedDate: quote.promisedDate } : {}),
+        }),
+        "The action failed. Refresh and try again.",
+      );
       await mutate();
       router.push(`/quotations/${saved.id}`);
     } catch (error) {
@@ -96,16 +98,27 @@ export function QuoteDetail({ isNew = false }: { isNew?: boolean }) {
     setFailure("");
     setNotice("");
     try {
-      const result = await quoteRequest<{ status?: string; message?: string }>(
-        `/quotes/${quote.id}/${["approve", "return", "reject"].includes(action) ? "approval" : action}`,
+      const endpoint = apiClient.api.v1.quotes({ id: quote.id });
+      const fallback = "The action failed. Refresh and try again.";
+      const result =
         action === "send"
-          ? { renew: quote.status === "SENT" || quote.status === "UNDER_NEGOTIATION" }
+          ? apiData(
+              await endpoint.send.post({
+                renew: quote.status === "SENT" || quote.status === "UNDER_NEGOTIATION",
+              }),
+              fallback,
+            )
           : action === "submit"
-            ? { revision: quote.revision }
-            : { revision: quote.revision, action, reason },
-      );
+            ? apiData(await endpoint.submit.post({ revision: quote.revision }), fallback)
+            : apiData(
+                await endpoint.approval.post({ revision: quote.revision, action, reason }),
+                fallback,
+              );
       if (result.status === "FAILED")
-        setFailure(result.message ?? "Email delivery failed; retry after checking configuration.");
+        setFailure(
+          ("message" in result ? result.message : undefined) ??
+            "Email delivery failed; retry after checking configuration.",
+        );
       else setNotice(action === "send" ? "Email accepted by provider." : "Quotation updated.");
       await onSaved();
     } catch (e) {

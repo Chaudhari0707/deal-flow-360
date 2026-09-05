@@ -16,7 +16,7 @@ import {
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import type { StockRow } from "@/features/inventory/_types/ui";
-import { fetchJson } from "@/lib/swr/fetcher";
+import { apiClient, apiData } from "@/lib/api/client";
 
 export function RestockDialog({
   stock,
@@ -56,16 +56,14 @@ export function RestockDialog({
               operation.payload === payload ? operation : { key: crypto.randomUUID(), payload };
             setOperation(nextOperation);
             try {
-              await fetchJson("/api/v1/inventory/restock", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
+              apiData(
+                await apiClient.api.v1.inventory.restock.post({
                   ...values,
                   operationKey: nextOperation.key,
                   warehouseId: stock.warehouseId,
                   productId: stock.productId,
                 }),
-              });
+              );
               setOperation({ key: "", payload: "" });
               setError(false);
               setMessage("Stock received. Backorders can now be consolidated.");

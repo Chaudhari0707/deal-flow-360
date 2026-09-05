@@ -7,8 +7,8 @@ import { Layers3, LockKeyhole, LogOut } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { apiClient, apiData } from "@/lib/api/client";
 import { authClient } from "@/lib/auth/client";
-import { fetchJson } from "@/lib/swr/fetcher";
 
 export function PortalShell({ children }: { children: ReactNode }) {
   const [pending, setPending] = useState(false);
@@ -17,7 +17,7 @@ export function PortalShell({ children }: { children: ReactNode }) {
     setPending(true);
     setError("");
     try {
-      await fetchJson("/api/v1/portal/logout", { method: "POST" });
+      apiData(await apiClient.api.v1.portal.logout.post());
       const result = await authClient.signOut();
       if (result.error) throw new Error("Sign out failed");
       window.location.assign("/login");

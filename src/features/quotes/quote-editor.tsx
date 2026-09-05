@@ -20,9 +20,9 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import type { LineInput } from "@/features/quotes/_types/quotes";
-import { quoteRequest } from "@/features/quotes/client-action";
 import { PurchaseRecommendations } from "@/features/quotes/purchase-recommendations";
 import { calculateQuote, defaultDiscounts, money, priceLines } from "@/features/quotes/rules";
+import { apiClient, apiData } from "@/lib/api/client";
 import type { Workspace } from "@/lib/domain/_types/workspace";
 
 export function QuoteEditor({
@@ -88,19 +88,30 @@ export function QuoteEditor({
     setPending(true);
     setError("");
     try {
-      const saved = await quoteRequest<Workspace["quotes"][number]>(
-        quote ? `/quotes/${quote.id}` : "/quotes",
-        {
-          customerId,
-          lines,
-          orderDiscountBps,
-          notes,
-          ...(date ? { promisedDate: date } : {}),
-          ...(quote ? { revision: quote.revision } : {}),
-        },
-        quote ? "PATCH" : "POST",
-      );
-      if (submit) await quoteRequest(`/quotes/${saved.id}/submit`, { revision: saved.revision });
+      const payload = {
+        customerId,
+        lines,
+        orderDiscountBps,
+        notes,
+        ...(date ? { promisedDate: date } : {}),
+        ...(quote ? { revision: quote.revision } : {}),
+      };
+      const saved = quote
+        ? apiData(
+            await apiClient.api.v1.quotes({ id: quote.id }).patch(payload),
+            "The action failed. Refresh and try again.",
+          )
+        : apiData(
+            await apiClient.api.v1.quotes.post(payload),
+            "The action failed. Refresh and try again.",
+          );
+      if (submit)
+        apiData(
+          await apiClient.api.v1.quotes({ id: saved.id }).submit.post({
+            revision: saved.revision,
+          }),
+          "The action failed. Refresh and try again.",
+        );
       await onSaved();
       router.push(`/quotations/${saved.id}`);
     } catch (e) {

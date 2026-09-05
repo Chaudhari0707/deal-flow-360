@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { DataTable } from "@/components/ui/data-table";
-import type { InventorySnapshot, StockRow } from "@/features/inventory/_types/ui";
+import type { StockRow } from "@/features/inventory/_types/ui";
 import { RestockDialog } from "@/features/inventory/restock-form";
 import { StockSetup } from "@/features/inventory/stock-setup";
 import { useStockFeed } from "@/features/inventory/use-stock-feed";
@@ -18,6 +18,7 @@ import { WarehouseSettings } from "@/features/inventory/warehouse-settings";
 import { PageHeader } from "@/features/shell/page-header";
 import { useWorkspace } from "@/features/shell/use-workspace";
 import { WorkspaceState } from "@/features/shell/workspace-state";
+import { apiClient, apiData } from "@/lib/api/client";
 
 const columns: ColumnDef<DataTableFeatures, StockRow>[] = [
   {
@@ -61,8 +62,14 @@ const columns: ColumnDef<DataTableFeatures, StockRow>[] = [
 export function InventoryScreen() {
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 20 });
   const [selected, setSelected] = useState<string>();
-  const { data, error, mutate } = useSWR<InventorySnapshot>(
+  const { data, error, mutate } = useSWR(
     `/api/v1/inventory?page=${pagination.pageIndex}&pageSize=${pagination.pageSize}`,
+    async () =>
+      apiData(
+        await apiClient.api.v1.inventory.get({
+          query: { page: pagination.pageIndex, pageSize: pagination.pageSize },
+        }),
+      ),
     { keepPreviousData: true },
   );
   const workspace = useWorkspace();

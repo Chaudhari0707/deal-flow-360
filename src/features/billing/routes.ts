@@ -51,7 +51,8 @@ export const billingRoutes = new Elysia({ name: "billing", tags: ["Billing"] })
   .use(actorContext)
   .post(
     "/invoices/:id/pay",
-    ({ actor, params, body }) => recordPayment(actor, params.id, body.operationKey, body.reference),
+    async ({ actor, params, body }) =>
+      recordPayment(actor, params.id, body.operationKey, body.reference),
     {
       authorize: ["admin", "finance"],
       body: t.Object({ operationKey: key, reference: t.String({ minLength: 3, maxLength: 100 }) }),
@@ -59,13 +60,13 @@ export const billingRoutes = new Elysia({ name: "billing", tags: ["Billing"] })
       response: { 200: paymentResultModel, ...apiErrorResponses },
     },
   )
-  .post("/subscriptions/run-due", ({ actor }) => runDueBilling(actor), {
+  .post("/subscriptions/run-due", async ({ actor }) => runDueBilling(actor), {
     authorize: ["admin", "finance"],
     response: { 200: billingRunModel, ...apiErrorResponses },
   })
   .post(
     "/subscriptions/:id/change",
-    ({ actor, params, body }) => changeSubscription(actor, params.id, body),
+    async ({ actor, params, body }) => changeSubscription(actor, params.id, body),
     {
       authorize: ["admin", "finance"],
       body: t.Object({
@@ -81,7 +82,7 @@ export const billingRoutes = new Elysia({ name: "billing", tags: ["Billing"] })
   )
   .post(
     "/subscriptions/:id/cancel",
-    ({ actor, params, body }) => changeSubscription(actor, params.id, body, true),
+    async ({ actor, params, body }) => changeSubscription(actor, params.id, body, true),
     {
       authorize: ["admin", "finance"],
       body: t.Object({

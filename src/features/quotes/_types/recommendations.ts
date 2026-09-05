@@ -1,4 +1,5 @@
-export type PurchaseRecommendations = {
-  productIds: string[];
-  source: "last_purchase" | "best_sellers";
-};
+import type { Static } from "elysia";
+
+import type { recommendationsModel } from "@/features/quotes/model";
+
+export type PurchaseRecommendations = Static<typeof recommendationsModel>;

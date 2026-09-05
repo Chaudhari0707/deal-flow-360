@@ -1,46 +1,8 @@
-import type {
-  auditEntries,
-  credits,
-  customers,
-  deliveries,
-  invoices,
-  messages,
-  orders,
-  payments,
-  products,
-  quotes,
-  reservations,
-  settings,
-  stocks,
-  subscriptions,
-  warehouses,
-} from "@/lib/db/schema";
-import type { Actor } from "@/lib/domain/_types/domain";
+import type { Static } from "elysia";
 
-export type Serialized<T> = T extends Date
-  ? string
-  : T extends readonly (infer U)[]
-    ? Serialized<U>[]
-    : T extends object
-      ? { [K in keyof T]: Serialized<T[K]> }
-      : T;
+import type { workspaceResponseModel } from "@/features/workspace/model";
+import type { JsonTransport } from "@/lib/api/_types/client";
 
-export interface Workspace {
-  activity: Serialized<typeof auditEntries.$inferSelect>[];
-  actor: Actor;
-  asOf?: string;
-  credits: Serialized<typeof credits.$inferSelect>[];
-  customers: Serialized<typeof customers.$inferSelect>[];
-  deliveries: Omit<Serialized<typeof deliveries.$inferSelect>, "encryptedPayload">[];
-  invoices: Serialized<typeof invoices.$inferSelect>[];
-  messages: Serialized<typeof messages.$inferSelect>[];
-  orders: Serialized<typeof orders.$inferSelect>[];
-  payments: Serialized<typeof payments.$inferSelect>[];
-  products: Serialized<typeof products.$inferSelect>[];
-  quotes: Serialized<typeof quotes.$inferSelect>[];
-  reservations: Serialized<typeof reservations.$inferSelect>[];
-  settings: Serialized<typeof settings.$inferSelect>[];
-  stocks: Serialized<typeof stocks.$inferSelect>[];
-  subscriptions: Serialized<typeof subscriptions.$inferSelect>[];
-  warehouses: Serialized<typeof warehouses.$inferSelect>[];
-}
+export type Serialized<Data> = JsonTransport<Data>;
+export type Workspace = Omit<WorkspaceResponse, "asOf"> & { asOf?: string };
+type WorkspaceResponse = JsonTransport<Static<typeof workspaceResponseModel>>;

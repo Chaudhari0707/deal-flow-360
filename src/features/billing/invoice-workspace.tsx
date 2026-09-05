@@ -31,6 +31,7 @@ import { displayDate, displayStatus, money } from "@/features/shell/format";
 import { PageHeader } from "@/features/shell/page-header";
 import { useWorkspace } from "@/features/shell/use-workspace";
 import { WorkspaceState } from "@/features/shell/workspace-state";
+import { apiClient, apiData } from "@/lib/api/client";
 
 export function InvoiceWorkspace({ initialId }: { initialId?: string }) {
   const { data, error, mutate } = useWorkspace();
@@ -175,8 +176,13 @@ export function InvoiceWorkspace({ initialId }: { initialId?: string }) {
                     event.preventDefault();
                     if (reference.trim().length >= 3)
                       void action.run(
-                        `/invoices/${invoice.id}/pay`,
-                        { operationKey: crypto.randomUUID(), reference: reference.trim() },
+                        async () =>
+                          apiData(
+                            await apiClient.api.v1.invoices({ id: invoice.id }).pay.post({
+                              operationKey: crypto.randomUUID(),
+                              reference: reference.trim(),
+                            }),
+                          ),
                         "Payment recorded and balance reconciled.",
                       );
                   }}

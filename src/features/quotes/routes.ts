@@ -34,12 +34,12 @@ export const quoteRoutes = new Elysia({ name: "quotes", tags: ["Quotes"] })
       response: { 200: recommendationsModel, ...apiErrorResponses },
     },
   )
-  .post("/quotes", ({ actor, body: b }) => saveQuote(b, actor), {
+  .post("/quotes", async ({ actor, body: b }) => saveQuote(b, actor), {
     authorize: ["rep", "manager", "admin"],
     body,
     response: { 200: quoteModel, ...apiErrorResponses },
   })
-  .patch("/quotes/:id", ({ actor, body: b, params }) => saveQuote(b, actor, params.id), {
+  .patch("/quotes/:id", async ({ actor, body: b, params }) => saveQuote(b, actor, params.id), {
     authorize: ["rep", "manager", "admin"],
     body,
     params: t.Object({ id }),
@@ -124,7 +124,7 @@ export const quoteRoutes = new Elysia({ name: "quotes", tags: ["Quotes"] })
   )
   .post(
     "/quotes/:id/confirm",
-    ({ actor, params, body: b }) => confirmQuote(params.id, b.revision, actor),
+    async ({ actor, params, body: b }) => confirmQuote(params.id, b.revision, actor),
     {
       authorize: ["admin"],
       params: t.Object({ id }),

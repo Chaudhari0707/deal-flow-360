@@ -38,6 +38,7 @@ import { displayDate, displayStatus, money } from "@/features/shell/format";
 import { PageHeader } from "@/features/shell/page-header";
 import { useWorkspace } from "@/features/shell/use-workspace";
 import { WorkspaceState } from "@/features/shell/workspace-state";
+import { apiClient, apiData } from "@/lib/api/client";
 
 export function SubscriptionWorkspace() {
   const { data, error, mutate } = useWorkspace();
@@ -67,8 +68,7 @@ export function SubscriptionWorkspace() {
               disabled={action.pending}
               onClick={() =>
                 void action.run(
-                  "/subscriptions/run-due",
-                  {},
+                  async () => apiData(await apiClient.api.v1.subscriptions["run-due"].post()),
                   "Due billing completed. Each period is issued once.",
                 )
               }
@@ -158,14 +158,18 @@ export function SubscriptionWorkspace() {
                     event.preventDefault();
                     if (valid)
                       void action.run(
-                        `/subscriptions/${encodeURIComponent(subscription.id)}/change`,
-                        {
-                          operationKey: crypto.randomUUID(),
-                          productId,
-                          quantity,
-                          reason: reason.trim(),
-                          version: subscription.version,
-                        },
+                        async () =>
+                          apiData(
+                            await apiClient.api.v1
+                              .subscriptions({ id: subscription.id })
+                              .change.post({
+                                operationKey: crypto.randomUUID(),
+                                productId,
+                                quantity,
+                                reason: reason.trim(),
+                                version: subscription.version,
+                              }),
+                          ),
                         "Subscription updated. Any prorated invoice or credit is in the invoice register.",
                       );
                   }}
@@ -285,12 +289,16 @@ export function SubscriptionWorkspace() {
                     disabled={action.pending || !valid}
                     onClick={() =>
                       void action.run(
-                        `/subscriptions/${encodeURIComponent(subscription.id)}/cancel`,
-                        {
-                          operationKey: crypto.randomUUID(),
-                          reason: reason.trim(),
-                          version: subscription.version,
-                        },
+                        async () =>
+                          apiData(
+                            await apiClient.api.v1
+                              .subscriptions({ id: subscription.id })
+                              .cancel.post({
+                                operationKey: crypto.randomUUID(),
+                                reason: reason.trim(),
+                                version: subscription.version,
+                              }),
+                          ),
                         "Subscription cancelled. Unused service credit issued; future billing stopped.",
                       )
                     }
