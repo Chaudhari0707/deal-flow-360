@@ -248,8 +248,16 @@ above 2,000 invoices, 2,000 credits, 2,000 quotes, 2,000 orders, or 20,000 appro
 the endpoint rejects oversized selections rather than silently truncating totals.
 
 PDF and Excel downloads use the active filter query. The export description explains date
-and whole-record matching semantics. Excel money columns remain numeric with INR headings;
-customer-entered text is treated as text. Download actions are disabled when the report is
+and whole-record matching semantics. Excel money columns remain numeric with INR headings, and
+customer-entered text is treated as text.
+
+PDF uses a landscape executive summary with INR KPI cards, financial comparison bars and
+quotation-status counts, followed by filter/interpretation notes and separate quotation, order
+and financial registers. Charts use the same filtered records as the tables; they are not a
+conversion funnel. Negative net billing is plotted left of zero; credit totals remain positive
+and reduce net billed. Empty selections have explanatory text. Tables wrap long cells across
+pages, repeat headings and show page numbers. The PDF generation time is shown in UTC.
+Download actions are disabled when the report is
 unavailable, invalid, refreshing, or failed. A failed refresh hides cached report results rather
 than presenting old totals as current; the retry/sign-in state remains visible. Sources:
 [financial report](../../src/features/billing/reports.ts),
