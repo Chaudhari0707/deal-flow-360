@@ -37,7 +37,7 @@ export function QuoteList({ approvals = false }: { approvals?: boolean }) {
         .toLowerCase()
         .includes(search.toLowerCase()),
   );
-  const canCreate = ["rep", "manager", "admin"].includes(data.actor.role);
+  const canCreate = data.actor.role === "rep";
   const tableRows = visible.map((quote) => ({
     ...quote,
     customerName:

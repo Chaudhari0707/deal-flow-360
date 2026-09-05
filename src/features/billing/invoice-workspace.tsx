@@ -40,7 +40,7 @@ export function InvoiceWorkspace({ initialId }: { initialId?: string }) {
   const action = useBillingAction();
   if (!data) return <WorkspaceState error={error} retry={() => void mutate()} />;
   const invoice = data.invoices.find((entry) => entry.id === selected);
-  const canPay = ["admin", "finance"].includes(data.actor.role);
+  const canPay = data.actor.role === "finance";
   const rows = data.invoices.filter((entry) =>
     `${entry.number} ${data.customers.find((customer) => customer.id === entry.customerId)?.name ?? ""}`
       .toLowerCase()

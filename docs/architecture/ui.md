@@ -54,6 +54,9 @@ flowchart LR
   quotation-link sessions can use it; Admin, Finance, Manager, Ops and Rep sessions are redirected
   to their workspace and receive `403` from every portal endpoint. Costs, margins, internal notes,
   and risk snapshots are absent from the public quotation contract.
+- Administrators configure products, warehouses, stock locations, and policy, and can view reports.
+  They cannot take an approval step, act as a customer, operate fulfillment, or mutate billing. The
+  sidebar is filtered by the same role boundaries enforced by application APIs.
 - The email token is redeemed once for an HttpOnly scoped session, then removed from browser
   history. Portal sign-out revokes that session. Confirmation sends the reviewed revision;
   the server rejects stale or unapproved terms.

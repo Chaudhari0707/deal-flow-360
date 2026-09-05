@@ -13,3 +13,6 @@ move it into the canonical routed playbook and remove the duplicate entry here.
 2026-09-05 | Subscription amounts | Preserve the original rational price/quantity basis when changing
 quantities; repeatedly scaling rounded totals can gain or lose a cent. |
 `test/integration/billing.regression.test.ts` quantity round-trip regression.
+
+2026-09-05 | Numeric form controls | Keep a numeric field's raw text until blur; coercing every
+keystroke drops valid leading-zero decimal states. | `test/unit/number-input.regression.test.ts`

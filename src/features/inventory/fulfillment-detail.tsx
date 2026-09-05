@@ -41,7 +41,7 @@ export function FulfillmentDetail({
   const [notice, setNotice] = useState("");
   const [failed, setFailed] = useState(false);
   const [operations, setOperations] = useState<Record<string, string>>({});
-  const canOperate = ["admin", "ops"].includes(workspace.data?.actor.role ?? "");
+  const canOperate = workspace.data?.actor.role === "ops";
   async function action(kind: string, body?: unknown) {
     setPending(true);
     setNotice("");

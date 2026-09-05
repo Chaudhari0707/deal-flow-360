@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { NumberInput } from "@/components/ui/number-input";
 import {
   Select,
   SelectContent,
@@ -241,28 +242,31 @@ export function QuoteEditor({
                     <div className="grid grid-cols-2 items-end gap-3 sm:grid-cols-4">
                       <Field>
                         <FieldLabel htmlFor={`qty-${line.id}`}>Quantity</FieldLabel>
-                        <Input
+                        <NumberInput
                           id={`qty-${line.id}`}
                           aria-label={`${product?.name} quantity`}
-                          type="number"
                           min={1}
                           max={10000}
                           value={line.quantity}
-                          onChange={(e) => update(index, { quantity: Number(e.target.value) })}
+                          onValueChange={(value) =>
+                            update(index, { quantity: value ?? Number.NaN })
+                          }
                         />
                       </Field>
                       <Field>
                         <FieldLabel htmlFor={`discount-${line.id}`}>Discount %</FieldLabel>
-                        <Input
+                        <NumberInput
                           id={`discount-${line.id}`}
                           aria-label={`${product?.name} discount`}
-                          type="number"
                           min={0}
                           max={100}
                           step="0.01"
                           value={line.discountBps / 100}
-                          onChange={(e) =>
-                            update(index, { discountBps: Math.round(Number(e.target.value) * 100) })
+                          onValueChange={(value) =>
+                            update(index, {
+                              discountBps:
+                                value === undefined ? Number.NaN : Math.round(value * 100),
+                            })
                           }
                         />
                       </Field>
@@ -290,14 +294,15 @@ export function QuoteEditor({
             <div className="grid gap-4 sm:grid-cols-2">
               <Field>
                 <FieldLabel htmlFor="order-discount">Order discount %</FieldLabel>
-                <Input
+                <NumberInput
                   id="order-discount"
-                  type="number"
                   min={0}
                   max={100}
                   step="0.01"
                   value={orderDiscountBps / 100}
-                  onChange={(e) => setOrderDiscount(Math.round(Number(e.target.value) * 100))}
+                  onValueChange={(value) =>
+                    setOrderDiscount(value === undefined ? Number.NaN : Math.round(value * 100))
+                  }
                 />
               </Field>
               <Field>

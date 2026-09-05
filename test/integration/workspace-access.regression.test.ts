@@ -109,7 +109,7 @@ beforeAll(async () => {
     const draft = await saveQuote(input, accounts[owner]!.actor);
     const created = await saveQuote(input, accounts[owner]!.actor);
     const approved = await submitQuote(created.id, created.revision, accounts[owner]!.actor);
-    const order = await confirmQuote(approved.id, approved.revision, accounts.admin!.actor);
+    const order = await confirmQuote(approved.id, approved.revision, accounts.customer!.actor);
     const [invoice] = await db.select().from(invoices).where(eq(invoices.orderId, order.id));
     const [subscription] = await db
       .select()

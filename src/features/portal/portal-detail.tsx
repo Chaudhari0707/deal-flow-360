@@ -111,7 +111,7 @@ export function PortalDetail({ id }: { id: string }) {
         .reduce((sum, line) => sum + line.totalCents, 0),
     }))
     .filter((cycle) => cycle.cents > 0);
-  const canTransact = ["customer", "admin"].includes(data.actor.role);
+  const canTransact = data.actor.role === "customer";
   const confirmable =
     canTransact &&
     ["SENT", "APPROVED", "UNDER_NEGOTIATION"].includes(quote.status) &&

@@ -22,6 +22,7 @@ import {
   FieldSet,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { NumberInput } from "@/components/ui/number-input";
 import {
   Select,
   SelectContent,
@@ -249,10 +250,9 @@ export function CatalogEditor({
                   ].map((field) => (
                     <Field key={field.name}>
                       <FieldLabel htmlFor={`catalog-${field.name}`}>{field.label}</FieldLabel>
-                      <Input
+                      <NumberInput
                         id={`catalog-${field.name}`}
                         name={field.name}
-                        type="number"
                         required
                         min="0"
                         max={field.max}

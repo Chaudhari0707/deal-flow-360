@@ -57,7 +57,7 @@ export function QuoteDetail({ isNew = false }: { isNew?: boolean }) {
         </CardContent>
       </Card>
     );
-  const canEdit = ["rep", "manager", "admin"].includes(data.actor.role);
+  const canEdit = data.actor.role === "rep";
   const customer = data.customers.find((c) => c.id === quote?.customerId);
   const onSaved = async () => {
     setEditing(false);
@@ -114,9 +114,7 @@ export function QuoteDetail({ isNew = false }: { isNew?: boolean }) {
       setPending(false);
     }
   }
-  const reviewer =
-    quote?.status === "PENDING_APPROVAL" &&
-    (data.actor.role === quote.approvalStep || data.actor.role === "admin");
+  const reviewer = quote?.status === "PENDING_APPROVAL" && data.actor.role === quote.approvalStep;
   const approved = quote?.approvedRevision === quote?.revision && quote !== undefined;
   return (
     <>

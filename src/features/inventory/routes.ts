@@ -67,25 +67,19 @@ export const inventoryRoutes = new Elysia({ name: "inventory", normalize: false 
   )
   .post(
     "/fulfillment/:id/accept",
-    async ({ request, params: p }) =>
-      acceptSplit(p.id, await requireActor(request, ["admin", "ops"])),
+    async ({ request, params: p }) => acceptSplit(p.id, await requireActor(request, ["ops"])),
     { params },
   )
   .post(
     "/fulfillment/:id/consolidate",
     async ({ request, params: p }) =>
-      consolidateBackorder(p.id, await requireActor(request, ["admin", "ops"])),
+      consolidateBackorder(p.id, await requireActor(request, ["ops"])),
     { params },
   )
   .post(
     "/fulfillment/:id/override",
     async ({ request, params: p, body }) =>
-      overrideSplit(
-        p.id,
-        body.allocations,
-        body.reason,
-        await requireActor(request, ["admin", "ops"]),
-      ),
+      overrideSplit(p.id, body.allocations, body.reason, await requireActor(request, ["ops"])),
     {
       params,
       body: t.Object(
@@ -102,7 +96,7 @@ export const inventoryRoutes = new Elysia({ name: "inventory", normalize: false 
   .post(
     "/fulfillment/:id/ship",
     async ({ request, params: p, body }) =>
-      shipReservation(p.id, body, await requireActor(request, ["admin", "ops"])),
+      shipReservation(p.id, body, await requireActor(request, ["ops"])),
     {
       params,
       body: t.Object(
@@ -113,7 +107,7 @@ export const inventoryRoutes = new Elysia({ name: "inventory", normalize: false 
   )
   .post(
     "/inventory/restock",
-    async ({ request, body }) => restock(body, await requireActor(request, ["admin", "ops"])),
+    async ({ request, body }) => restock(body, await requireActor(request, ["ops"])),
     {
       body: t.Object(
         { operationKey: id, productId: id, quantity: positive, reason, warehouseId: id },
