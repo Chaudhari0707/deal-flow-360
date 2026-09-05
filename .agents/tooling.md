@@ -7,6 +7,9 @@
 - Resolve repository paths from `import.meta.dir` or `import.meta.url`, not the caller's working
   directory.
 - Every imported package MUST be declared directly in `package.json`. Do not rely on hoisting.
+- `@types/node` is a development-only compatibility dependency for Next.js, Playwright, Drizzle, and
+  package declarations that reference Node ambient types. It does not authorize Node runtime APIs;
+  repository code remains Bun/Web API first.
 - `.env.local` and `.env.test.local` are ignored machine-local files. `.env.example` and
   `.env.test.example` are sanitized contracts and MUST remain current.
 - Scripts MUST validate arguments, print actionable errors, and exit non-zero on failure.

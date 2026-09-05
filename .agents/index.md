@@ -10,6 +10,8 @@ Load only what the task touches.
 | Better Auth, sessions, login, password, account access | `.agents/auth.md` |
 | Resend, transactional email, verification/reset delivery | `.agents/email.md` |
 | shadcn/ui components, tokens, component installation | `.agents/shadcn.md` |
+| Shared DataTable, list grids, sorting/filtering/pagination | `.agents/data-table.md` |
+| SWR client fetching, cache keys, mutation, revalidation | `.agents/swr.md` |
 | Bun, scripts, commands, package execution | `.agents/tooling.md` |
 | Unit, integration, E2E, regression, flaky tests | `.agents/testing.md` |
 | Dependency add, removal, or version change | `.agents/dependencies.md` |

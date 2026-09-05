@@ -12,6 +12,7 @@ Local planning drafts under `docs/product/` are intentionally not tracked.
 - Drizzle ORM with PostgreSQL/Postgres.js
 - Resend and React Email
 - shadcn/ui and Tailwind CSS
+- TanStack Table v9 and SWR for reusable client data surfaces
 - Strict TypeScript
 - Oxlint with repository-local rules and Oxfmt
 - Bun test and Playwright
