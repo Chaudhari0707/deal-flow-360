@@ -1,11 +1,11 @@
 "use client";
 
 import { type FormEvent, useState, useSyncExternalStore } from "react";
+import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, Layers3, LoaderCircle } from "lucide-react";
+import { ArrowRight, LoaderCircle } from "lucide-react";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field";
@@ -63,14 +63,15 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
   return (
     <main className="flex min-h-svh flex-col items-center justify-center gap-8 bg-muted p-6 md:p-10">
       <div className="flex w-full max-w-sm flex-col gap-6">
-        <Link
-          href="/"
-          className="flex items-center gap-2.5 self-center text-xl font-semibold tracking-tight"
-        >
-          <Badge className="size-9 rounded-xl p-2">
-            <Layers3 className="size-5!" />
-          </Badge>
-          DealFlow<span className="text-primary">360</span>
+        <Link href="/" className="flex items-center justify-center self-center py-2">
+          <Image
+            src="/logo.png"
+            alt="DealFlow360"
+            width={240}
+            height={80}
+            className="h-14 w-auto object-contain"
+            priority
+          />
         </Link>
         <Card>
           <CardHeader className="gap-2 text-center">
