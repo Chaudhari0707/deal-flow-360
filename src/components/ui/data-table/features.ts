@@ -11,9 +11,11 @@ import {
   createFilteredRowModel,
   createPaginatedRowModel,
   createSortedRowModel,
+  filterFns,
   rowPaginationFeature,
   rowSelectionFeature,
   rowSortingFeature,
+  sortFns,
   tableFeatures,
 } from "@tanstack/react-table";
 
@@ -32,9 +34,11 @@ export const dataTableFeatures = tableFeatures({
   facetedRowModel: createFacetedRowModel(),
   facetedUniqueValues: createFacetedUniqueValues(),
   filteredRowModel: createFilteredRowModel(),
+  filterFns,
   paginatedRowModel: createPaginatedRowModel(),
   rowPaginationFeature,
   rowSelectionFeature,
   rowSortingFeature,
   sortedRowModel: createSortedRowModel(),
+  sortFns,
 });

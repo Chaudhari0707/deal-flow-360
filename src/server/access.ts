@@ -19,10 +19,13 @@ export async function requireActor(request: Request, roles?: Role[]): Promise<Ac
   };
   if (roles && !roles.includes(actor.role))
     throw new DomainError("Your role cannot perform this action.", 403);
-  if (!["GET", "HEAD", "OPTIONS"].includes(request.method)) {
-    const origin = request.headers.get("origin");
-    if (origin && origin !== Bun.env.BETTER_AUTH_URL)
-      throw new DomainError("Request origin is not allowed.", 403);
-  }
+  requireMutationOrigin(request);
   return actor;
+}
+
+export function requireMutationOrigin(request: Request) {
+  if (["GET", "HEAD", "OPTIONS"].includes(request.method)) return;
+  const expected = new URL(Bun.env.BETTER_AUTH_URL!).origin;
+  if (request.headers.get("origin") !== expected)
+    throw new DomainError("Request origin is not allowed.", 403);
 }

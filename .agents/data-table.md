@@ -16,6 +16,9 @@ generic mechanics remain in the shared component.
 
 ## Required usage
 
+- Keep the TanStack v9 `filterFns` and `sortFns` registries registered alongside their row-model
+  features. Controls can render while filtering/sorting silently does nothing without the registries.
+
 - Every selectable table MUST pass a stable `getRowId`; array indexes can retarget selection after
   refresh/reorder.
 - Server-backed lists MUST use `manualPagination`, controlled `pagination`, `pageCount`, and

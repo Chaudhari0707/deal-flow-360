@@ -28,6 +28,7 @@ export type Serialized<T> = T extends Date
 export interface Workspace {
   activity: Serialized<typeof auditEntries.$inferSelect>[];
   actor: Actor;
+  asOf?: string;
   credits: Serialized<typeof credits.$inferSelect>[];
   customers: Serialized<typeof customers.$inferSelect>[];
   deliveries: Omit<Serialized<typeof deliveries.$inferSelect>, "encryptedPayload">[];

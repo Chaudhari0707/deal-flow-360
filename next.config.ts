@@ -33,7 +33,9 @@ function securityHeaders() {
 const nextConfig: NextConfig = {
   distDir: Bun.env.NEXT_DIST_DIR ?? ".next",
   logging: { incomingRequests: { ignore: [/\/portal\/access/] } },
-  serverExternalPackages: ["exceljs", "pdf-lib"],
+  // Bundle document exporters and their default-external helpers: Bun cannot resolve
+  // Turbopack's newly generated hashed external aliases on the first cold request.
+  transpilePackages: ["exceljs", "pdf-lib", "rimraf", "prettier"],
   allowedDevOrigins: ["127.0.0.1"],
   cacheComponents: true,
   reactCompiler: true,

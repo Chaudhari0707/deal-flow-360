@@ -10,7 +10,6 @@ Do not add task status, speculation, private issue content, customer data, crede
 conversation history. Promote a lesson only after the same rule has independent evidence twice;
 move it into the canonical routed playbook and remove the duplicate entry here.
 
-2026-09-05 | Better Auth schema | Match the `auth` CLI version to the installed Better Auth runtime;
-the legacy `@better-auth/cli` 1.4 generator omits the required 1.7 account issuer identity. Generate
-and migrate with the matching CLI before credential tests. | `scripts/generate-auth-schema.ts`,
-`drizzle/0002_abandoned_living_mummy.sql`, credential integration regressions.
+2026-09-05 | Subscription amounts | Preserve the original rational price/quantity basis when changing
+quantities; repeatedly scaling rounded totals can gain or lose a cent. |
+`test/integration/billing.regression.test.ts` quantity round-trip regression.
