@@ -36,6 +36,9 @@ operation keys. No Redis, broker, microservices or speculative persistence abstr
 
 - USD cents and integer basis points. Apply variant/tier pricing, line discount, order discount,
   then per-line tax; half-up rounding. Promotions initialize a line discount rather than stack invisibly.
+  Hardware tier factors are editable under Pricelists; new and edited drafts use them. Each variant
+  is a canonical SKU with its own final catalog price, stock and descriptive attributes; accepted
+  lines retain the SKU and price snapshot. Only configured product pairings qualify as upsell attribution.
 - Line ceiling is minimum of customer-tier and category caps. Effective discount includes order
   discount. HIGH means max overage ≥ 500 basis points or summed overage ≥ 800; positive lower overage
   is MEDIUM; no overage is NONE. Approval authorizes the exact commercial revision, even when HIGH.
