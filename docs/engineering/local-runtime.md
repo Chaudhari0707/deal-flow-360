@@ -24,9 +24,23 @@ discovers unfinished periods from PostgreSQL; invoice identities prevent duplica
 health response reports whether billing is enabled, the last run/success time and failure state.
 Tests set `AUTOMATIC_BILLING=false` except the dedicated restart regression.
 
-Use the canonical `127.0.0.1` host consistently. Better Auth cookies, the allowed WebSocket origin,
-and the local content security policy use that host. `REALTIME_PORT`, when specified, must be 101
-higher than the app port: 3101 for development, 3102 for browser acceptance.
+## Loopback aliases and sign-in
+
+`BETTER_AUTH_URL` remains the canonical URL used by authentication and generated email links.
+For a configured `http://127.0.0.1:3000`, the application also accepts `http://localhost:3000`;
+configuring `localhost` permits the reverse alias. Scheme and port must match. No wildcard, other
+hostname, different port, `null` origin or missing mutation Origin is permitted. A non-loopback
+configured URL receives no additional hostname alias.
+
+Better Auth and protected API mutations use the same `trustedOrigins` policy. The authenticated
+WebSocket upgrade and its CSP allowance follow that loopback pair. Origin permission does not merge
+browser cookie stores: a session created on `127.0.0.1` is not a session on `localhost`. Stay on one
+hostname within a browser session, or sign in again after switching. The stock feed uses the current
+page hostname so it receives that host's cookie.
+
+`REALTIME_PORT`, when specified, must be 101 higher than the app port: 3101 for development,
+3102 for browser acceptance. Both alias origins refer to the same local application/database;
+this does not enable remote hosting or cross-port authentication.
 
 ## Browser acceptance
 
@@ -36,7 +50,7 @@ browser acceptance does not send real email. Playwright starts and waits for two
 
 | Service | Address | Isolation |
 | --- | --- | --- |
-| Next.js with Webpack | `http://127.0.0.1:3001` | `NEXT_DIST_DIR=.next-test` and dedicated test database |
+| Next.js with native Turbopack | `http://127.0.0.1:3001` | `NEXT_DIST_DIR=.next-test` and dedicated test database |
 | Authenticated stock feed | `http://127.0.0.1:3102` | Same test database and auth origin as Next.js |
 
 Both services have explicit readiness URLs and graceful termination on completion or test failure.
