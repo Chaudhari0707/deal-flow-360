@@ -5,7 +5,7 @@ const command = [
   "bun",
   "--bun",
   "x",
-  "better-auth",
+  "auth",
   "generate",
   "--config",
   "scripts/better-auth.config.ts",

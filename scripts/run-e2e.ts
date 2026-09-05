@@ -22,12 +22,18 @@ if (!hasSpecs) {
   const env: Record<string, boolean | string | undefined> = { ...Bun.env };
 
   if (externalServer) {
+    const target = new URL(Bun.env.PLAYWRIGHT_BASE_URL!);
+    if (target.protocol !== "http:" || !["127.0.0.1", "localhost"].includes(target.hostname))
+      throw new Error("Browser acceptance targets must be local HTTP servers");
     console.log("test:e2e: external server selected; database preparation is disabled");
   } else {
     const testDatabaseUrl = requireDatabaseUrl("TEST_DATABASE_URL");
     assertDisposableDatabase(testDatabaseUrl, "test");
     env.DATABASE_URL = testDatabaseUrl;
     env.BETTER_AUTH_URL = "http://127.0.0.1:3001";
+    env.NEXT_DIST_DIR = ".next-test";
+    env.REALTIME_PORT = "3102";
+    env.EMAIL_TRANSPORT = "test";
     await runCommand(["bun", "run", "scripts/db-test-command.ts", "migrate"], { cwd: ROOT, env });
     await runCommand(["bun", "run", "scripts/db-test-reset.ts"], { cwd: ROOT, env });
   }
