@@ -8,6 +8,20 @@ test("credentials sign-in, responsive navigation and logout @regression", async 
 
   await page.goto("/dashboard");
   await expect(page).toHaveURL(/\/login$/);
+  const reviewerAccount = page.getByRole("combobox", { name: "Reviewer account", exact: true });
+  await reviewerAccount.click();
+  await page.getByRole("option", { name: "Sales Representative", exact: true }).click();
+  await expect(page.getByLabel("Email address", { exact: true })).toHaveValue(
+    "rep@dealflow360.demo",
+  );
+  const passwordInput = page.getByLabel("Password", { exact: true });
+  if (Bun.env.NEXT_PUBLIC_REVIEWER_PASSWORD)
+    await expect(passwordInput).toHaveValue(Bun.env.NEXT_PUBLIC_REVIEWER_PASSWORD);
+  await expect(passwordInput).toHaveAttribute("type", "password");
+  await page.getByRole("button", { name: "Show password", exact: true }).click();
+  await expect(passwordInput).toHaveAttribute("type", "text");
+  await page.getByRole("button", { name: "Hide password", exact: true }).click();
+  await expect(passwordInput).toHaveAttribute("type", "password");
   await page.getByLabel("Email address").fill(email);
   await page.getByLabel("Password", { exact: true }).fill("incorrect-password-for-test");
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
