@@ -5,6 +5,7 @@ import { useTable } from "@tanstack/react-table";
 import { renderToStaticMarkup } from "react-dom/server";
 
 import { dataTableFeatures } from "@/components/ui/data-table/features";
+import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table";
 
 function TableFixture() {
   const table = useTable({
@@ -32,4 +33,21 @@ function TableFixture() {
 
 test("shared table filters text and sorts numbers with registered built-in functions", () => {
   expect(renderToStaticMarkup(createElement(TableFixture))).toBe("<div>Laptop case,Laptop</div>");
+});
+
+test("shared table preserves the CRAzy Collection pinned-column and row-hover chrome", () => {
+  const markup = renderToStaticMarkup(
+    createElement(
+      Table,
+      { containerClassName: "overflow-visible" },
+      createElement(
+        TableBody,
+        null,
+        createElement(TableRow, null, createElement(TableCell, null, "Pinned value")),
+      ),
+    ),
+  );
+  expect(markup).toContain("overflow-visible");
+  expect(markup).toContain("border-separate");
+  expect(markup).toContain("group/table-row");
 });

@@ -10,7 +10,10 @@ the repository's Base UI / `base-nova` primitives. The maintainer selected shadc
 depend on a font download.
 
 Feature components compose these native primitives; they do not introduce a competing button,
-dialog, input, table, or navigation system. List screens use the existing shared DataTable.
+dialog, input, table, or navigation system. List screens use the existing shared DataTable. Its
+TanStack mechanics are aligned with the reviewed CRAzy Collection implementation: one horizontal
+scroll ancestor, `border-separate` sticky cells, table-row grouping for hover actions, and a visible
+sticky-column container. DealFlow360 retains its own Base UI Checkbox and Lucide dependencies.
 The official sidebar source is split into shell, context, and menu files to retain the repository's
 500-line file limit. Mobile state subscribes to the browser's media query through React's external
 store API; the server snapshot is stable for hydration.
