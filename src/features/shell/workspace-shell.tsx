@@ -60,6 +60,7 @@ const navigation = [
         roles: ["admin", "finance", "manager", "ops", "rep"],
       },
       { title: "Quotations", href: "/quotations", icon: FileText, roles: ["manager", "rep"] },
+      { title: "Customers", href: "/customers", icon: Boxes, roles: ["rep", "manager", "admin"] },
       { title: "Approvals", href: "/approvals", icon: ShieldCheck, roles: ["finance", "manager"] },
     ],
   },

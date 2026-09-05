@@ -133,7 +133,7 @@ export function Dashboard() {
         title="Overview"
         description={`Welcome back, ${data.actor.name.split(" ")[0]}. Here's where your business stands today.`}
         actions={
-          <Button nativeButton={false} size="lg" render={<Link href="/quotations" />}>
+          <Button nativeButton={false} size="lg" render={<Link href="/quotations/new" />}>
             <Plus />
             Create quotation
           </Button>

@@ -1,5 +1,6 @@
 import { Elysia } from "elysia";
 
+import { deleteCatalogCustomer } from "@/features/catalog/customer-lifecycle";
 import {
   catalogIdParamsModel,
   catalogModels,
@@ -57,4 +58,9 @@ export const catalogRoutes = new Elysia({ name: "catalog", tags: ["Catalog"] })
       body: settingBodyModel,
       response: { 200: settingModel, ...apiErrorResponses },
     },
-  );
+  )
+  .delete("/customers/:id", async ({ actor, params }) => deleteCatalogCustomer(params.id, actor), {
+    authorize: ["manager", "admin"],
+    params: catalogIdParamsModel,
+    response: { 200: customerModel, ...apiErrorResponses },
+  });

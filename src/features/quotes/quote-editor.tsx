@@ -22,7 +22,13 @@ import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import type { LineInput } from "@/features/quotes/_types/quotes";
 import { PurchaseRecommendations } from "@/features/quotes/purchase-recommendations";
-import { calculateQuote, defaultDiscounts, money, priceLines } from "@/features/quotes/rules";
+import {
+  calculateQuote,
+  defaultDiscounts,
+  defaultPricelists,
+  money,
+  priceLines,
+} from "@/features/quotes/rules";
 import { apiClient, apiData } from "@/lib/api/client";
 import type { Workspace } from "@/lib/domain/_types/workspace";
 
@@ -163,7 +169,11 @@ export function QuoteEditor({
           <CardContent className="grid gap-4 sm:grid-cols-2">
             <Field>
               <FieldLabel>Customer</FieldLabel>
-              <Select value={customerId} onValueChange={(v) => v && setCustomerId(v)}>
+              <Select
+                value={customerId}
+                onValueChange={(v) => v && setCustomerId(v)}
+                items={data.customers.map((c) => ({ value: c.id, label: `${c.name} · ${c.tier}` }))}
+              >
                 <SelectTrigger aria-label="Customer">
                   <SelectValue />
                 </SelectTrigger>
@@ -175,6 +185,17 @@ export function QuoteEditor({
                   ))}
                 </SelectContent>
               </Select>
+              {customer && (
+                <p className="text-xs text-muted-foreground" role="note">
+                  {customer.tier} tier: up to {(limits[customer.tier] ?? 0) / 100}% discount without
+                  approval. Hardware tier pricing:{" "}
+                  {(10000 -
+                    (pricelists?.[customer.tier] ?? defaultPricelists[customer.tier] ?? 10000)) /
+                    100}
+                  % below base price. Category limits may be lower. Tier ceilings are limits, not
+                  automatic discounts.
+                </p>
+              )}
             </Field>
             <Field>
               <FieldLabel htmlFor="promise-date">Promised delivery</FieldLabel>
@@ -196,7 +217,13 @@ export function QuoteEditor({
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex gap-2">
-              <Select value={productId} onValueChange={(v) => v && setProductId(v)}>
+              <Select
+                value={productId}
+                onValueChange={(v) => v && setProductId(v)}
+                items={data.products
+                  .filter((p) => p.active)
+                  .map((p) => ({ value: p.id, label: `${p.name} · ${money(p.priceCents)}` }))}
+              >
                 <SelectTrigger aria-label="Product to add" className="flex-1">
                   <SelectValue />
                 </SelectTrigger>

@@ -5,8 +5,10 @@ import type {
   CatalogProductInput,
   CatalogSettingInput,
 } from "@/features/catalog/_types/catalog";
+import { databaseErrorCode } from "@/features/catalog/customer-lifecycle";
 import { db } from "@/lib/db/connection";
-import { customers, products, settings } from "@/lib/db/schema";
+import { customers, products, profiles, settings } from "@/lib/db/schema";
+import { session, user } from "@/lib/db/schema/auth";
 import type { Actor } from "@/lib/domain/_types/domain";
 import { audit } from "@/server/audit";
 import { DomainError } from "@/server/errors";
@@ -43,24 +45,61 @@ export async function saveCatalogCustomer(
   actor: Actor,
   customerId?: string,
 ) {
-  return db.transaction(async (tx) => {
-    if (!customerId) {
+  const roles = customerId ? ["manager", "admin"] : ["rep", "manager", "admin"];
+  if (!roles.includes(actor.role)) throw new DomainError("Your role cannot change customers", 403);
+  input = { ...input, name: input.name.trim(), email: input.email.trim().toLowerCase() };
+  try {
+    return await db.transaction(async (tx) => {
+      if (!customerId) {
+        const [customer] = await tx
+          .insert(customers)
+          .values({ id: crypto.randomUUID(), ...input })
+          .returning();
+        await audit(tx, actor, customer!.id, "CUSTOMER_CREATED", "Customer record created", input);
+        return customer;
+      }
+      const [existing] = await tx
+        .select()
+        .from(customers)
+        .where(eq(customers.id, customerId))
+        .for("update");
+      if (!existing) throw new DomainError("Customer not found", 404);
+      if (existing.email !== input.email) {
+        const linked = await tx.select().from(profiles).where(eq(profiles.customerId, customerId));
+        if (linked.length > 1 || linked.some((profile) => profile.role !== "customer"))
+          throw new DomainError(
+            "This customer has multiple or non-customer logins. Contact an administrator before changing the email.",
+            409,
+          );
+        if (linked[0]) {
+          await tx
+            .update(user)
+            .set({ email: input.email, name: input.name, emailVerified: false })
+            .where(eq(user.id, linked[0].userId));
+          await tx.delete(session).where(eq(session.userId, linked[0].userId));
+        }
+      }
       const [customer] = await tx
-        .insert(customers)
-        .values({ id: crypto.randomUUID(), ...input })
+        .update(customers)
+        .set(input)
+        .where(eq(customers.id, customerId))
         .returning();
-      await audit(tx, actor, customer!.id, "CUSTOMER_CREATED", "Customer record created", input);
+      if (!customer) throw new DomainError("Customer not found", 404);
+      await audit(
+        tx,
+        actor,
+        customer.id,
+        "CUSTOMER_UPDATED",
+        "Customer tier/contact updated",
+        input,
+      );
       return customer;
-    }
-    const [customer] = await tx
-      .update(customers)
-      .set(input)
-      .where(eq(customers.id, customerId))
-      .returning();
-    if (!customer) throw new DomainError("Customer not found", 404);
-    await audit(tx, actor, customer.id, "CUSTOMER_UPDATED", "Customer tier/contact updated", input);
-    return customer;
-  });
+    });
+  } catch (error) {
+    if (databaseErrorCode(error) === "23505")
+      throw new DomainError("That email is already used by another login.", 409);
+    throw error;
+  }
 }
 
 const allowedSettings: Record<string, string[]> = {

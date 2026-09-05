@@ -38,7 +38,9 @@ export function PurchaseRecommendations({
       apiData(await apiClient.api.v1.quotes.recommendations.get({ query: { customerId } })),
     { keepPreviousData: false },
   );
-  const suggestions = (data?.productIds ?? []).flatMap((id) => {
+  const validDiscount =
+    Number.isInteger(orderDiscountBps) && orderDiscountBps >= 0 && orderDiscountBps <= 10000;
+  const suggestions = (validDiscount ? (data?.productIds ?? []) : []).flatMap((id) => {
     const product = products.find((item) => item.id === id && item.active);
     if (!product || existingIds.includes(id)) return [];
     const input: LineInput = {
@@ -86,6 +88,10 @@ export function PurchaseRecommendations({
               Retry recommendations
             </Button>
           </div>
+        ) : !validDiscount ? (
+          <p className="text-sm text-muted-foreground">
+            Enter an order discount between 0% and 100% to see recommendations.
+          </p>
         ) : suggestions.length ? (
           suggestions.map((product) => (
             <div key={product.product.id} className="space-y-2">
