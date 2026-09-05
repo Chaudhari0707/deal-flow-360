@@ -3,6 +3,7 @@ import { Elysia, t } from "elysia";
 
 import { db } from "@/lib/db/connection";
 import { auditEntries, quotes, settings } from "@/lib/db/schema/commerce";
+import { permissions } from "@/lib/domain/permissions";
 import { actorContext } from "@/server/access";
 import { audit } from "@/server/audit";
 import { DomainError } from "@/server/errors";
@@ -31,7 +32,7 @@ export const healthRoutes = new Elysia({ name: "health-rules", tags: ["Health"] 
       });
     },
     {
-      authorize: ["admin", "manager"],
+      authorize: permissions.settings,
       body: t.Object({
         anomalyBps: t.Number({ maximum: 10000, minimum: 0, multipleOf: 1 }),
         historyDays: t.Number({ maximum: 365, minimum: 1, multipleOf: 1 }),
@@ -71,7 +72,7 @@ export const healthRoutes = new Elysia({ name: "health-rules", tags: ["Health"] 
       });
     },
     {
-      authorize: ["admin", "manager", "finance", "rep"],
+      authorize: permissions.health,
       body: t.Object({
         operationKey: t.String({ minLength: 8, maxLength: 100 }),
         quoteId: t.String({ minLength: 1, maxLength: 100 }),

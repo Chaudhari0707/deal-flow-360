@@ -21,7 +21,8 @@ flowchart LR
 ```
 
 Elysia owns `/api/v1`; Better Auth owns `/api/auth`. Resource permissions are checked on the server.
-Self-signup grants Sales Rep only. Customer profiles are seeded or administered. Customer access is
+Self-signup grants Sales Rep only. Staff customer creation provisions a customer-bound credential
+login with an emailed temporary password and required replacement. Customer access is
 restricted to their quotes and excludes internal margins, costs, policy audit and unrelated stock.
 Email access is a separate quote-scoped token exchanged for a restricted session, not a new account
 login provider. Its digest and expiry are persisted; raw tokens are never logged.
@@ -34,7 +35,7 @@ operation keys. No Redis, broker, microservices or speculative persistence abstr
 
 ## Product rules selected for implementation
 
-- USD cents and integer basis points. Apply variant/tier pricing, line discount, order discount,
+- INR paise and integer basis points. Apply variant/tier pricing, line discount, order discount,
   then per-line tax; half-up rounding. Promotions initialize a line discount rather than stack invisibly.
   Hardware tier factors are editable under Pricelists; new and edited drafts use them. Each variant
   is a canonical SKU with its own final catalog price, stock and descriptive attributes; accepted

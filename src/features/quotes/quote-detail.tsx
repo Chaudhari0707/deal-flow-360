@@ -351,18 +351,20 @@ export function QuoteDetail({ isNew = false }: { isNew?: boolean }) {
                       </div>
                     </>
                   )}
-                  {approved && quote.status !== "CONFIRMED" && (
-                    <>
-                      <Button
-                        className="w-full"
-                        disabled={pending}
-                        onClick={() => void act("send")}
-                      >
-                        <Mail />
-                        Send quotation email
-                      </Button>
-                    </>
-                  )}
+                  {approved &&
+                    ["rep", "manager", "finance"].includes(data.actor.role) &&
+                    quote.status !== "CONFIRMED" && (
+                      <>
+                        <Button
+                          className="w-full"
+                          disabled={pending}
+                          onClick={() => void act("send")}
+                        >
+                          <Mail />
+                          Send quotation email
+                        </Button>
+                      </>
+                    )}
                   {quote.status === "CONFIRMED" && (
                     <Button nativeButton={false} render={<Link href="/fulfillment" />}>
                       View fulfillment

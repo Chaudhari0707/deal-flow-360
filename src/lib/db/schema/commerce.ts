@@ -28,6 +28,7 @@ export const profiles = pgTable("profiles", {
     .references(() => user.id, { onDelete: "cascade" }),
   role: text("role").$type<Role>().notNull().default("rep"),
   customerId: text("customer_id").references(() => customers.id),
+  mustChangePassword: boolean("must_change_password").notNull().default(false),
 });
 
 export const products = pgTable(

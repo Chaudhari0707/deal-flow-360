@@ -52,6 +52,8 @@ instructions as concise Markdown. Put universal rules here and situational detai
   testable modules only when that boundary is supported by the task and codebase.
 - New or changed API contracts, database schemas, permissions, or cross-layer flows require tests
   and matching documentation in the same task.
+- Every user-facing flow change MUST update its guide and coverage index under `docs/flows/` in
+  the same task. Follow `.agents/docs.md` for diagrams, examples, and verification evidence.
 
 ## Coordination and git
 

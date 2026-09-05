@@ -62,7 +62,9 @@ physical quantity change. Replenishment thresholds are alerts, not automatic pur
 ## API contract
 
 All routes are mounted under `/api/v1`. Better Auth sessions are checked server-side. Configuration
-requires Admin; stock operations require Admin or Ops. Reads are limited to authorized internal roles.
+requires Admin; receiving and dispatch operations require Ops. Reads permit Rep, Manager, Ops and
+Admin; Finance has no stock access. Stock UI lives in Fulfillment or Admin Settings, with legacy
+`/inventory` URLs redirected by role. See [role access](role-access.md).
 Customer portal users cannot access warehouse quantities. JSON mutation bodies reject unknown fields.
 
 | Method and path | Input | Result |

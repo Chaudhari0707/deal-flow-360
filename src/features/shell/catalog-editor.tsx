@@ -31,6 +31,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { CustomerInvitationStatus } from "@/features/catalog/customer-invitation-status";
 import { CustomerDelete } from "@/features/shell/customer-delete";
 import { useWorkspace } from "@/features/shell/use-workspace";
 import { apiClient, apiData, HttpResponseError } from "@/lib/api/client";
@@ -66,6 +67,7 @@ export function CatalogEditor({
 }) {
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
+  const [createdCustomerId, setCreatedCustomerId] = useState<string>();
   const [stockable, setStockable] = useState(product?.stockable ?? false);
   const [active, setActive] = useState(product?.active ?? true);
   const [promoted, setPromoted] = useState(product?.promoted ?? false);
@@ -116,7 +118,14 @@ export function CatalogEditor({
         };
         const customers = apiClient.api.v1.customers;
         if (customer) apiData(await customers({ id: customer.id }).patch(body));
-        else apiData(await customers.post(body));
+        else {
+          const result = apiData(await customers.post(body));
+          if (result.invitation.status !== "SENT") {
+            setCreatedCustomerId(result.id);
+            await saved();
+            return;
+          }
+        }
       }
       await saved();
       close();
@@ -147,7 +156,7 @@ export function CatalogEditor({
           <DialogDescription>
             {kind === "product"
               ? "Each variant is a separate SKU with its own final unit price. Catalog changes apply to new quotation lines; existing quotes keep their pricing snapshots."
-              : "Manage the customer details used for quotations and billing. Changing a linked login email signs that customer out; their password stays the same."}
+              : "New customers receive a portal login and a temporary password by email. Existing customers keep their password when details change; changing their login email signs them out."}
           </DialogDescription>
         </DialogHeader>
         <form method="post" onSubmit={submit}>
@@ -245,14 +254,14 @@ export function CatalogEditor({
                   {[
                     {
                       name: "price",
-                      label: "Unit price ($)",
+                      label: "Unit price (₹)",
                       value: (product?.priceCents ?? 0) / 100,
                       step: "0.01",
                       max: 100000,
                     },
                     {
                       name: "cost",
-                      label: "Unit cost ($)",
+                      label: "Unit cost (₹)",
                       value: (product?.costCents ?? 0) / 100,
                       step: "0.01",
                       max: 100000,
@@ -382,6 +391,9 @@ export function CatalogEditor({
                 </div>
               </>
             )}
+            {kind === "customer" && (customer?.id || createdCustomerId) && (
+              <CustomerInvitationStatus id={customer?.id ?? createdCustomerId!} />
+            )}
             {error && (
               <Alert variant="destructive">
                 <AlertDescription>{error}</AlertDescription>
@@ -402,7 +414,7 @@ export function CatalogEditor({
               <Button type="button" variant="outline" onClick={close} disabled={pending}>
                 Cancel
               </Button>
-              <Button type="submit" disabled={pending}>
+              <Button type="submit" disabled={pending || Boolean(createdCustomerId)}>
                 {pending ? "Saving…" : `Save ${kind}`}
               </Button>
             </DialogFooter>

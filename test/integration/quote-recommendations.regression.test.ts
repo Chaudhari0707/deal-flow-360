@@ -154,10 +154,9 @@ describe("quotation purchase recommendations", () => {
 
   test("requires authentication and quote creation roles", async () => {
     expect((await request(returning)).status).toBe(401);
-    for (const role of ["finance", "ops", "customer"] as Role[])
+    for (const role of ["finance", "ops", "customer", "admin", "manager"] as Role[])
       expect((await request(returning, role)).status).toBe(403);
-    for (const role of ["admin", "manager"] as Role[])
-      expect((await request(returning, role)).status).toBe(200);
+    expect((await request(returning, "rep")).status).toBe(200);
   });
 
   test("validates customer selection", async () => {

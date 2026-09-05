@@ -6,9 +6,9 @@ import type { ColumnDef } from "@tanstack/react-table";
 import {
   ArrowRight,
   ArrowUpRight,
-  CircleDollarSign,
   Clock3,
   FileCheck2,
+  IndianRupee,
   Plus,
   RefreshCw,
 } from "lucide-react";
@@ -32,7 +32,9 @@ import { displayDate, displayStatus, money } from "@/features/shell/format";
 import { PageHeader } from "@/features/shell/page-header";
 import { useWorkspace } from "@/features/shell/use-workspace";
 import { WorkspaceState } from "@/features/shell/workspace-state";
+import type { Permission } from "@/lib/domain/_types/permissions";
 import type { Workspace } from "@/lib/domain/_types/workspace";
+import { can } from "@/lib/domain/permissions";
 
 type QuoteRow = Workspace["quotes"][number] & { customerName: string };
 const quoteColumns: ColumnDef<DataTableFeatures, QuoteRow>[] = [
@@ -102,7 +104,7 @@ export function Dashboard() {
       label: "One-time pipeline",
       value: money(openQuotes.reduce((sum, quote) => sum + quote.totalCents, 0)),
       detail: `${openQuotes.length} active quotations`,
-      icon: CircleDollarSign,
+      icon: IndianRupee,
       href: "/quotations",
     },
     {
@@ -133,10 +135,12 @@ export function Dashboard() {
         title="Overview"
         description={`Welcome back, ${data.actor.name.split(" ")[0]}. Here's where your business stands today.`}
         actions={
-          <Button nativeButton={false} size="lg" render={<Link href="/quotations/new" />}>
-            <Plus />
-            Create quotation
-          </Button>
+          can(data.actor.role, "quoteWrite") && (
+            <Button nativeButton={false} size="lg" render={<Link href="/quotations/new" />}>
+              <Plus />
+              Create quotation
+            </Button>
+          )
         }
       />
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -153,15 +157,17 @@ export function Dashboard() {
             </CardHeader>
             <CardFooter className="justify-between gap-2 text-xs">
               <span>{metric.detail}</span>
-              <Button
-                nativeButton={false}
-                variant="ghost"
-                size="icon-sm"
-                aria-label={`View ${metric.label.toLowerCase()}`}
-                render={<Link href={metric.href} />}
-              >
-                <ArrowUpRight />
-              </Button>
+              {can(data.actor.role, metric.href.slice(1) as Permission) && (
+                <Button
+                  nativeButton={false}
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label={`View ${metric.label.toLowerCase()}`}
+                  render={<Link href={metric.href} />}
+                >
+                  <ArrowUpRight />
+                </Button>
+              )}
             </CardFooter>
           </Card>
         ))}
@@ -260,23 +266,25 @@ export function Dashboard() {
                 detail: `${money(outstanding)} remains outstanding`,
                 href: "/invoices",
               },
-            ].map((item) => (
-              <div key={item.href} className="flex items-center justify-between gap-4">
-                <div>
-                  <p className="text-sm font-medium">{item.label}</p>
-                  <p className="text-xs text-muted-foreground">{item.detail}</p>
+            ]
+              .filter((item) => can(data.actor.role, item.href.slice(1) as Permission))
+              .map((item) => (
+                <div key={item.href} className="flex items-center justify-between gap-4">
+                  <div>
+                    <p className="text-sm font-medium">{item.label}</p>
+                    <p className="text-xs text-muted-foreground">{item.detail}</p>
+                  </div>
+                  <Button
+                    nativeButton={false}
+                    variant="outline"
+                    size="icon-sm"
+                    aria-label={item.label}
+                    render={<Link href={item.href} />}
+                  >
+                    <ArrowRight />
+                  </Button>
                 </div>
-                <Button
-                  nativeButton={false}
-                  variant="outline"
-                  size="icon-sm"
-                  aria-label={item.label}
-                  render={<Link href={item.href} />}
-                >
-                  <ArrowRight />
-                </Button>
-              </div>
-            ))}
+              ))}
           </CardContent>
         </Card>
         <Card>

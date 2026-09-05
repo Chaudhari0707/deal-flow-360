@@ -236,8 +236,14 @@ describe("billing transaction regressions", () => {
         },
         body: JSON.stringify(body),
       });
-    const responses = await Promise.all([api.handle(request()), api.handle(request())]);
-    expect(responses.map((response) => response.status)).toEqual([200, 200]);
+    expect((await api.handle(request())).status).toBe(403);
+    await db.update(profiles).set({ role: "manager" }).where(eq(profiles.userId, actor.id));
+    try {
+      const responses = await Promise.all([api.handle(request()), api.handle(request())]);
+      expect(responses.map((response) => response.status)).toEqual([200, 200]);
+    } finally {
+      await db.update(profiles).set({ role: "finance" }).where(eq(profiles.userId, actor.id));
+    }
     const entries = await db
       .select()
       .from(auditEntries)

@@ -49,6 +49,9 @@ if (files.length === 0) {
   }
 
   files.sort();
+  // Never inherit a live email key into normal tests. Provider-contract fixtures
+  // install their own fake key and mock Resend explicitly.
+  env.RESEND_API_KEY = "";
   await runCommand(["bun", "test", "--isolate", "--timeout", "5000", ...files], {
     cwd: ROOT,
     env,

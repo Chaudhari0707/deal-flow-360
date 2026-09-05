@@ -2,6 +2,7 @@ import { Elysia } from "elysia";
 
 import { meResponseModel, workspaceResponseModel } from "@/features/workspace/model";
 import { workspaceSnapshot } from "@/features/workspace/query";
+import { permissions } from "@/lib/domain/permissions";
 import { actorContext } from "@/server/access";
 import { apiErrorResponses } from "@/server/models";
 
@@ -18,7 +19,7 @@ export const workspaceRoutes = new Elysia({ name: "workspace", tags: ["Workspace
       return workspaceSnapshot(actor);
     },
     {
-      authorize: ["rep", "manager", "finance", "ops", "admin"],
+      authorize: permissions.workspace,
       response: { 200: workspaceResponseModel, ...apiErrorResponses },
     },
   );

@@ -1,5 +1,8 @@
 # DealFlow360
 
+Read the [complete project flow guide](docs/flows/README.md) for every role's journey,
+worked examples, flow diagrams, permissions, failure paths and test coverage.
+
 A local sales-operations application that connects governed quotations, customer negotiation,
 warehouse fulfillment, recurring billing and payment reconciliation. The interface uses shadcn's
 dashboard block composition with tweakcn's Supabase theme.
@@ -72,7 +75,7 @@ Leave that override out only when the actual sender/recipient configuration is r
 
 ## Boundaries
 
-This release runs locally with USD, one selling organization, three active warehouses, manual
+This release runs locally with INR, one selling organization, three active warehouses, manual
 full-balance payments and credit notes. Same-cadence subscription changes are supported; cash refunds,
 cross-cadence conversion, cross-invoice credit application, multi-company and external payment rails
 are documented follow-ups. Large workspace summaries are bounded; production capacity is not claimed.

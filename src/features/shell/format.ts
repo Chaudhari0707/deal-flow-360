@@ -1,8 +1,4 @@
-const currency = new Intl.NumberFormat("en-US", {
-  style: "currency",
-  currency: "USD",
-  maximumFractionDigits: 2,
-});
+export { money } from "@/lib/money";
 const shortDate = new Intl.DateTimeFormat("en-US", {
   month: "short",
   day: "numeric",
@@ -10,9 +6,6 @@ const shortDate = new Intl.DateTimeFormat("en-US", {
   timeZone: "UTC",
 });
 
-export function money(cents: number) {
-  return currency.format(cents / 100);
-}
 export function displayDate(value: string) {
   return shortDate.format(new Date(value));
 }
