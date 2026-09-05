@@ -11,30 +11,51 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { DataTable } from "@/components/ui/data-table";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import type { FulfillmentDetail as Detail } from "@/features/inventory/_types/ui";
 import { OverrideForm } from "@/features/inventory/override-form";
 import { PageHeader } from "@/features/shell/page-header";
 import { useWorkspace } from "@/features/shell/use-workspace";
 import { WorkspaceState } from "@/features/shell/workspace-state";
-import { fetchJson } from "@/lib/swr/fetcher";
+import { apiClient, apiData } from "@/lib/api/client";
 
-export function FulfillmentDetail({ id, back }: { id: string; back: () => void }) {
-  const { data, error, mutate } = useSWR<Detail>(`/api/v1/fulfillment/${id}`);
+export function FulfillmentDetail({
+  id,
+  back,
+  compact = false,
+}: {
+  id: string;
+  back: () => void;
+  compact?: boolean;
+}) {
+  const { data, error, mutate } = useSWR(`/api/v1/fulfillment/${id}`, async () =>
+    apiData(await apiClient.api.v1.fulfillment({ id }).get()),
+  );
   const workspace = useWorkspace();
   const [pending, setPending] = useState(false);
   const [notice, setNotice] = useState("");
   const [failed, setFailed] = useState(false);
   const [operations, setOperations] = useState<Record<string, string>>({});
-  const canOperate = ["admin", "ops"].includes(workspace.data?.actor.role ?? "");
-  async function action(kind: string, body?: unknown) {
+  const canOperate = workspace.data?.actor.role === "ops";
+  async function action(
+    kind: "accept" | "consolidate" | "ship",
+    body?: { operationKey: string; quantity: number; reservationId: string },
+  ) {
     setPending(true);
     setNotice("");
     try {
-      await fetchJson(`/api/v1/fulfillment/${id}/${kind}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        ...(body ? { body: JSON.stringify(body) } : {}),
-      });
+      const endpoint = apiClient.api.v1.fulfillment({ id });
+      if (kind === "accept") apiData(await endpoint.accept.post());
+      else if (kind === "consolidate") apiData(await endpoint.consolidate.post());
+      else if (body) apiData(await endpoint.ship.post(body));
+      else throw new Error("Shipment details are required");
       await Promise.all([mutate(), workspace.mutate()]);
       setFailed(false);
       setNotice(
@@ -75,16 +96,18 @@ export function FulfillmentDetail({ id, back }: { id: string; back: () => void }
     );
   return (
     <>
-      <PageHeader
-        title={data.order.number}
-        description="Review the split, dispatch reserved stock, and recover backorders when stock arrives."
-        actions={
-          <Button variant="outline" onClick={back}>
-            <ArrowLeft />
-            All orders
-          </Button>
-        }
-      />
+      {!compact && (
+        <PageHeader
+          title={data.order.number}
+          description="Review the split, dispatch reserved stock, and recover backorders when stock arrives."
+          actions={
+            <Button variant="outline" onClick={back}>
+              <ArrowLeft />
+              All orders
+            </Button>
+          }
+        />
+      )}
       <div className="grid gap-4 sm:grid-cols-3">
         <Card>
           <CardHeader>
@@ -218,5 +241,35 @@ export function FulfillmentDetail({ id, back }: { id: string; back: () => void }
           </Card>
         )}
     </>
+  );
+}
+
+export function FulfillmentDetailDialog({
+  id,
+  title,
+  onClose,
+}: {
+  id: string;
+  title: string;
+  onClose: () => void;
+}) {
+  return (
+    <Dialog
+      open
+      onOpenChange={(open) => {
+        if (!open) onClose();
+      }}
+    >
+      <DialogContent showCloseButton={false} className="sm:max-w-4xl">
+        <DialogHeader>
+          <DialogTitle>{title}</DialogTitle>
+          <DialogDescription>
+            Review the warehouse plan, dispatch reservations, and manage backorders.
+          </DialogDescription>
+        </DialogHeader>
+        <FulfillmentDetail id={id} back={onClose} compact />
+        <DialogFooter showCloseButton />
+      </DialogContent>
+    </Dialog>
   );
 }

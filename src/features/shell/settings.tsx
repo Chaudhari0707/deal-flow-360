@@ -8,13 +8,13 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
+import { NumberInput } from "@/components/ui/number-input";
 import { displayStatus } from "@/features/shell/format";
 import { PageHeader } from "@/features/shell/page-header";
 import { useWorkspace } from "@/features/shell/use-workspace";
 import { WorkspaceState } from "@/features/shell/workspace-state";
+import { apiClient, apiData, HttpResponseError } from "@/lib/api/client";
 import type { Workspace } from "@/lib/domain/_types/workspace";
-import { fetchJson, HttpResponseError } from "@/lib/swr/fetcher";
 
 function PolicyForm({
   setting,
@@ -36,11 +36,7 @@ function PolicyForm({
     setError("");
     setNotice("");
     try {
-      await fetchJson(`/api/v1/settings/${setting.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ value }),
-      });
+      apiData(await apiClient.api.v1.settings({ id: setting.id }).patch({ value }));
       await saved();
       setNotice("Policy saved. New submissions will use the updated values.");
     } catch (failure) {
@@ -60,9 +56,11 @@ function PolicyForm({
         <CardDescription>
           {setting.id === "pricelists"
             ? "Hardware price factors: 9,000 basis points means 90% of the catalog price. New and edited drafts use these prices."
-            : setting.id === "health"
-              ? "Day thresholds control follow-ups; the anomaly threshold uses basis points (100 = 1%)."
-              : "Percentage policies use basis points: 100 basis points = 1%."}
+            : setting.id === "approvalChain"
+              ? "Approval ranks determine order: 1 is first. Use 0 to disable a role. HIGH-risk quotes use every enabled step; lower-risk quotes use the first."
+              : setting.id === "health"
+                ? "Day thresholds control follow-ups; the anomaly threshold uses basis points (100 = 1%)."
+                : "Percentage policies use basis points: 100 basis points = 1%."}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -72,27 +70,31 @@ function PolicyForm({
               {Object.entries(setting.value).map(([key, value]) => (
                 <Field key={key}>
                   <FieldLabel htmlFor={`${setting.id}-${key}`}>{displayStatus(key)}</FieldLabel>
-                  <Input
+                  <NumberInput
                     id={`${setting.id}-${key}`}
                     name={key}
-                    type="number"
                     required
                     min={
-                      (setting.id === "health" && key !== "anomalyBps") || key.startsWith("high")
-                        ? 1
-                        : 0
+                      setting.id === "approvalChain"
+                        ? 0
+                        : (setting.id === "health" && key !== "anomalyBps") ||
+                            key.startsWith("high")
+                          ? 1
+                          : 0
                     }
                     step="1"
                     max={
-                      setting.id === "health"
-                        ? key === "historyDays"
-                          ? 365
-                          : key === "staleDays"
-                            ? 90
-                            : key === "approvalDays" || key === "overdueDays"
-                              ? 60
-                              : 10000
-                        : 10000
+                      setting.id === "approvalChain"
+                        ? 10
+                        : setting.id === "health"
+                          ? key === "historyDays"
+                            ? 365
+                            : key === "staleDays"
+                              ? 90
+                              : key === "approvalDays" || key === "overdueDays"
+                                ? 60
+                                : 10000
+                          : 10000
                     }
                     defaultValue={value}
                   />

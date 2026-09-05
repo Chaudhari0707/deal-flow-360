@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { NumberInput } from "@/components/ui/number-input";
 import {
   Select,
   SelectContent,
@@ -20,8 +21,15 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import type { LineInput } from "@/features/quotes/_types/quotes";
-import { quoteRequest } from "@/features/quotes/client-action";
-import { calculateQuote, defaultDiscounts, money, priceLines } from "@/features/quotes/rules";
+import { PurchaseRecommendations } from "@/features/quotes/purchase-recommendations";
+import {
+  calculateQuote,
+  defaultDiscounts,
+  defaultPricelists,
+  money,
+  priceLines,
+} from "@/features/quotes/rules";
+import { apiClient, apiData } from "@/lib/api/client";
 import type { Workspace } from "@/lib/domain/_types/workspace";
 
 export function QuoteEditor({
@@ -87,19 +95,30 @@ export function QuoteEditor({
     setPending(true);
     setError("");
     try {
-      const saved = await quoteRequest<Workspace["quotes"][number]>(
-        quote ? `/quotes/${quote.id}` : "/quotes",
-        {
-          customerId,
-          lines,
-          orderDiscountBps,
-          notes,
-          ...(date ? { promisedDate: date } : {}),
-          ...(quote ? { revision: quote.revision } : {}),
-        },
-        quote ? "PATCH" : "POST",
-      );
-      if (submit) await quoteRequest(`/quotes/${saved.id}/submit`, { revision: saved.revision });
+      const payload = {
+        customerId,
+        lines,
+        orderDiscountBps,
+        notes,
+        ...(date ? { promisedDate: date } : {}),
+        ...(quote ? { revision: quote.revision } : {}),
+      };
+      const saved = quote
+        ? apiData(
+            await apiClient.api.v1.quotes({ id: quote.id }).patch(payload),
+            "The action failed. Refresh and try again.",
+          )
+        : apiData(
+            await apiClient.api.v1.quotes.post(payload),
+            "The action failed. Refresh and try again.",
+          );
+      if (submit)
+        apiData(
+          await apiClient.api.v1.quotes({ id: saved.id }).submit.post({
+            revision: saved.revision,
+          }),
+          "The action failed. Refresh and try again.",
+        );
       await onSaved();
       router.push(`/quotations/${saved.id}`);
     } catch (e) {
@@ -150,7 +169,11 @@ export function QuoteEditor({
           <CardContent className="grid gap-4 sm:grid-cols-2">
             <Field>
               <FieldLabel>Customer</FieldLabel>
-              <Select value={customerId} onValueChange={(v) => v && setCustomerId(v)}>
+              <Select
+                value={customerId}
+                onValueChange={(v) => v && setCustomerId(v)}
+                items={data.customers.map((c) => ({ value: c.id, label: `${c.name} · ${c.tier}` }))}
+              >
                 <SelectTrigger aria-label="Customer">
                   <SelectValue />
                 </SelectTrigger>
@@ -162,6 +185,17 @@ export function QuoteEditor({
                   ))}
                 </SelectContent>
               </Select>
+              {customer && (
+                <p className="text-xs text-muted-foreground" role="note">
+                  {customer.tier} tier: up to {(limits[customer.tier] ?? 0) / 100}% discount without
+                  approval. Hardware tier pricing:{" "}
+                  {(10000 -
+                    (pricelists?.[customer.tier] ?? defaultPricelists[customer.tier] ?? 10000)) /
+                    100}
+                  % below base price. Category limits may be lower. Tier ceilings are limits, not
+                  automatic discounts.
+                </p>
+              )}
             </Field>
             <Field>
               <FieldLabel htmlFor="promise-date">Promised delivery</FieldLabel>
@@ -183,7 +217,13 @@ export function QuoteEditor({
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex gap-2">
-              <Select value={productId} onValueChange={(v) => v && setProductId(v)}>
+              <Select
+                value={productId}
+                onValueChange={(v) => v && setProductId(v)}
+                items={data.products
+                  .filter((p) => p.active)
+                  .map((p) => ({ value: p.id, label: `${p.name} · ${money(p.priceCents)}` }))}
+              >
                 <SelectTrigger aria-label="Product to add" className="flex-1">
                   <SelectValue />
                 </SelectTrigger>
@@ -240,28 +280,31 @@ export function QuoteEditor({
                     <div className="grid grid-cols-2 items-end gap-3 sm:grid-cols-4">
                       <Field>
                         <FieldLabel htmlFor={`qty-${line.id}`}>Quantity</FieldLabel>
-                        <Input
+                        <NumberInput
                           id={`qty-${line.id}`}
                           aria-label={`${product?.name} quantity`}
-                          type="number"
                           min={1}
                           max={10000}
                           value={line.quantity}
-                          onChange={(e) => update(index, { quantity: Number(e.target.value) })}
+                          onValueChange={(value) =>
+                            update(index, { quantity: value ?? Number.NaN })
+                          }
                         />
                       </Field>
                       <Field>
                         <FieldLabel htmlFor={`discount-${line.id}`}>Discount %</FieldLabel>
-                        <Input
+                        <NumberInput
                           id={`discount-${line.id}`}
                           aria-label={`${product?.name} discount`}
-                          type="number"
                           min={0}
                           max={100}
                           step="0.01"
                           value={line.discountBps / 100}
-                          onChange={(e) =>
-                            update(index, { discountBps: Math.round(Number(e.target.value) * 100) })
+                          onValueChange={(value) =>
+                            update(index, {
+                              discountBps:
+                                value === undefined ? Number.NaN : Math.round(value * 100),
+                            })
                           }
                         />
                       </Field>
@@ -289,14 +332,15 @@ export function QuoteEditor({
             <div className="grid gap-4 sm:grid-cols-2">
               <Field>
                 <FieldLabel htmlFor="order-discount">Order discount %</FieldLabel>
-                <Input
+                <NumberInput
                   id="order-discount"
-                  type="number"
                   min={0}
                   max={100}
                   step="0.01"
                   value={orderDiscountBps / 100}
-                  onChange={(e) => setOrderDiscount(Math.round(Number(e.target.value) * 100))}
+                  onValueChange={(value) =>
+                    setOrderDiscount(value === undefined ? Number.NaN : Math.round(value * 100))
+                  }
                 />
               </Field>
               <Field>
@@ -339,6 +383,18 @@ export function QuoteEditor({
         </Card>
       </div>
       <div className="space-y-4">
+        <PurchaseRecommendations
+          key={customerId}
+          customerId={customerId}
+          products={data.products}
+          existingIds={lines.map((line) => line.productId)}
+          disabled={pending || lines.length >= 100 || (lines.length > 0 && !!validation)}
+          limits={limits}
+          orderDiscountBps={orderDiscountBps}
+          onAdd={(id) => add(id)}
+          pricelists={pricelists}
+          tier={customer?.tier ?? "Bronze"}
+        />
         <Card>
           <CardHeader>
             <CardDescription>One-time total</CardDescription>

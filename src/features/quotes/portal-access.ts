@@ -42,10 +42,25 @@ export async function redeemAccess(token: string) {
   return { session, quoteId: access.quoteId };
 }
 
+async function signedInActor(request: Request): Promise<Actor | null> {
+  try {
+    return await requireActor(request);
+  } catch (error) {
+    if (error instanceof DomainError && error.status === 401) return null;
+    throw error;
+  }
+}
+
 export async function portalIdentity(
   request: Request,
   quoteId?: string,
 ): Promise<{ actor: Actor; quoteId?: string }> {
+  const session = await signedInActor(request);
+  if (session) {
+    if (session.role !== "customer" || !session.customerId)
+      throw new DomainError("The customer portal is available only to customer accounts.", 403);
+    return { actor: session };
+  }
   const token = portalCookie(request);
   if (token) {
     const [access] = await db
@@ -84,8 +99,7 @@ export async function portalIdentity(
       };
     }
   }
-  const actor = await requireActor(request);
-  return { actor };
+  throw new DomainError("Please sign in to continue.", 401);
 }
 
 export async function permittedPortalQuote(request: Request, id: string) {
@@ -93,8 +107,7 @@ export async function permittedPortalQuote(request: Request, id: string) {
   const [quote] = await db.select().from(quotes).where(eq(quotes.id, id));
   if (
     !quote ||
-    (actor.role === "customer" && actor.customerId !== quote.customerId) ||
-    (actor.role === "rep" && actor.id !== quote.ownerId) ||
+    actor.customerId !== quote.customerId ||
     ["DRAFT", "RETURNED", "REJECTED"].includes(quote.status)
   )
     throw new DomainError("Quotation not found", 404);

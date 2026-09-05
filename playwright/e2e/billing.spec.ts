@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, request as requestFactory, test } from "@playwright/test";
 
 import type { Workspace } from "@/lib/domain/_types/workspace";
 
@@ -8,17 +8,21 @@ function demoPassword() {
   return password;
 }
 
+async function signedInRequest(baseURL: string, email: string, password: string) {
+  const request = await requestFactory.newContext({ baseURL });
+  const response = await request.post("/api/auth/sign-in/email", { data: { email, password } });
+  expect(response.ok(), await response.text()).toBe(true);
+  return request;
+}
+
 test("finance records a full payment, downloads real documents and cancels recurring service @regression", async ({
   baseURL,
   page,
-  request,
 }) => {
+  if (!baseURL) throw new Error("Billing browser tests require the application base URL");
   const password = demoPassword();
-  const adminSignIn = await request.post("/api/auth/sign-in/email", {
-    data: { email: "admin@dealflow360.demo", password },
-  });
-  expect(adminSignIn.ok()).toBe(true);
-  const created = await request.post("/api/v1/quotes", {
+  const repRequest = await signedInRequest(baseURL, "rep@dealflow360.demo", password);
+  const created = await repRequest.post("/api/v1/quotes", {
     headers: { origin: new URL(baseURL!).origin },
     data: {
       customerId: "acme",
@@ -32,21 +36,30 @@ test("finance records a full payment, downloads real documents and cancels recur
   });
   expect(created.ok()).toBe(true);
   const quote = (await created.json()) as { id: string; revision: number };
-  const submitted = await request.post(`/api/v1/quotes/${quote.id}/submit`, {
+  const submitted = await repRequest.post(`/api/v1/quotes/${quote.id}/submit`, {
     headers: { origin: new URL(baseURL!).origin },
     data: { revision: quote.revision },
   });
   expect(submitted.ok()).toBe(true);
   const approved = (await submitted.json()) as { revision: number };
-  const confirmed = await request.post(`/api/v1/quotes/${quote.id}/confirm`, {
+  await repRequest.dispose();
+  const customerRequest = await signedInRequest(baseURL, "acme@dealflow360.demo", password);
+  const confirmed = await customerRequest.post(`/api/v1/portal/${quote.id}/confirm`, {
     headers: { origin: new URL(baseURL!).origin },
     data: { revision: approved.revision },
   });
   expect(confirmed.ok()).toBe(true);
   const order = (await confirmed.json()) as { id: string; number: string };
-  const initialResponse = await request.get("/api/v1/workspace");
+  await customerRequest.dispose();
+  const adminRequest = await signedInRequest(baseURL, "admin@dealflow360.demo", password);
+  const initialResponse = await adminRequest.get("/api/v1/workspace");
   expect(initialResponse.ok()).toBe(true);
   const initial = (await initialResponse.json()) as Workspace;
+  await adminRequest.dispose();
+  const quoteCreator = initial.activity.find(
+    (entry) => entry.action === "QUOTE_CREATED" && entry.entityId === quote.id,
+  );
+  expect(quoteCreator).toBeDefined();
   const invoice = initial.invoices.find(
     (entry) => entry.orderId === order.id && entry.kind === "ONE_TIME",
   )!;
@@ -58,15 +71,20 @@ test("finance records a full payment, downloads real documents and cancels recur
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
   await expect(page).toHaveURL(/\/dashboard$/);
   await page.goto(`/invoices/${invoice.id}`);
-  await expect(page.getByRole("heading", { name: "Invoices", exact: true })).toBeVisible();
-  await page.getByLabel("Payment reference").fill(`BANK-${crypto.randomUUID()}`);
-  await page.getByRole("button", { name: /Record full payment/ }).click();
+  const invoiceDialog = page.getByRole("dialog", { name: invoice.number, exact: true });
+  await expect(invoiceDialog).toBeVisible();
+  await expect(invoiceDialog.locator("[data-slot='dialog-footer']")).toHaveCSS(
+    "position",
+    "sticky",
+  );
+  await invoiceDialog.getByLabel("Payment reference").fill(`BANK-${crypto.randomUUID()}`);
+  await invoiceDialog.getByRole("button", { name: /Record full payment/ }).click();
   await expect(
     page.getByText("Payment recorded and balance reconciled.", { exact: true }),
   ).toBeVisible();
-  await expect(page.getByRole("button", { name: /Record full payment/ })).toHaveCount(0);
+  await expect(invoiceDialog.getByRole("button", { name: /Record full payment/ })).toHaveCount(0);
   const invoiceDownload = page.waitForEvent("download");
-  await page.getByRole("button", { name: "Download invoice PDF" }).click();
+  await invoiceDialog.getByRole("button", { name: "Download invoice PDF" }).click();
   const invoiceFile = await invoiceDownload;
   expect(invoiceFile.suggestedFilename()).toBe(`${invoice.number}.pdf`);
   const invoicePath = await invoiceFile.path();
@@ -79,17 +97,29 @@ test("finance records a full payment, downloads real documents and cancels recur
   await page.goto("/subscriptions");
   await page.getByRole("textbox", { name: "Search subscriptions" }).fill(order.number);
   await page.getByRole("row").filter({ hasText: order.number }).click();
-  await page.getByLabel("Quantity", { exact: true }).fill("2");
-  await page.getByLabel("Reason", { exact: true }).fill("Customer adds a second service unit");
-  await page.getByRole("button", { name: "Apply change", exact: true }).click();
+  const subscriptionDialog = page.getByRole("dialog", { name: "Care Plan 2yr", exact: true });
+  await expect(subscriptionDialog).toBeVisible();
+  await expect(subscriptionDialog.locator("[data-slot='dialog-footer']")).toHaveCSS(
+    "position",
+    "sticky",
+  );
+  await subscriptionDialog.getByLabel("Quantity", { exact: true }).fill("2");
+  await subscriptionDialog
+    .getByLabel("Reason", { exact: true })
+    .fill("Customer adds a second service unit");
+  await subscriptionDialog.getByRole("button", { name: "Apply change", exact: true }).click();
   await expect(
     page.getByText(
       "Subscription updated. Any prorated invoice or credit is in the invoice register.",
       { exact: true },
     ),
   ).toBeVisible();
-  await page.getByLabel("Reason", { exact: true }).fill("Customer cancels the recurring plan");
-  await page.getByRole("button", { name: "Cancel and credit unused service", exact: true }).click();
+  await subscriptionDialog
+    .getByLabel("Reason", { exact: true })
+    .fill("Customer cancels the recurring plan");
+  await subscriptionDialog
+    .getByRole("button", { name: "Cancel and credit unused service", exact: true })
+    .click();
   await expect(
     page.getByText(
       "Subscription cancelled. Unused service credit issued; future billing stopped.",
@@ -122,9 +152,9 @@ test("finance records a full payment, downloads real documents and cancels recur
   for (const filter of [
     {
       label: "Report representative",
-      option: initial.actor.name,
+      option: quoteCreator!.actorName,
       key: "repId",
-      value: initial.actor.id,
+      value: quoteCreator!.actorId!,
     },
     {
       label: "Report team",

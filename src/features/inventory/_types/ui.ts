@@ -1,12 +1,16 @@
-import type {
-  fulfillmentDetail,
-  fulfillmentList,
-  inventorySnapshot,
-} from "@/features/inventory/queries";
-import type { Serialized } from "@/lib/domain/_types/workspace";
+import type { Static } from "elysia";
 
-export type FulfillmentDetail = Serialized<Awaited<ReturnType<typeof fulfillmentDetail>>>;
-export type FulfillmentList = Serialized<Awaited<ReturnType<typeof fulfillmentList>>>;
-export type InventorySnapshot = Serialized<Awaited<ReturnType<typeof inventorySnapshot>>>;
+import type {
+  allocationPlanModel,
+  fulfillmentDetailModel,
+  fulfillmentListModel,
+  inventorySnapshotModel,
+} from "@/features/inventory/model";
+import type { JsonTransport } from "@/lib/api/_types/client";
+
+export type FulfillmentDetail = JsonTransport<Static<typeof fulfillmentDetailModel>>;
+export type FulfillmentList = JsonTransport<Static<typeof fulfillmentListModel>>;
+export type FulfillmentPlan = JsonTransport<Static<typeof allocationPlanModel>>;
+export type InventorySnapshot = JsonTransport<Static<typeof inventorySnapshotModel>>;
 export type StockRow = InventorySnapshot["stocks"][number];
 export type WarehouseRow = InventorySnapshot["warehouses"][number];

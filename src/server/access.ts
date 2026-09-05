@@ -1,4 +1,5 @@
 import { eq } from "drizzle-orm";
+import { Elysia } from "elysia";
 
 import { createAuth, trustedOrigins } from "@/lib/auth/create-auth";
 import { db } from "@/lib/db/connection";
@@ -6,8 +7,10 @@ import { profiles } from "@/lib/db/schema";
 import type { Actor, Role } from "@/lib/domain/_types/domain";
 import { DomainError } from "@/server/errors";
 
+const auth = createAuth(db);
+
 export async function requireActor(request: Request, roles?: Role[]): Promise<Actor> {
-  const session = await createAuth(db).api.getSession({ headers: request.headers });
+  const session = await auth.api.getSession({ headers: request.headers });
   if (!session) throw new DomainError("Please sign in to continue.", 401);
   const [profile] = await db.select().from(profiles).where(eq(profiles.userId, session.user.id));
   const actor: Actor = {
@@ -30,3 +33,14 @@ export function requireMutationOrigin(request: Request) {
   if (!origin || !baseURL || !trustedOrigins(baseURL).includes(origin))
     throw new DomainError("Request origin is not allowed.", 403);
 }
+
+export const actorContext = new Elysia({ name: "actor-context" }).macro({
+  authorize(roles: true | Role[]) {
+    return {
+      detail: { security: [{ SessionCookie: [] }] },
+      resolve: async ({ request }) => ({
+        actor: await requireActor(request, roles === true ? undefined : roles),
+      }),
+    };
+  },
+});

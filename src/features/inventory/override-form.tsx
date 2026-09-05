@@ -9,15 +9,17 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { NumberInput } from "@/components/ui/number-input";
 import type { FulfillmentDetail } from "@/features/inventory/_types/ui";
+import { apiClient, apiData } from "@/lib/api/client";
 import type { Workspace } from "@/lib/domain/_types/workspace";
-import { fetchJson } from "@/lib/swr/fetcher";
 
 export function OverrideForm({
   detail,
@@ -71,7 +73,7 @@ export function OverrideForm({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger render={<Button variant="outline" />}>Manual override</DialogTrigger>
-      <DialogContent className="max-h-[85vh] overflow-y-auto">
+      <DialogContent>
         <DialogHeader>
           <DialogTitle>Adjust warehouse allocations</DialogTitle>
           <DialogDescription>
@@ -83,14 +85,12 @@ export function OverrideForm({
           onSubmit={form.handleSubmit(async (values) => {
             setError("");
             try {
-              await fetchJson(`/api/v1/fulfillment/${detail.order.id}/override`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
+              apiData(
+                await apiClient.api.v1.fulfillment({ id: detail.order.id }).override.post({
                   ...values,
                   allocations: values.allocations.filter((a) => a.quantity > 0),
                 }),
-              });
+              );
               refresh();
               setOpen(false);
             } catch (e) {
@@ -104,9 +104,8 @@ export function OverrideForm({
                 <FieldLabel htmlFor={`allocation-${index}`}>
                   {row.label} · up to {row.available}
                 </FieldLabel>
-                <Input
+                <NumberInput
                   id={`allocation-${index}`}
-                  type="number"
                   {...form.register(`allocations.${index}.quantity`, {
                     valueAsNumber: true,
                     required: true,
@@ -136,10 +135,12 @@ export function OverrideForm({
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
             )}
+          </FieldGroup>
+          <DialogFooter showCloseButton={!form.formState.isSubmitting}>
             <Button type="submit" disabled={!form.formState.isValid || form.formState.isSubmitting}>
               Save audited override
             </Button>
-          </FieldGroup>
+          </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>

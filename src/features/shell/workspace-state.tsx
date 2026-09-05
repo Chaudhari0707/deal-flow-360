@@ -6,7 +6,7 @@ import { AlertTriangle } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { HttpResponseError } from "@/lib/swr/fetcher";
+import { HttpResponseError } from "@/lib/api/client";
 
 export function WorkspaceState({ error, retry }: { error?: unknown; retry?: () => void }) {
   if (error) {

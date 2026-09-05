@@ -19,7 +19,7 @@ import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import type { PortalDetail } from "@/features/portal/_types/portal";
 import { displayDate } from "@/features/shell/format";
-import { fetchJson } from "@/lib/swr/fetcher";
+import { apiClient, apiData } from "@/lib/api/client";
 
 export function PortalConversation({
   data,
@@ -37,11 +37,12 @@ export function PortalConversation({
     setPending(true);
     setError("");
     try {
-      await fetchJson(`/api/v1/portal/${data.quote.id}/message`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ body: body.trim(), ...(lineId !== "all" ? { lineId } : {}) }),
-      });
+      apiData(
+        await apiClient.api.v1.portal({ id: data.quote.id }).message.post({
+          body: body.trim(),
+          ...(lineId !== "all" ? { lineId } : {}),
+        }),
+      );
       setBody("");
       await saved();
     } catch {
@@ -81,7 +82,7 @@ export function PortalConversation({
             </p>
           )}
         </div>
-        {["customer", "rep", "manager", "admin"].includes(data.actor.role) && (
+        {data.actor.role === "customer" && (
           <form method="post" onSubmit={submit}>
             <FieldGroup>
               <Field>

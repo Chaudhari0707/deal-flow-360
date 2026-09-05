@@ -10,14 +10,15 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { DataTable } from "@/components/ui/data-table";
-import type { InventorySnapshot, StockRow } from "@/features/inventory/_types/ui";
-import { RestockForm } from "@/features/inventory/restock-form";
+import type { StockRow } from "@/features/inventory/_types/ui";
+import { RestockDialog } from "@/features/inventory/restock-form";
 import { StockSetup } from "@/features/inventory/stock-setup";
 import { useStockFeed } from "@/features/inventory/use-stock-feed";
 import { WarehouseSettings } from "@/features/inventory/warehouse-settings";
 import { PageHeader } from "@/features/shell/page-header";
 import { useWorkspace } from "@/features/shell/use-workspace";
 import { WorkspaceState } from "@/features/shell/workspace-state";
+import { apiClient, apiData } from "@/lib/api/client";
 
 const columns: ColumnDef<DataTableFeatures, StockRow>[] = [
   {
@@ -61,14 +62,20 @@ const columns: ColumnDef<DataTableFeatures, StockRow>[] = [
 export function InventoryScreen() {
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 20 });
   const [selected, setSelected] = useState<string>();
-  const { data, error, mutate } = useSWR<InventorySnapshot>(
+  const { data, error, mutate } = useSWR(
     `/api/v1/inventory?page=${pagination.pageIndex}&pageSize=${pagination.pageSize}`,
+    async () =>
+      apiData(
+        await apiClient.api.v1.inventory.get({
+          query: { page: pagination.pageIndex, pageSize: pagination.pageSize },
+        }),
+      ),
     { keepPreviousData: true },
   );
   const workspace = useWorkspace();
   const live = useStockFeed();
   if (!data) return <WorkspaceState error={error} retry={() => void mutate()} />;
-  const canOperate = ["admin", "ops"].includes(workspace.data?.actor.role ?? "");
+  const canOperate = workspace.data?.actor.role === "ops";
   const stock = data.stocks.find((s) => s.id === selected);
   return (
     <>
@@ -161,7 +168,15 @@ export function InventoryScreen() {
         </CardContent>
       </Card>
       {stock && canOperate && (
-        <RestockForm key={stock.id} stock={stock} refresh={() => void mutate()} />
+        <RestockDialog
+          key={stock.id}
+          stock={stock}
+          open
+          onOpenChange={(open) => {
+            if (!open) setSelected(undefined);
+          }}
+          refresh={() => void mutate()}
+        />
       )}
     </>
   );

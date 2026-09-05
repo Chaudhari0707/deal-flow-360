@@ -1,32 +1,12 @@
-import type { Actor, QuoteLine } from "@/lib/domain/_types/domain";
-import type { Workspace } from "@/lib/domain/_types/workspace";
+import type { Static } from "elysia";
 
-export interface PortalDetail {
-  actor: Actor;
-  customer: Workspace["customers"][number];
-  messages: Workspace["messages"];
-  quote: PublicQuote;
-}
+import type {
+  portalDetailModel,
+  portalWorkspaceModel,
+  publicQuoteModel,
+} from "@/features/quotes/model";
+import type { JsonTransport } from "@/lib/api/_types/client";
 
-export interface PortalWorkspace {
-  actor: Actor;
-  customer: Workspace["customers"][number] | null;
-  quotes: PublicQuote[];
-}
-
-export type PublicQuote = Pick<
-  Workspace["quotes"][number],
-  | "approvedRevision"
-  | "customerId"
-  | "id"
-  | "number"
-  | "orderDiscountBps"
-  | "promisedDate"
-  | "recurringCents"
-  | "revision"
-  | "status"
-  | "subtotalCents"
-  | "taxCents"
-  | "totalCents"
-  | "updatedAt"
-> & { lines: Omit<QuoteLine, "costCents">[] };
+export type PortalDetail = JsonTransport<Static<typeof portalDetailModel>>;
+export type PortalWorkspace = JsonTransport<Static<typeof portalWorkspaceModel>>;
+export type PublicQuote = JsonTransport<Static<typeof publicQuoteModel>>;

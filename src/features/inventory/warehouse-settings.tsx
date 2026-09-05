@@ -9,14 +9,16 @@ import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { NumberInput } from "@/components/ui/number-input";
 import type { WarehouseRow } from "@/features/inventory/_types/ui";
-import { fetchJson } from "@/lib/swr/fetcher";
+import { apiClient, apiData } from "@/lib/api/client";
 
 export function WarehouseSettings({
   warehouse = { id: "", name: "", active: false, replenishmentThreshold: 5, shippingWeight: 100 },
@@ -52,16 +54,9 @@ export function WarehouseSettings({
           onSubmit={form.handleSubmit(async (values) => {
             setError("");
             try {
-              await fetchJson(
-                warehouse.id
-                  ? `/api/v1/inventory/warehouses/${warehouse.id}`
-                  : "/api/v1/inventory/warehouses",
-                {
-                  method: warehouse.id ? "PATCH" : "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify(values),
-                },
-              );
+              const warehouses = apiClient.api.v1.inventory.warehouses;
+              if (warehouse.id) apiData(await warehouses({ id: warehouse.id }).patch(values));
+              else apiData(await warehouses.post(values));
               refresh();
               setOpen(false);
             } catch (e) {
@@ -80,9 +75,8 @@ export function WarehouseSettings({
             </Field>
             <Field>
               <FieldLabel htmlFor={`weight-${warehouse.id}`}>Shipping score × 100</FieldLabel>
-              <Input
+              <NumberInput
                 id={`weight-${warehouse.id}`}
-                type="number"
                 {...form.register("shippingWeight", {
                   valueAsNumber: true,
                   min: 0,
@@ -98,9 +92,8 @@ export function WarehouseSettings({
               <FieldLabel htmlFor={`threshold-${warehouse.id}`}>
                 Low-stock alert threshold
               </FieldLabel>
-              <Input
+              <NumberInput
                 id={`threshold-${warehouse.id}`}
-                type="number"
                 {...form.register("replenishmentThreshold", {
                   valueAsNumber: true,
                   min: 0,
@@ -130,10 +123,12 @@ export function WarehouseSettings({
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
             )}
+          </FieldGroup>
+          <DialogFooter showCloseButton={!form.formState.isSubmitting}>
             <Button type="submit" disabled={form.formState.isSubmitting || !form.formState.isValid}>
               Save warehouse
             </Button>
-          </FieldGroup>
+          </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>

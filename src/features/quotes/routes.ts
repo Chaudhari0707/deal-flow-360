@@ -2,52 +2,53 @@ import { desc, eq } from "drizzle-orm";
 import { Elysia, t } from "elysia";
 
 import { sendQuotation } from "@/features/quotes/email";
-import { approvalAction, confirmQuote, saveQuote, submitQuote } from "@/features/quotes/service";
+import { postQuoteMessage } from "@/features/quotes/messages";
+import {
+  deliveryResultModel,
+  quoteDetailModel,
+  quoteInputModel,
+  recommendationsModel,
+} from "@/features/quotes/model";
+import { purchaseRecommendations } from "@/features/quotes/recommendations";
+import { approvalAction, saveQuote, submitQuote } from "@/features/quotes/service";
 import { db } from "@/lib/db/connection";
 import { auditEntries, messages, quotes } from "@/lib/db/schema";
-import { requireActor } from "@/server/access";
+import { actorContext } from "@/server/access";
 import { DomainError } from "@/server/errors";
+import { apiErrorResponses, messageModel, quoteModel } from "@/server/models";
 
 const id = t.String({ minLength: 1, maxLength: 100 }),
   revision = t.Integer({ minimum: 1 });
-const body = t.Object(
-  {
-    customerId: id,
-    lines: t.Array(
-      t.Object({
-        id: t.Optional(id),
-        productId: id,
-        quantity: t.Integer({ minimum: 1, maximum: 10000 }),
-        discountBps: t.Integer({ minimum: 0, maximum: 10000 }),
-        upsell: t.Optional(t.Boolean()),
-      }),
-      { minItems: 1, maxItems: 100 },
-    ),
-    orderDiscountBps: t.Integer({ minimum: 0, maximum: 10000 }),
-    notes: t.Optional(t.String({ maxLength: 2000 })),
-    promisedDate: t.Optional(t.String({ pattern: "^\\d{4}-\\d{2}-\\d{2}$" })),
-    revision: t.Optional(revision),
-  },
-  { additionalProperties: false },
-);
+const body = quoteInputModel;
 
-export const quoteRoutes = new Elysia({ name: "quotes" })
-  .post(
-    "/quotes",
-    async ({ body: b, request }) =>
-      saveQuote(b, await requireActor(request, ["rep", "manager", "admin"])),
-    { body },
+export const quoteRoutes = new Elysia({ name: "quotes", tags: ["Quotes"] })
+  .use(actorContext)
+  .get(
+    "/quotes/recommendations",
+    async ({ query, set }) => {
+      set.headers["cache-control"] = "private, no-store";
+      return purchaseRecommendations(query.customerId);
+    },
+    {
+      authorize: ["rep", "manager", "admin"],
+      query: t.Object({ customerId: id }),
+      response: { 200: recommendationsModel, ...apiErrorResponses },
+    },
   )
-  .patch(
-    "/quotes/:id",
-    async ({ body: b, params, request }) =>
-      saveQuote(b, await requireActor(request, ["rep", "manager", "admin"]), params.id),
-    { body, params: t.Object({ id }) },
-  )
+  .post("/quotes", async ({ actor, body: b }) => saveQuote(b, actor), {
+    authorize: ["rep"],
+    body,
+    response: { 200: quoteModel, ...apiErrorResponses },
+  })
+  .patch("/quotes/:id", async ({ actor, body: b, params }) => saveQuote(b, actor, params.id), {
+    authorize: ["rep"],
+    body,
+    params: t.Object({ id }),
+    response: { 200: quoteModel, ...apiErrorResponses },
+  })
   .get(
     "/quotes/:id",
-    async ({ params, request }) => {
-      const actor = await requireActor(request, ["rep", "manager", "finance", "ops", "admin"]);
+    async ({ actor, params }) => {
       const [quote] = await db.select().from(quotes).where(eq(quotes.id, params.id));
       if (!quote || (actor.role === "rep" && quote.ownerId !== actor.id))
         throw new DomainError("Quotation not found", 404);
@@ -67,54 +68,71 @@ export const quoteRoutes = new Elysia({ name: "quotes" })
       ]);
       return { quote, activity, messages: thread };
     },
-    { params: t.Object({ id }) },
+    {
+      authorize: ["rep", "manager", "finance", "ops"],
+      params: t.Object({ id }),
+      response: { 200: quoteDetailModel, ...apiErrorResponses },
+    },
+  )
+  .post(
+    "/quotes/:id/message",
+    async ({ actor, body: input, params }) => postQuoteMessage(params.id, input, actor),
+    {
+      authorize: ["rep", "manager", "finance"],
+      params: t.Object({ id }),
+      body: t.Object(
+        { body: t.String({ minLength: 1, maxLength: 2000 }), lineId: t.Optional(id) },
+        { additionalProperties: false },
+      ),
+      response: { 200: messageModel, ...apiErrorResponses },
+    },
   )
   .post(
     "/quotes/:id/submit",
-    async ({ params, body: b, request }) => {
-      const actor = await requireActor(request, ["rep", "manager", "admin"]);
+    async ({ actor, params, body: b }) => {
       const quote = await submitQuote(params.id, b.revision, actor);
       if (quote.status === "APPROVED") await sendQuotation(quote.id, actor);
       return quote;
     },
-    { params: t.Object({ id }), body: t.Object({ revision }) },
+    {
+      authorize: ["rep"],
+      params: t.Object({ id }),
+      body: t.Object({ revision }),
+      response: { 200: quoteModel, ...apiErrorResponses },
+    },
   )
   .post(
     "/quotes/:id/approval",
-    async ({ params, body: b, request }) => {
-      const actor = await requireActor(request, ["manager", "finance", "admin"]);
+    async ({ actor, params, body: b }) => {
       const quote = await approvalAction(params.id, b.revision, b.action, b.reason, actor);
       if (quote.status === "APPROVED") await sendQuotation(quote.id, actor);
       return quote;
     },
     {
+      authorize: ["manager", "finance"],
       params: t.Object({ id }),
       body: t.Object({
         revision,
         action: t.Union([t.Literal("approve"), t.Literal("return"), t.Literal("reject")]),
         reason: t.String({ minLength: 3, maxLength: 1000 }),
       }),
+      response: { 200: quoteModel, ...apiErrorResponses },
     },
   )
   .post(
     "/quotes/:id/send",
-    async ({ params, request, body: input }) => {
-      const actor = await requireActor(request, ["rep", "manager", "finance", "admin"]);
+    async ({ actor, params, body: input }) => {
       const [quote] = await db.select().from(quotes).where(eq(quotes.id, params.id));
       if (!quote || (actor.role === "rep" && quote.ownerId !== actor.id))
         throw new DomainError("Quotation not found", 404);
       return sendQuotation(params.id, actor, input?.renew ?? false);
     },
     {
+      authorize: ["rep", "manager", "finance"],
       params: t.Object({ id }),
       body: t.Optional(
         t.Object({ renew: t.Optional(t.Boolean()) }, { additionalProperties: false }),
       ),
+      response: { 200: deliveryResultModel, ...apiErrorResponses },
     },
-  )
-  .post(
-    "/quotes/:id/confirm",
-    async ({ params, body: b, request }) =>
-      confirmQuote(params.id, b.revision, await requireActor(request, ["admin"])),
-    { params: t.Object({ id }), body: t.Object({ revision }) },
   );

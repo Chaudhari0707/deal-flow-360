@@ -14,14 +14,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { ReportRow } from "@/features/billing/_types/documents";
-import type { ReportOptions, SalesReport } from "@/features/billing/_types/reports";
 import { ReportExportActions } from "@/features/billing/report-export-actions";
 import { reportColumns, salesColumns } from "@/features/billing/table-columns";
 import { money } from "@/features/shell/format";
 import { PageHeader } from "@/features/shell/page-header";
 import { useWorkspace } from "@/features/shell/use-workspace";
 import { WorkspaceState } from "@/features/shell/workspace-state";
+import { apiClient, apiData } from "@/lib/api/client";
+
+function isApprovalStatus(
+  value: string,
+): value is "APPROVED" | "NOT_SUBMITTED" | "PENDING" | "REJECTED" | "RETURNED" {
+  return ["APPROVED", "NOT_SUBMITTED", "PENDING", "REJECTED", "RETURNED"].includes(value);
+}
 
 export function ReportWorkspace() {
   const workspace = useWorkspace();
@@ -48,12 +53,26 @@ export function ReportWorkspace() {
   const allowed =
     workspace.data && ["admin", "finance", "manager"].includes(workspace.data.actor.role);
   const invalid = Boolean(from && to && from > to);
-  const report = useSWR<{
-    rows: ReportRow[];
-    sales: SalesReport;
-    options: ReportOptions;
-    totals: { billedCents: number; outstandingCents: number; paidCents: number };
-  }>(allowed && !invalid ? url : null, { keepPreviousData: true });
+  const report = useSWR(
+    allowed && !invalid ? url : null,
+    async () =>
+      apiData(
+        await apiClient.api.v1.reports.financial.get({
+          query: {
+            ...(from ? { from } : {}),
+            ...(to ? { to } : {}),
+            ...(customerId !== "all" ? { customerId } : {}),
+            ...(category !== "all" ? { category } : {}),
+            ...(status === "PAID" || status === "UNPAID" ? { status } : {}),
+            ...(repId !== "all" ? { repId } : {}),
+            ...(team !== "all" ? { team } : {}),
+            ...(isApprovalStatus(approvalStatus) ? { approvalStatus } : {}),
+            ...(productId !== "all" ? { productId } : {}),
+          },
+        }),
+      ),
+    { keepPreviousData: true },
+  );
   if (!workspace.data)
     return <WorkspaceState error={workspace.error} retry={() => void workspace.mutate()} />;
   if (!allowed)

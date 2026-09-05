@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import { createOrderBilling } from "@/features/billing/creation";
 import { reserveOrderStock } from "@/features/inventory/stock";
 import type { QuoteInput } from "@/features/quotes/_types/quotes";
+import { requiredApprovalChain } from "@/features/quotes/approval-policy";
 import { calculateQuote, defaultDiscounts, priceLines } from "@/features/quotes/rules";
 import { db } from "@/lib/db/connection";
 import { customers, orders, products, quoteRevisions, quotes, settings } from "@/lib/db/schema";
@@ -11,8 +12,7 @@ import { audit } from "@/server/audit";
 import { DomainError } from "@/server/errors";
 
 export async function saveQuote(input: QuoteInput, actor: Actor, id?: string) {
-  if (!["rep", "manager", "admin"].includes(actor.role))
-    throw new DomainError("Your role cannot edit quotations", 403);
+  if (actor.role !== "rep") throw new DomainError("Your role cannot edit quotations", 403);
   return db.transaction(async (tx) => {
     const [customer] = await tx.select().from(customers).where(eq(customers.id, input.customerId));
     if (!customer) throw new DomainError("Customer not found", 404);
@@ -77,8 +77,7 @@ export async function saveQuote(input: QuoteInput, actor: Actor, id?: string) {
 }
 
 export async function submitQuote(id: string, revision: number, actor: Actor) {
-  if (!["rep", "manager", "admin"].includes(actor.role))
-    throw new DomainError("Your role cannot submit quotations", 403);
+  if (actor.role !== "rep") throw new DomainError("Your role cannot submit quotations", 403);
   return db.transaction(async (tx) => {
     const [quote] = await tx.select().from(quotes).where(eq(quotes.id, id)).for("update");
     if (!quote || (actor.role === "rep" && quote.ownerId !== actor.id))
@@ -89,6 +88,10 @@ export async function submitQuote(id: string, revision: number, actor: Actor) {
       throw new DomainError("Only a draft or returned quote can be submitted", 409);
     const [customer] = await tx.select().from(customers).where(eq(customers.id, quote.customerId));
     const [policy] = await tx.select().from(settings).where(eq(settings.id, "discounts"));
+    const [approvalPolicy] = await tx
+      .select()
+      .from(settings)
+      .where(eq(settings.id, "approvalChain"));
     const amounts = calculateQuote(
       quote.lines,
       quote.orderDiscountBps,
@@ -110,7 +113,10 @@ export async function submitQuote(id: string, revision: number, actor: Actor) {
         revision: revisionNext,
         status: amounts.risk === "NONE" ? "APPROVED" : "PENDING_APPROVAL",
         approvedRevision: amounts.risk === "NONE" ? revisionNext : null,
-        approvalStep: amounts.risk === "NONE" ? null : "manager",
+        approvalStep:
+          amounts.risk === "NONE"
+            ? null
+            : (requiredApprovalChain(amounts.risk, approvalPolicy?.value)[0] ?? null),
         updatedAt: new Date(),
       })
       .where(eq(quotes.id, id))
@@ -139,17 +145,26 @@ export async function approvalAction(
     if (!quote) throw new DomainError("Quotation not found", 404);
     if (quote.status !== "PENDING_APPROVAL" || quote.revision !== revision)
       throw new DomainError("Approval is stale. Reload current quotation.", 409);
-    if (actor.role !== quote.approvalStep && actor.role !== "admin")
+    if (actor.role !== quote.approvalStep)
       throw new DomainError("Only the current approval role can act", 403);
+    const [approvalPolicy] = await tx
+      .select()
+      .from(settings)
+      .where(eq(settings.id, "approvalChain"));
+    const chain = requiredApprovalChain(quote.risk, approvalPolicy?.value);
+    const stepIndex = chain.indexOf(quote.approvalStep as (typeof chain)[number]);
+    if (stepIndex < 0) throw new DomainError("Approval chain configuration is invalid", 503);
     const next =
       action === "approve"
-        ? quote.approvalStep === "manager" && quote.risk === "HIGH"
-          ? "finance"
-          : null
-        : null;
+        ? (chain[stepIndex + 1] ?? null)
+        : action === "return" && stepIndex > 0
+          ? chain[stepIndex - 1]
+          : null;
     const status =
       action === "return"
-        ? "RETURNED"
+        ? next
+          ? "PENDING_APPROVAL"
+          : "RETURNED"
         : action === "reject"
           ? "REJECTED"
           : next
@@ -181,8 +196,7 @@ export async function counterQuote(
   actor: Actor,
   promisedDate?: string,
 ) {
-  if (!["customer", "admin"].includes(actor.role))
-    throw new DomainError("Only the customer or administrator demo proxy can propose terms", 403);
+  if (actor.role !== "customer") throw new DomainError("Only the customer can propose terms", 403);
   return db.transaction(async (tx) => {
     const [quote] = await tx.select().from(quotes).where(eq(quotes.id, id)).for("update");
     if (!quote) throw new DomainError("Quotation not found", 404);
@@ -201,6 +215,10 @@ export async function counterQuote(
     }));
     const [customer] = await tx.select().from(customers).where(eq(customers.id, quote.customerId));
     const [policy] = await tx.select().from(settings).where(eq(settings.id, "discounts"));
+    const [approvalPolicy] = await tx
+      .select()
+      .from(settings)
+      .where(eq(settings.id, "approvalChain"));
     const amounts = calculateQuote(
       lines,
       quote.orderDiscountBps,
@@ -222,7 +240,10 @@ export async function counterQuote(
         revision: nextRevision,
         approvedRevision: amounts.risk === "NONE" ? nextRevision : null,
         status: amounts.risk === "NONE" ? "APPROVED" : "PENDING_APPROVAL",
-        approvalStep: amounts.risk === "NONE" ? null : "manager",
+        approvalStep:
+          amounts.risk === "NONE"
+            ? null
+            : (requiredApprovalChain(amounts.risk, approvalPolicy?.value)[0] ?? null),
         promisedDate: promisedDate ?? quote.promisedDate,
         updatedAt: new Date(),
       })
@@ -237,8 +258,7 @@ export async function counterQuote(
 }
 
 export async function confirmQuote(id: string, revision: number, actor: Actor) {
-  if (!["customer", "admin"].includes(actor.role))
-    throw new DomainError("Only the customer or administrator demo proxy can accept terms", 403);
+  if (actor.role !== "customer") throw new DomainError("Only the customer can accept terms", 403);
   return db.transaction(async (tx) => {
     const [quote] = await tx.select().from(quotes).where(eq(quotes.id, id)).for("update");
     if (!quote) throw new DomainError("Quotation not found", 404);

@@ -1,14 +1,16 @@
 "use client";
 
 import { type ReactNode, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
-import { Layers3, LockKeyhole, LogOut } from "lucide-react";
+import { LockKeyhole, LogOut } from "lucide-react";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ThemeToggle } from "@/features/shell/theme-toggle";
+import { apiClient, apiData } from "@/lib/api/client";
 import { authClient } from "@/lib/auth/client";
-import { fetchJson } from "@/lib/swr/fetcher";
 
 export function PortalShell({ children }: { children: ReactNode }) {
   const [pending, setPending] = useState(false);
@@ -17,7 +19,7 @@ export function PortalShell({ children }: { children: ReactNode }) {
     setPending(true);
     setError("");
     try {
-      await fetchJson("/api/v1/portal/logout", { method: "POST" });
+      apiData(await apiClient.api.v1.portal.logout.post());
       const result = await authClient.signOut();
       if (result.error) throw new Error("Sign out failed");
       window.location.assign("/login");
@@ -33,20 +35,27 @@ export function PortalShell({ children }: { children: ReactNode }) {
         <div className="mx-auto flex h-20 max-w-6xl items-center justify-between gap-4 px-4 md:px-8">
           <Link
             href="/portal"
-            className="flex items-center gap-2 text-lg font-semibold tracking-tight"
+            className="flex items-center gap-3 text-lg font-semibold tracking-tight"
           >
-            <Badge className="size-8 rounded-lg p-1.5">
-              <Layers3 className="size-5!" />
-            </Badge>
-            DealFlow360
-            <Badge variant="outline" className="ml-2 hidden sm:flex">
+            <Image
+              src="/logo.png"
+              alt="DealFlow360"
+              width={180}
+              height={60}
+              className="h-10 w-auto object-contain"
+              priority
+            />
+            <Badge variant="outline" className="hidden sm:flex">
               Customer portal
             </Badge>
           </Link>
-          <Button variant="outline" aria-label="Sign out" disabled={pending} onClick={signOut}>
-            <LogOut />
-            <span className="hidden sm:inline">Sign out</span>
-          </Button>
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+            <Button variant="outline" aria-label="Sign out" disabled={pending} onClick={signOut}>
+              <LogOut />
+              <span className="hidden sm:inline">Sign out</span>
+            </Button>
+          </div>
         </div>
       </header>
       <main className="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-8 md:px-8 md:py-12">

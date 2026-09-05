@@ -37,6 +37,7 @@ export async function seedDemo(database: Database) {
           },
         },
         { id: "upsell", value: { minimumMarginBps: 2000 } },
+        { id: "approvalChain", value: { manager: 1, finance: 2 } },
       ])
       .onConflictDoNothing();
     const [health] = await tx.select().from(s.settings).where(eq(s.settings.id, "health"));

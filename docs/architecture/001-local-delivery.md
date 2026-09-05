@@ -42,8 +42,10 @@ operation keys. No Redis, broker, microservices or speculative persistence abstr
 - Line ceiling is minimum of customer-tier and category caps. Effective discount includes order
   discount. HIGH means max overage ≥ 500 basis points or summed overage ≥ 800; positive lower overage
   is MEDIUM; no overage is NONE. Approval authorizes the exact commercial revision, even when HIGH.
-- Human HIGH approval is Manager then Finance. Return/reject/edit/counter and automatic actions are
-  audited. Changed commercial terms invalidate approval; comments do not.
+- Human HIGH approval follows the ordered `approvalChain` workspace setting, seeded as Manager then
+  Finance. A reviewer approval advances to the next configured role; a return routes to the previous
+  reviewer, while the first reviewer returns it to the representative for edits. Return/reject/edit/
+  counter and automatic actions are audited. Changed commercial terms invalidate approval; comments do not.
 - Confirmation locks the quote and relevant stock, creates one order per quote, reserves available
   units and creates initial billing within one database transaction. Unmet demand remains backorder.
   Acceptance does not reserve again; override preserves other orders and dispatched units.

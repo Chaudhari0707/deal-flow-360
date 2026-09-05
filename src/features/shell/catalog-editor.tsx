@@ -9,6 +9,7 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -21,6 +22,7 @@ import {
   FieldSet,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { NumberInput } from "@/components/ui/number-input";
 import {
   Select,
   SelectContent,
@@ -29,9 +31,25 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { CustomerDelete } from "@/features/shell/customer-delete";
 import { useWorkspace } from "@/features/shell/use-workspace";
+import { apiClient, apiData, HttpResponseError } from "@/lib/api/client";
 import type { Workspace } from "@/lib/domain/_types/workspace";
-import { fetchJson, HttpResponseError } from "@/lib/swr/fetcher";
+
+function productCategory(value: string): "Hardware" | "Services" | "Subscription" {
+  if (value === "Hardware" || value === "Services" || value === "Subscription") return value;
+  throw new Error("Choose a valid product category");
+}
+
+function intervalMonths(value: number): 0 | 1 | 3 | 12 {
+  if (value === 0 || value === 1 || value === 3 || value === 12) return value;
+  throw new Error("Choose a valid billing interval");
+}
+
+function customerTier(value: string): "Bronze" | "Gold" | "Silver" {
+  if (value === "Bronze" || value === "Silver" || value === "Gold") return value;
+  throw new Error("Choose a valid customer tier");
+}
 
 export function CatalogEditor({
   kind,
@@ -62,25 +80,6 @@ export function CatalogEditor({
     const form = new FormData(event.currentTarget);
     const value = (name: string) => String(form.get(name) ?? "").trim();
     const numeric = (name: string, scale = 1) => Math.round(Number(value(name)) * scale);
-    const body =
-      kind === "product"
-        ? {
-            name: value("name"),
-            category: value("category"),
-            description: value("description"),
-            unit: value("unit"),
-            variant: value("variant"),
-            priceCents: numeric("price", 100),
-            costCents: numeric("cost", 100),
-            taxBps: numeric("tax", 100),
-            intervalMonths: numeric("interval"),
-            promotionBps: numeric("promotion", 100),
-            pairedProductIds,
-            stockable,
-            active,
-            promoted,
-          }
-        : { name: value("name"), email: value("email"), tier: value("tier"), team: value("team") };
     if (kind === "product" && stockable && numeric("interval") > 0) {
       setError("Recurring subscriptions cannot track warehouse inventory.");
       return;
@@ -88,19 +87,46 @@ export function CatalogEditor({
     setPending(true);
     setError("");
     try {
-      const base = kind === "product" ? "/api/v1/catalog/products" : "/api/v1/customers";
-      await fetchJson(existing ? `${base}/${existing.id}` : base, {
-        method: existing ? "PATCH" : "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
+      if (kind === "product") {
+        const body = {
+          name: value("name"),
+          category: productCategory(value("category")),
+          description: value("description"),
+          unit: value("unit"),
+          variant: value("variant"),
+          priceCents: numeric("price", 100),
+          costCents: numeric("cost", 100),
+          taxBps: numeric("tax", 100),
+          intervalMonths: intervalMonths(numeric("interval")),
+          promotionBps: numeric("promotion", 100),
+          pairedProductIds,
+          stockable,
+          active,
+          promoted,
+        };
+        const products = apiClient.api.v1.catalog.products;
+        if (product) apiData(await products({ id: product.id }).patch(body));
+        else apiData(await products.post(body));
+      } else {
+        const body = {
+          name: value("name"),
+          email: value("email"),
+          tier: customerTier(value("tier")),
+          team: value("team"),
+        };
+        const customers = apiClient.api.v1.customers;
+        if (customer) apiData(await customers({ id: customer.id }).patch(body));
+        else apiData(await customers.post(body));
+      }
       await saved();
       close();
     } catch (failure) {
       setError(
         failure instanceof HttpResponseError && failure.status === 403
           ? "Your role cannot change this catalog."
-          : "Could not save. Check the field values and try again.",
+          : failure instanceof HttpResponseError
+            ? failure.message
+            : "Could not save. Check the field values and try again.",
       );
     } finally {
       setPending(false);
@@ -113,7 +139,7 @@ export function CatalogEditor({
         if (!open && !pending) close();
       }}
     >
-      <DialogContent className="max-h-[90svh] overflow-y-auto sm:max-w-2xl">
+      <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>
             {existing ? "Edit" : "Add"} {kind}
@@ -121,7 +147,7 @@ export function CatalogEditor({
           <DialogDescription>
             {kind === "product"
               ? "Each variant is a separate SKU with its own final unit price. Catalog changes apply to new quotation lines; existing quotes keep their pricing snapshots."
-              : "Manage the customer details used for quotations and billing."}
+              : "Manage the customer details used for quotations and billing. Changing a linked login email signs that customer out; their password stays the same."}
           </DialogDescription>
         </DialogHeader>
         <form method="post" onSubmit={submit}>
@@ -248,10 +274,9 @@ export function CatalogEditor({
                   ].map((field) => (
                     <Field key={field.name}>
                       <FieldLabel htmlFor={`catalog-${field.name}`}>{field.label}</FieldLabel>
-                      <Input
+                      <NumberInput
                         id={`catalog-${field.name}`}
                         name={field.name}
-                        type="number"
                         required
                         min="0"
                         max={field.max}
@@ -362,14 +387,25 @@ export function CatalogEditor({
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
             )}
-            <div className="flex justify-end gap-2">
+            <DialogFooter>
+              {kind === "customer" && customer && (
+                <CustomerDelete
+                  id={customer.id}
+                  name={customer.name}
+                  disabled={pending}
+                  deleted={async () => {
+                    await saved();
+                    close();
+                  }}
+                />
+              )}
               <Button type="button" variant="outline" onClick={close} disabled={pending}>
                 Cancel
               </Button>
               <Button type="submit" disabled={pending}>
                 {pending ? "Saving…" : `Save ${kind}`}
               </Button>
-            </div>
+            </DialogFooter>
           </FieldGroup>
         </form>
       </DialogContent>

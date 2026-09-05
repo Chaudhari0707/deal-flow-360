@@ -21,20 +21,20 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { quoteRequest } from "@/features/quotes/client-action";
+import { QuoteConversation } from "@/features/quotes/quote-conversation";
 import { QuoteEditor } from "@/features/quotes/quote-editor";
 import { money } from "@/features/quotes/rules";
 import { PageHeader } from "@/features/shell/page-header";
 import { useWorkspace } from "@/features/shell/use-workspace";
 import { WorkspaceState } from "@/features/shell/workspace-state";
-import type { Workspace } from "@/lib/domain/_types/workspace";
+import { apiClient, apiData } from "@/lib/api/client";
 
 export function QuoteDetail({ isNew = false }: { isNew?: boolean }) {
   const router = useRouter();
   const params = useParams<{ id: string }>(),
     { data, error, mutate } = useWorkspace();
-  const detail = useSWR<{ activity: Workspace["activity"]; messages: Workspace["messages"] }>(
-    !isNew && params.id ? `/api/v1/quotes/${params.id}` : null,
+  const detail = useSWR(!isNew && params.id ? `/api/v1/quotes/${params.id}` : null, async () =>
+    apiData(await apiClient.api.v1.quotes({ id: params.id }).get()),
   );
   const [editing, setEditing] = useState(false),
     [pending, setPending] = useState(false),
@@ -57,7 +57,7 @@ export function QuoteDetail({ isNew = false }: { isNew?: boolean }) {
         </CardContent>
       </Card>
     );
-  const canEdit = ["rep", "manager", "admin"].includes(data.actor.role);
+  const canEdit = data.actor.role === "rep";
   const customer = data.customers.find((c) => c.id === quote?.customerId);
   const onSaved = async () => {
     setEditing(false);
@@ -69,19 +69,22 @@ export function QuoteDetail({ isNew = false }: { isNew?: boolean }) {
     setPending(true);
     setFailure("");
     try {
-      const saved = await quoteRequest<{ id: string }>("/quotes", {
-        customerId: quote.customerId,
-        lines: quote.lines.map((line) => ({
-          id: crypto.randomUUID(),
-          productId: line.productId,
-          quantity: line.quantity,
-          discountBps: line.discountBps,
-          upsell: line.upsell,
-        })),
-        orderDiscountBps: quote.orderDiscountBps,
-        notes: quote.notes,
-        ...(quote.promisedDate ? { promisedDate: quote.promisedDate } : {}),
-      });
+      const saved = apiData(
+        await apiClient.api.v1.quotes.post({
+          customerId: quote.customerId,
+          lines: quote.lines.map((line) => ({
+            id: crypto.randomUUID(),
+            productId: line.productId,
+            quantity: line.quantity,
+            discountBps: line.discountBps,
+            upsell: line.upsell,
+          })),
+          orderDiscountBps: quote.orderDiscountBps,
+          notes: quote.notes,
+          ...(quote.promisedDate ? { promisedDate: quote.promisedDate } : {}),
+        }),
+        "The action failed. Refresh and try again.",
+      );
       await mutate();
       router.push(`/quotations/${saved.id}`);
     } catch (error) {
@@ -96,16 +99,27 @@ export function QuoteDetail({ isNew = false }: { isNew?: boolean }) {
     setFailure("");
     setNotice("");
     try {
-      const result = await quoteRequest<{ status?: string; message?: string }>(
-        `/quotes/${quote.id}/${["approve", "return", "reject"].includes(action) ? "approval" : action}`,
+      const endpoint = apiClient.api.v1.quotes({ id: quote.id });
+      const fallback = "The action failed. Refresh and try again.";
+      const result =
         action === "send"
-          ? { renew: quote.status === "SENT" || quote.status === "UNDER_NEGOTIATION" }
+          ? apiData(
+              await endpoint.send.post({
+                renew: quote.status === "SENT" || quote.status === "UNDER_NEGOTIATION",
+              }),
+              fallback,
+            )
           : action === "submit"
-            ? { revision: quote.revision }
-            : { revision: quote.revision, action, reason },
-      );
+            ? apiData(await endpoint.submit.post({ revision: quote.revision }), fallback)
+            : apiData(
+                await endpoint.approval.post({ revision: quote.revision, action, reason }),
+                fallback,
+              );
       if (result.status === "FAILED")
-        setFailure(result.message ?? "Email delivery failed; retry after checking configuration.");
+        setFailure(
+          ("message" in result ? result.message : undefined) ??
+            "Email delivery failed; retry after checking configuration.",
+        );
       else setNotice(action === "send" ? "Email accepted by provider." : "Quotation updated.");
       await onSaved();
     } catch (e) {
@@ -114,9 +128,7 @@ export function QuoteDetail({ isNew = false }: { isNew?: boolean }) {
       setPending(false);
     }
   }
-  const reviewer =
-    quote?.status === "PENDING_APPROVAL" &&
-    (data.actor.role === quote.approvalStep || data.actor.role === "admin");
+  const reviewer = quote?.status === "PENDING_APPROVAL" && data.actor.role === quote.approvalStep;
   const approved = quote?.approvedRevision === quote?.revision && quote !== undefined;
   return (
     <>
@@ -349,14 +361,6 @@ export function QuoteDetail({ isNew = false }: { isNew?: boolean }) {
                         <Mail />
                         Send quotation email
                       </Button>
-                      <Button
-                        className="w-full"
-                        variant="outline"
-                        nativeButton={false}
-                        render={<Link href={`/portal/${quote.id}`} />}
-                      >
-                        Open customer portal
-                      </Button>
                     </>
                   )}
                   {quote.status === "CONFIRMED" && (
@@ -366,29 +370,16 @@ export function QuoteDetail({ isNew = false }: { isNew?: boolean }) {
                   )}
                 </CardContent>
               </Card>
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">Customer conversation</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  {detail.data?.messages.map((m) => (
-                    <div key={m.id} className="rounded-lg bg-muted p-3 text-sm">
-                      <p className="font-medium">{m.authorName}</p>
-                      <p className="mt-1 text-muted-foreground">{m.body}</p>
-                    </div>
-                  ))}
-                  {!detail.data?.messages.length && (
-                    <p className="text-sm text-muted-foreground">No messages yet.</p>
-                  )}
-                  <Button
-                    variant="outline"
-                    nativeButton={false}
-                    render={<Link href={`/portal/${quote.id}`} />}
-                  >
-                    Reply in portal
-                  </Button>
-                </CardContent>
-              </Card>
+              <QuoteConversation
+                canReply={["finance", "manager", "rep"].includes(data.actor.role)}
+                lines={quote.lines}
+                messages={detail.data?.messages ?? []}
+                quoteId={quote.id}
+                saved={async () => {
+                  await mutate();
+                  await detail.mutate();
+                }}
+              />
             </div>
           </div>
         )

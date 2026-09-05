@@ -2,6 +2,14 @@ import { eq, sql } from "drizzle-orm";
 import { Elysia, t } from "elysia";
 
 import {
+  allocationPlanModel,
+  fulfillmentDetailModel,
+  fulfillmentListModel,
+  inventorySnapshotModel,
+  movementResponseModel,
+  statusResponseModel,
+} from "@/features/inventory/model";
+import {
   acceptSplit,
   consolidateBackorder,
   overrideSplit,
@@ -17,9 +25,10 @@ import { saveWarehouse } from "@/features/inventory/warehouse";
 import { db } from "@/lib/db/connection";
 import { products } from "@/lib/db/schema/commerce";
 import { stocks, warehouses } from "@/lib/db/schema/inventory";
-import { requireActor } from "@/server/access";
+import { actorContext } from "@/server/access";
 import { audit } from "@/server/audit";
 import { DomainError } from "@/server/errors";
+import { apiErrorResponses, orderModel, stockModel, warehouseModel } from "@/server/models";
 
 const id = t.String({ minLength: 1, maxLength: 100 });
 const positive = t.Integer({ minimum: 1, maximum: 1_000_000 });
@@ -40,53 +49,46 @@ const warehouseBody = t.Object(
   { additionalProperties: false },
 );
 
-export const inventoryRoutes = new Elysia({ name: "inventory", normalize: false })
-  .get(
-    "/inventory",
-    async ({ request, query }) => {
-      await requireActor(request, ["admin", "ops", "manager", "rep"]);
-      return inventorySnapshot(query.page, query.pageSize);
-    },
-    { query: paging },
-  )
-  .get(
-    "/fulfillment/orders",
-    async ({ request, query }) => {
-      await requireActor(request, ["admin", "ops", "manager", "rep"]);
-      return fulfillmentList(query.page, query.pageSize);
-    },
-    { query: paging },
-  )
-  .get(
-    "/fulfillment/:id",
-    async ({ request, params: p }) => {
-      await requireActor(request, ["admin", "ops", "manager", "rep"]);
-      return fulfillmentDetail(p.id);
-    },
-    { params },
-  )
-  .post(
-    "/fulfillment/:id/accept",
-    async ({ request, params: p }) =>
-      acceptSplit(p.id, await requireActor(request, ["admin", "ops"])),
-    { params },
-  )
+export const inventoryRoutes = new Elysia({
+  name: "inventory",
+  normalize: false,
+  tags: ["Inventory"],
+})
+  .use(actorContext)
+  .get("/inventory", async ({ query }) => inventorySnapshot(query.page, query.pageSize), {
+    authorize: ["admin", "ops", "manager", "rep"],
+    query: paging,
+    response: { 200: inventorySnapshotModel, ...apiErrorResponses },
+  })
+  .get("/fulfillment/orders", async ({ query }) => fulfillmentList(query.page, query.pageSize), {
+    authorize: ["admin", "ops", "manager", "rep"],
+    query: paging,
+    response: { 200: fulfillmentListModel, ...apiErrorResponses },
+  })
+  .get("/fulfillment/:id", async ({ params: p }) => fulfillmentDetail(p.id), {
+    authorize: ["admin", "ops", "manager", "rep"],
+    params,
+    response: { 200: fulfillmentDetailModel, ...apiErrorResponses },
+  })
+  .post("/fulfillment/:id/accept", async ({ actor, params: p }) => acceptSplit(p.id, actor), {
+    authorize: ["ops"],
+    params,
+    response: { 200: orderModel, ...apiErrorResponses },
+  })
   .post(
     "/fulfillment/:id/consolidate",
-    async ({ request, params: p }) =>
-      consolidateBackorder(p.id, await requireActor(request, ["admin", "ops"])),
-    { params },
+    async ({ actor, params: p }) => consolidateBackorder(p.id, actor),
+    {
+      authorize: ["ops"],
+      params,
+      response: { 200: allocationPlanModel, ...apiErrorResponses },
+    },
   )
   .post(
     "/fulfillment/:id/override",
-    async ({ request, params: p, body }) =>
-      overrideSplit(
-        p.id,
-        body.allocations,
-        body.reason,
-        await requireActor(request, ["admin", "ops"]),
-      ),
+    async ({ actor, params: p, body }) => overrideSplit(p.id, body.allocations, body.reason, actor),
     {
+      authorize: ["ops"],
       params,
       body: t.Object(
         {
@@ -97,50 +99,53 @@ export const inventoryRoutes = new Elysia({ name: "inventory", normalize: false 
         },
         { additionalProperties: false },
       ),
+      response: { 200: statusResponseModel, ...apiErrorResponses },
     },
   )
   .post(
     "/fulfillment/:id/ship",
-    async ({ request, params: p, body }) =>
-      shipReservation(p.id, body, await requireActor(request, ["admin", "ops"])),
+    async ({ actor, params: p, body }) => shipReservation(p.id, body, actor),
     {
+      authorize: ["ops"],
       params,
       body: t.Object(
         { operationKey: id, quantity: positive, reservationId: id },
         { additionalProperties: false },
       ),
+      response: { 200: movementResponseModel, ...apiErrorResponses },
     },
   )
-  .post(
-    "/inventory/restock",
-    async ({ request, body }) => restock(body, await requireActor(request, ["admin", "ops"])),
-    {
-      body: t.Object(
-        { operationKey: id, productId: id, quantity: positive, reason, warehouseId: id },
-        { additionalProperties: false },
-      ),
-    },
-  )
+  .post("/inventory/restock", async ({ actor, body }) => restock(body, actor), {
+    authorize: ["ops"],
+    body: t.Object(
+      { operationKey: id, productId: id, quantity: positive, reason, warehouseId: id },
+      { additionalProperties: false },
+    ),
+    response: { 200: movementResponseModel, ...apiErrorResponses },
+  })
   .post(
     "/inventory/warehouses",
-    async ({ request, body }) =>
-      saveWarehouse(
-        undefined,
-        { ...body, id: crypto.randomUUID() },
-        await requireActor(request, ["admin"]),
-      ),
-    { body: warehouseBody },
+    async ({ actor, body }) =>
+      saveWarehouse(undefined, { ...body, id: crypto.randomUUID() }, actor),
+    {
+      authorize: ["admin"],
+      body: warehouseBody,
+      response: { 200: warehouseModel, ...apiErrorResponses },
+    },
   )
   .patch(
     "/inventory/warehouses/:id",
-    async ({ request, params: p, body }) =>
-      saveWarehouse(p.id, { ...body, id: p.id }, await requireActor(request, ["admin"])),
-    { params, body: warehouseBody },
+    async ({ actor, params: p, body }) => saveWarehouse(p.id, { ...body, id: p.id }, actor),
+    {
+      authorize: ["admin"],
+      params,
+      body: warehouseBody,
+      response: { 200: warehouseModel, ...apiErrorResponses },
+    },
   )
   .post(
     "/inventory/stocks",
-    async ({ request, body }) => {
-      const actor = await requireActor(request, ["admin"]);
+    async ({ actor, body }) => {
       return db.transaction(async (tx) => {
         const [product] = await tx.select().from(products).where(eq(products.id, body.productId));
         if (!product?.stockable) throw new DomainError("Choose a stockable product", 400);
@@ -161,5 +166,9 @@ export const inventoryRoutes = new Elysia({ name: "inventory", normalize: false 
         return balance;
       });
     },
-    { body: t.Object({ productId: id, warehouseId: id }, { additionalProperties: false }) },
+    {
+      authorize: ["admin"],
+      body: t.Object({ productId: id, warehouseId: id }, { additionalProperties: false }),
+      response: { 200: stockModel, ...apiErrorResponses },
+    },
   );

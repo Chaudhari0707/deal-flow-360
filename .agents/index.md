@@ -6,7 +6,7 @@ Load only what the task touches.
 | --- | --- |
 | Linear issue, worktree, parallel device, branch handoff | `.agents/coordination.md` |
 | Next.js, React Server Components, routes, caching | `.agents/nextjs.md` |
-| Elysia application API, Eden client, OpenAPI | `.agents/elysia.md` |
+| Elysia API composition, feature routes, Eden, OpenAPI, Next API adapter | `.agents/elysia.md` |
 | Better Auth, sessions, login, password, account access | `.agents/auth.md` |
 | Resend, transactional email, verification/reset delivery | `.agents/email.md` |
 | shadcn/ui components, tokens, component installation | `.agents/shadcn.md` |

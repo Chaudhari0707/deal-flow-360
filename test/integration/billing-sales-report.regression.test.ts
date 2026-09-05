@@ -29,7 +29,7 @@ const id = crypto.randomUUID(),
   targetId = `sales-target-${id}`,
   noiseId = `sales-noise-${id}`,
   team = `sales-team-${id}`;
-let rep: Actor, admin: Actor, cookie: string;
+let rep: Actor, manager: Actor, finance: Actor, customer: Actor, cookie: string;
 const quoteIds: string[] = [];
 let confirmedId: string;
 
@@ -63,15 +63,24 @@ beforeAll(async () => {
     },
   ]);
   const actors: Actor[] = [];
-  for (const role of ["rep", "rep", "admin"] as const) {
+  for (const role of ["rep", "rep", "manager", "finance", "admin", "customer"] as const) {
     const suffix = crypto.randomUUID(),
       email = `sales-${suffix}@example.com`,
       password = `Sales-test-${suffix}`;
     const result = await createAuth(db).api.signUpEmail({
       body: { email, name: `Sales ${role}`, password },
     });
-    await db.insert(profiles).values({ role, userId: result.user.id });
-    actors.push({ customerId: null, email, id: result.user.id, name: `Sales ${role}`, role });
+    const customerIdForRole = role === "customer" ? customerId : null;
+    await db
+      .insert(profiles)
+      .values({ customerId: customerIdForRole, role, userId: result.user.id });
+    actors.push({
+      customerId: customerIdForRole,
+      email,
+      id: result.user.id,
+      name: `Sales ${role}`,
+      role,
+    });
     if (role === "admin") {
       const session = await createAuth(db).api.signInEmail({
         asResponse: true,
@@ -84,7 +93,9 @@ beforeAll(async () => {
     }
   }
   rep = actors[0]!;
-  admin = actors[2]!;
+  manager = actors[2]!;
+  finance = actors[3]!;
+  customer = actors[5]!;
   const created = await saveQuote(
     {
       customerId,
@@ -100,9 +111,9 @@ beforeAll(async () => {
   confirmedId = created.id;
   const submitted = await submitQuote(created.id, created.revision, rep);
   expect(submitted.risk).toBe("HIGH");
-  await approvalAction(created.id, submitted.revision, "approve", "Manager approval", admin);
-  await approvalAction(created.id, submitted.revision, "approve", "Finance approval", admin);
-  const order = await confirmQuote(created.id, submitted.revision, admin);
+  await approvalAction(created.id, submitted.revision, "approve", "Manager approval", manager);
+  await approvalAction(created.id, submitted.revision, "approve", "Finance approval", finance);
+  const order = await confirmQuote(created.id, submitted.revision, customer);
   for (const [owner, customer] of [
     [rep, customerId],
     [actors[1]!, customerId],
@@ -165,6 +176,7 @@ afterAll(async () => {
     await tx.delete(orders).where(inArray(orders.quoteId, quoteIds));
     await tx.delete(quoteRevisions).where(inArray(quoteRevisions.quoteId, quoteIds));
     await tx.delete(quotes).where(inArray(quotes.id, quoteIds));
+    await tx.delete(profiles).where(eq(profiles.customerId, customerId));
     await tx.delete(customers).where(inArray(customers.id, [customerId, otherCustomerId]));
     await tx.delete(products).where(inArray(products.id, [targetId, noiseId]));
   });

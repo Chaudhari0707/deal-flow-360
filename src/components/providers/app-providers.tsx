@@ -1,14 +1,15 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { ThemeProvider } from "next-themes";
 import { SWRConfig } from "swr";
 
+import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { fetchJson, HttpResponseError } from "@/lib/swr/fetcher";
+import { HttpResponseError } from "@/lib/api/client";
 
 const swrConfig = {
   dedupingInterval: 2_000,
-  fetcher: fetchJson,
   keepPreviousData: true,
   revalidateOnFocus: true,
   shouldRetryOnError(error: unknown) {
@@ -18,8 +19,19 @@ const swrConfig = {
 
 export function AppProviders({ children }: { children: ReactNode }) {
   return (
-    <SWRConfig value={swrConfig}>
-      <TooltipProvider>{children}</TooltipProvider>
-    </SWRConfig>
+    <ThemeProvider
+      attribute="class"
+      defaultTheme="system"
+      enableSystem
+      disableTransitionOnChange
+      storageKey="dealflow-theme"
+    >
+      <SWRConfig value={swrConfig}>
+        <TooltipProvider>
+          {children}
+          <Toaster />
+        </TooltipProvider>
+      </SWRConfig>
+    </ThemeProvider>
   );
 }

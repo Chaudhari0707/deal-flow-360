@@ -8,6 +8,7 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -20,8 +21,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { apiClient, apiData } from "@/lib/api/client";
 import type { Workspace } from "@/lib/domain/_types/workspace";
-import { fetchJson } from "@/lib/swr/fetcher";
 
 export function StockSetup({ workspace, refresh }: { workspace: Workspace; refresh: () => void }) {
   const [open, setOpen] = useState(false);
@@ -77,17 +78,16 @@ export function StockSetup({ workspace, refresh }: { workspace: Workspace; refre
               <AlertDescription>{error}</AlertDescription>
             </Alert>
           )}
+        </FieldGroup>
+        <DialogFooter showCloseButton>
           <Button
             disabled={pending || !warehouseId || !productId}
             onClick={async () => {
+              if (!productId || !warehouseId) return;
               setPending(true);
               setError("");
               try {
-                await fetchJson("/api/v1/inventory/stocks", {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ productId, warehouseId }),
-                });
+                apiData(await apiClient.api.v1.inventory.stocks.post({ productId, warehouseId }));
                 refresh();
                 setOpen(false);
               } catch (e) {
@@ -99,7 +99,7 @@ export function StockSetup({ workspace, refresh }: { workspace: Workspace; refre
           >
             Configure location
           </Button>
-        </FieldGroup>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

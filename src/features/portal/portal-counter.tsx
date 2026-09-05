@@ -7,8 +7,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { NumberInput } from "@/components/ui/number-input";
 import type { PortalDetail } from "@/features/portal/_types/portal";
-import { fetchJson, HttpResponseError } from "@/lib/swr/fetcher";
+import { apiClient, apiData, HttpResponseError } from "@/lib/api/client";
 
 export function PortalCounter({
   data,
@@ -32,15 +33,13 @@ export function PortalCounter({
     setError("");
     setNotice("");
     try {
-      await fetchJson(`/api/v1/portal/${data.quote.id}/counter`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+      apiData(
+        await apiClient.api.v1.portal({ id: data.quote.id }).counter.post({
           revision: data.quote.revision,
           lines,
           ...(promisedDate ? { promisedDate } : {}),
         }),
-      });
+      );
       await saved();
       setNotice("Your requested changes were sent for review. We'll keep the conversation here.");
     } catch (failure) {
@@ -68,10 +67,9 @@ export function PortalCounter({
             {data.quote.lines.map((line) => (
               <Field key={line.id}>
                 <FieldLabel htmlFor={`discount-${line.id}`}>{line.name} · discount (%)</FieldLabel>
-                <Input
+                <NumberInput
                   id={`discount-${line.id}`}
                   name={line.id}
-                  type="number"
                   min="0"
                   max="100"
                   step="0.01"
