@@ -54,9 +54,12 @@ flowchart LR
   snapshot simplifies navigation; growth requires paginated resource endpoints as documented in
   the system decision.
 - The separate portal is a consumer-only surface. Customer credential accounts and valid scoped
-  quotation-link sessions can use it; Admin, Finance, Manager, Ops and Rep sessions are redirected
-  to their workspace and receive `403` from every portal endpoint. Costs, margins, internal notes,
-  and risk snapshots are absent from the public quotation contract.
+  quotation-link sessions can use it. A signed-in Admin, Finance, Manager, Ops or Rep session is
+  checked first and receives `403` from every portal endpoint, even when a leftover magic-link
+  cookie is also present; those accounts are redirected to the workspace. Costs, margins, internal
+  notes, and risk snapshots are absent from the public quotation contract. Staff answer line
+  comments on quotation detail through `POST /api/v1/quotes/:id/message`; they never reply from
+  `/portal`.
 - Administrators configure products, warehouses, stock locations, and policy, and can view reports.
   They cannot take an approval step, act as a customer, operate fulfillment, or mutate billing. The
   sidebar is filtered by the same role boundaries enforced by application APIs.
@@ -69,8 +72,9 @@ flowchart LR
 `playwright/e2e/identity.spec.ts` exercises real sign-in, invalid credentials, signup, logout,
 protected navigation, staff denial of the customer portal, and a 390px mobile sidebar.
 `playwright/e2e/portal.spec.ts` follows a customer through a line-specific conversation,
-counterproposal, and order confirmation. `test/integration/portal.regression.test.ts` checks
-cross-customer isolation, all staff-role portal denial, single-use redemption concurrency,
+staff reply on quotation detail, counterproposal, and order confirmation, and checks that a
+customer password login never lands on internal navigation. `test/integration/portal.regression.test.ts` checks
+cross-customer isolation, all staff-role portal denial including leftover portal cookies, single-use redemption concurrency,
 public-field redaction, confirmation idempotency, and session revocation against the real API and
 test database.
 `playwright/e2e/catalog.spec.ts` verifies create, search, and edit through the real catalog UI.

@@ -2,6 +2,7 @@ import { desc, eq } from "drizzle-orm";
 import { Elysia, t } from "elysia";
 
 import { sendQuotation } from "@/features/quotes/email";
+import { postQuoteMessage } from "@/features/quotes/messages";
 import {
   deliveryResultModel,
   quoteDetailModel,
@@ -14,7 +15,7 @@ import { db } from "@/lib/db/connection";
 import { auditEntries, messages, quotes } from "@/lib/db/schema";
 import { actorContext } from "@/server/access";
 import { DomainError } from "@/server/errors";
-import { apiErrorResponses, quoteModel } from "@/server/models";
+import { apiErrorResponses, messageModel, quoteModel } from "@/server/models";
 
 const id = t.String({ minLength: 1, maxLength: 100 }),
   revision = t.Integer({ minimum: 1 });
@@ -71,6 +72,19 @@ export const quoteRoutes = new Elysia({ name: "quotes", tags: ["Quotes"] })
       authorize: ["rep", "manager", "finance", "ops"],
       params: t.Object({ id }),
       response: { 200: quoteDetailModel, ...apiErrorResponses },
+    },
+  )
+  .post(
+    "/quotes/:id/message",
+    async ({ actor, body: input, params }) => postQuoteMessage(params.id, input, actor),
+    {
+      authorize: ["rep", "manager", "finance"],
+      params: t.Object({ id }),
+      body: t.Object(
+        { body: t.String({ minLength: 1, maxLength: 2000 }), lineId: t.Optional(id) },
+        { additionalProperties: false },
+      ),
+      response: { 200: messageModel, ...apiErrorResponses },
     },
   )
   .post(

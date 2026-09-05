@@ -1,8 +1,8 @@
 import { expect, test } from "@playwright/test";
 
 test("credentials sign-in, responsive navigation and logout @regression", async ({ page }) => {
-  const email = Bun.env.PLAYWRIGHT_USER_EMAIL;
-  const password = Bun.env.PLAYWRIGHT_USER_PASSWORD;
+  const email = Bun.env.PLAYWRIGHT_USER_EMAIL ?? "rep@dealflow360.demo";
+  const password = Bun.env.PLAYWRIGHT_USER_PASSWORD ?? Bun.env.DEMO_PASSWORD;
   if (!email || !password)
     throw new Error("Browser identity tests require seeded test credentials");
 

@@ -47,8 +47,13 @@ async function request(
       ...(body === undefined ? {} : { body: JSON.stringify(body) }),
       headers: {
         ...(method === "GET" ? {} : { origin: new URL(Bun.env.BETTER_AUTH_URL!).origin }),
-        ...(account ? { cookie: accounts[account]!.cookie } : {}),
-        ...(tokenCookie ? { cookie: tokenCookie } : {}),
+        ...(account || tokenCookie
+          ? {
+              cookie: [account ? accounts[account]!.cookie : "", tokenCookie ?? ""]
+                .filter(Boolean)
+                .join("; "),
+            }
+          : {}),
         ...(body === undefined ? {} : { "content-type": "application/json" }),
       },
       method,
@@ -228,6 +233,60 @@ describe("internal and portal ownership boundaries", () => {
       "not found",
     );
   });
+  test("staff reply on quotation detail without using the customer portal", async () => {
+    const own = fixtures[0]!;
+    const foreign = fixtures[1]!;
+    const [before] = await db.select().from(quotes).where(eq(quotes.id, own.openId));
+    expect(
+      (
+        await request(`/quotes/${own.openId}/message`, "customer", "POST", {
+          body: "Customers cannot post on the internal thread.",
+        })
+      ).status,
+    ).toBe(403);
+    for (const role of ["ops", "admin"] as const)
+      expect(
+        (await request(`/quotes/${own.openId}/message`, role, "POST", { body: `${role} reply` }))
+          .status,
+      ).toBe(403);
+    expect(
+      (
+        await request(`/quotes/${foreign.openId}/message`, "repA", "POST", {
+          body: "Cross-owner reply",
+        })
+      ).status,
+    ).toBe(404);
+    expect(
+      (
+        await request(`/quotes/${own.openId}/message`, "repA", "POST", {
+          body: "We can meet that delivery window.",
+          lineId: before!.lines[0]!.id,
+        })
+      ).status,
+    ).toBe(200);
+    expect(
+      (
+        await request(`/quotes/${own.openId}/message`, "manager", "POST", {
+          body: "Manager will keep the approved terms.",
+        })
+      ).status,
+    ).toBe(200);
+    expect(
+      (
+        await request(`/quotes/${own.openId}/message`, "finance", "POST", {
+          body: "Finance confirmed the discount stays in policy.",
+        })
+      ).status,
+    ).toBe(200);
+    const [after] = await db.select().from(quotes).where(eq(quotes.id, own.openId));
+    expect(after?.status).toBe(before?.status);
+    expect(after?.revision).toBe(before?.revision);
+    const thread = await db.select().from(messages).where(eq(messages.quoteId, own.openId));
+    expect(thread.some((message) => message.body === "We can meet that delivery window.")).toBe(
+      true,
+    );
+  });
+
   test("portal lists and details are customer-only even when staff owns a quotation", async () => {
     for (const role of ["repA", "repB", "manager", "finance", "ops", "admin"])
       for (const path of ["/portal", `/portal/${fixtures[0]!.confirmedId}`])
@@ -294,6 +353,10 @@ describe("internal and portal ownership boundaries", () => {
       await request("/portal", undefined, "GET", undefined, cookie)
     ).json()) as { quotes: { id: string }[] };
     expect(listed.quotes.map((quote) => quote.id)).toEqual([fixtures[0]!.confirmedId]);
+    expect(
+      (await request(`/portal/${fixtures[0]!.confirmedId}`, "repA", "GET", undefined, cookie))
+        .status,
+    ).toBe(403);
     expect(
       (await request(`/portal/${fixtures[1]!.confirmedId}`, undefined, "GET", undefined, cookie))
         .status,

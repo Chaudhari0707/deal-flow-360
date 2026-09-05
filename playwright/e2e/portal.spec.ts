@@ -5,6 +5,7 @@ test("customer reviews, discusses, counters and confirms their approved quotatio
   page,
   request,
 }) => {
+  test.setTimeout(120_000);
   const password = Bun.env.DEMO_PASSWORD ?? Bun.env.PLAYWRIGHT_USER_PASSWORD;
   if (!password) throw new Error("Portal browser tests require the seeded demo password");
   const signedIn = await request.post("/api/auth/sign-in/email", {
@@ -31,8 +32,13 @@ test("customer reviews, discusses, counters and confirms their approved quotatio
   await page.goto("/login");
   await page.getByLabel("Email address").fill("acme@dealflow360.demo");
   await page.getByLabel("Password", { exact: true }).fill(password);
+  await expect(page.getByRole("button", { name: "Sign in", exact: true })).toBeEnabled();
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
+  await expect(page).toHaveURL(/\/portal$/, { timeout: 15_000 });
+  await page.goto("/dashboard");
   await expect(page).toHaveURL(/\/portal$/);
+  await expect(page.getByRole("link", { name: "Quotations", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "Overview", exact: true })).toHaveCount(0);
   await page.goto(`/portal/${quote.id}`);
   await expect(page.getByRole("heading", { name: quote.number, exact: true })).toBeVisible();
   await expect(page.getByText("Acme Corporation", { exact: false })).toBeVisible();
@@ -43,6 +49,34 @@ test("customer reviews, discusses, counters and confirms their approved quotatio
   await page.getByLabel("Your message").fill(message);
   await page.getByRole("button", { name: "Send message", exact: true }).click();
   await expect(page.getByText(message, { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Confirm order", exact: true })).toBeVisible();
+
+  await page.getByRole("button", { name: "Sign out", exact: true }).click();
+  await expect(page).toHaveURL(/\/login$/);
+  await page.getByLabel("Email address").fill("rep@dealflow360.demo");
+  await page.getByLabel("Password", { exact: true }).fill(password);
+  await expect(page.getByRole("button", { name: "Sign in", exact: true })).toBeEnabled();
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
+  await expect(page).toHaveURL(/\/dashboard$/, { timeout: 15_000 });
+  await page.goto("/portal");
+  await expect(page).toHaveURL(/\/dashboard$/);
+  await expect(page.getByRole("link", { name: "Customer portal", exact: true })).toHaveCount(0);
+  await page.goto(`/quotations/${quote.id}`);
+  await expect(page.getByRole("heading", { name: quote.number, exact: true })).toBeVisible();
+  await expect(page.getByText(message, { exact: true })).toBeVisible();
+  const reply = `Implementation contact is Jordan ${crypto.randomUUID()}`;
+  await page.getByLabel("Your reply").fill(reply);
+  await page.getByRole("button", { name: "Send reply", exact: true }).click();
+  await expect(page.getByText(reply, { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Sign out", exact: true }).click();
+  await expect(page).toHaveURL(/\/login$/);
+  await page.getByLabel("Email address").fill("acme@dealflow360.demo");
+  await page.getByLabel("Password", { exact: true }).fill(password);
+  await expect(page.getByRole("button", { name: "Sign in", exact: true })).toBeEnabled();
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
+  await expect(page).toHaveURL(/\/portal$/, { timeout: 15_000 });
+  await page.goto(`/portal/${quote.id}`);
+  await expect(page.getByText(reply, { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Confirm order", exact: true })).toBeVisible();
 
   await page.getByLabel("Onsite Setup Service · discount (%)", { exact: true }).fill("5");
