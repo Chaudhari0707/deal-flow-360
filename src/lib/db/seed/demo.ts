@@ -13,7 +13,6 @@ import * as s from "@/lib/db/schema";
 import { customerRows, productRows } from "@/lib/db/seed/demo-data";
 import type { QuoteStatus, Role } from "@/lib/domain/_types/domain";
 
-
 //
 export async function seedDemo(database: Database) {
   const password =
