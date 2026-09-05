@@ -20,8 +20,13 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import type { FulfillmentDetail as Detail } from "@/features/inventory/_types/ui";
-import { fulfillmentSplitEmptyMessage } from "@/features/inventory/fulfillment-copy";
+import {
+  fulfillmentAcceptanceCopy,
+  fulfillmentSplitEmptyMessage,
+  hasStockableLines,
+} from "@/features/inventory/fulfillment-copy";
 import { OverrideForm } from "@/features/inventory/override-form";
+import { money } from "@/features/shell/format";
 import { PageHeader } from "@/features/shell/page-header";
 import { useWorkspace } from "@/features/shell/use-workspace";
 import { WorkspaceState } from "@/features/shell/workspace-state";
@@ -71,6 +76,37 @@ export function FulfillmentDetail({
       setPending(false);
     }
   }
+  const lineColumns = useMemo<ColumnDef<DataTableFeatures, Detail["order"]["lines"][number]>[]>(
+    () => [
+      {
+        accessorKey: "name",
+        header: "Product / service",
+        cell: ({ row }) => (
+          <div>
+            <p className="font-medium">{row.original.name}</p>
+            <p className="text-xs text-muted-foreground">{row.original.variant}</p>
+          </div>
+        ),
+      },
+      { accessorKey: "category", header: "Category" },
+      { accessorKey: "quantity", header: "Quantity" },
+      {
+        id: "fulfillmentKind",
+        header: "Fulfillment",
+        cell: ({ row }) => (
+          <Badge variant={row.original.stockable ? "secondary" : "outline"}>
+            {row.original.stockable ? "Stockable" : "Service"}
+          </Badge>
+        ),
+      },
+      {
+        accessorKey: "totalCents",
+        header: "Total",
+        cell: ({ row }) => money(row.original.totalCents),
+      },
+    ],
+    [],
+  );
   const columns = useMemo<ColumnDef<DataTableFeatures, Detail["allocations"][number]>[]>(
     () => [
       { accessorKey: "product", header: "Product" },
@@ -135,9 +171,7 @@ export function FulfillmentDetail({
             </CardTitle>
           </CardHeader>
           <CardContent className="text-sm text-muted-foreground">
-            {data.order.acceptedAt
-              ? "Split accepted by operations"
-              : "Awaiting operations acceptance"}
+            {fulfillmentAcceptanceCopy(data.order)}
           </CardContent>
         </Card>
         <Card>
@@ -184,9 +218,27 @@ export function FulfillmentDetail({
       )}
       <Card>
         <CardHeader>
+          <CardTitle>Order lines</CardTitle>
+          <CardDescription>
+            Confirmed quote lines for this order. Warehouse allocation applies only to stockable
+            hardware.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <DataTable
+            columns={lineColumns}
+            data={data.order.lines}
+            getRowId={(row) => `${row.productId}:${row.id}`}
+            pageSize={20}
+            emptyMessage="This order has no lines."
+          />
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader>
           <CardTitle>Warehouse split</CardTitle>
           <CardDescription>
-            {data.order.lines.some((line) => line.stockable)
+            {hasStockableLines(data.order.lines)
               ? "Stock was reserved at customer confirmation. Accepting the split reserves nothing twice."
               : "This order has no stockable lines, so no warehouse split is required."}
           </CardDescription>
@@ -199,7 +251,7 @@ export function FulfillmentDetail({
             pageSize={20}
             emptyMessage={fulfillmentSplitEmptyMessage(data.order.lines)}
           />
-          {canOperate && data.order.lines.some((line) => line.stockable) && (
+          {canOperate && hasStockableLines(data.order.lines) && (
             <div className="flex flex-wrap gap-2">
               <Button
                 disabled={pending || Boolean(data.order.acceptedAt)}
