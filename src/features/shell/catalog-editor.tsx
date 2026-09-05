@@ -9,6 +9,7 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -113,7 +114,7 @@ export function CatalogEditor({
         if (!open && !pending) close();
       }}
     >
-      <DialogContent className="max-h-[90svh] overflow-y-auto sm:max-w-2xl">
+      <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>
             {existing ? "Edit" : "Add"} {kind}
@@ -362,14 +363,14 @@ export function CatalogEditor({
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
             )}
-            <div className="flex justify-end gap-2">
+            <DialogFooter>
               <Button type="button" variant="outline" onClick={close} disabled={pending}>
                 Cancel
               </Button>
               <Button type="submit" disabled={pending}>
                 {pending ? "Saving…" : `Save ${kind}`}
               </Button>
-            </div>
+            </DialogFooter>
           </FieldGroup>
         </form>
       </DialogContent>

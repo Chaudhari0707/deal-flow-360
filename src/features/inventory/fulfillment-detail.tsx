@@ -11,6 +11,14 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { DataTable } from "@/components/ui/data-table";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import type { FulfillmentDetail as Detail } from "@/features/inventory/_types/ui";
 import { OverrideForm } from "@/features/inventory/override-form";
 import { PageHeader } from "@/features/shell/page-header";
@@ -18,7 +26,15 @@ import { useWorkspace } from "@/features/shell/use-workspace";
 import { WorkspaceState } from "@/features/shell/workspace-state";
 import { fetchJson } from "@/lib/swr/fetcher";
 
-export function FulfillmentDetail({ id, back }: { id: string; back: () => void }) {
+export function FulfillmentDetail({
+  id,
+  back,
+  compact = false,
+}: {
+  id: string;
+  back: () => void;
+  compact?: boolean;
+}) {
   const { data, error, mutate } = useSWR<Detail>(`/api/v1/fulfillment/${id}`);
   const workspace = useWorkspace();
   const [pending, setPending] = useState(false);
@@ -75,16 +91,18 @@ export function FulfillmentDetail({ id, back }: { id: string; back: () => void }
     );
   return (
     <>
-      <PageHeader
-        title={data.order.number}
-        description="Review the split, dispatch reserved stock, and recover backorders when stock arrives."
-        actions={
-          <Button variant="outline" onClick={back}>
-            <ArrowLeft />
-            All orders
-          </Button>
-        }
-      />
+      {!compact && (
+        <PageHeader
+          title={data.order.number}
+          description="Review the split, dispatch reserved stock, and recover backorders when stock arrives."
+          actions={
+            <Button variant="outline" onClick={back}>
+              <ArrowLeft />
+              All orders
+            </Button>
+          }
+        />
+      )}
       <div className="grid gap-4 sm:grid-cols-3">
         <Card>
           <CardHeader>
@@ -218,5 +236,35 @@ export function FulfillmentDetail({ id, back }: { id: string; back: () => void }
           </Card>
         )}
     </>
+  );
+}
+
+export function FulfillmentDetailDialog({
+  id,
+  title,
+  onClose,
+}: {
+  id: string;
+  title: string;
+  onClose: () => void;
+}) {
+  return (
+    <Dialog
+      open
+      onOpenChange={(open) => {
+        if (!open) onClose();
+      }}
+    >
+      <DialogContent showCloseButton={false} className="sm:max-w-4xl">
+        <DialogHeader>
+          <DialogTitle>{title}</DialogTitle>
+          <DialogDescription>
+            Review the warehouse plan, dispatch reservations, and manage backorders.
+          </DialogDescription>
+        </DialogHeader>
+        <FulfillmentDetail id={id} back={onClose} compact />
+        <DialogFooter showCloseButton />
+      </DialogContent>
+    </Dialog>
   );
 }

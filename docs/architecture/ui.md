@@ -14,6 +14,12 @@ dialog, input, table, or navigation system. List screens use the existing shared
 TanStack mechanics are aligned with the reviewed CRAzy Collection implementation: one horizontal
 scroll ancestor, `border-separate` sticky cells, table-row grouping for hover actions, and a visible
 sticky-column container. DealFlow360 retains its own Base UI Checkbox and Lucide dependencies.
+
+The shared shadcn Dialog and AlertDialog primitives use a sticky action footer by default. The
+dialog viewport scrolls when needed while Close, Cancel and write actions remain visible. Invoice,
+subscription, inventory and fulfillment table rows open their selected detail in a dialog rather
+than rendering a second pane below the table. Direct quotation, portal and fulfillment URLs remain
+available for links and browser navigation.
 The official sidebar source is split into shell, context, and menu files to retain the repository's
 500-line file limit. Mobile state subscribes to the browser's media query through React's external
 store API; the server snapshot is stable for hydration.

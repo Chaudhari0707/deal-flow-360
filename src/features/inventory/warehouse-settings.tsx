@@ -9,6 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -130,10 +131,12 @@ export function WarehouseSettings({
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
             )}
+          </FieldGroup>
+          <DialogFooter showCloseButton={!form.formState.isSubmitting}>
             <Button type="submit" disabled={form.formState.isSubmitting || !form.formState.isValid}>
               Save warehouse
             </Button>
-          </FieldGroup>
+          </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>

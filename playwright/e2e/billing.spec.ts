@@ -58,15 +58,20 @@ test("finance records a full payment, downloads real documents and cancels recur
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
   await expect(page).toHaveURL(/\/dashboard$/);
   await page.goto(`/invoices/${invoice.id}`);
-  await expect(page.getByRole("heading", { name: "Invoices", exact: true })).toBeVisible();
-  await page.getByLabel("Payment reference").fill(`BANK-${crypto.randomUUID()}`);
-  await page.getByRole("button", { name: /Record full payment/ }).click();
+  const invoiceDialog = page.getByRole("dialog", { name: invoice.number, exact: true });
+  await expect(invoiceDialog).toBeVisible();
+  await expect(invoiceDialog.locator("[data-slot='dialog-footer']")).toHaveCSS(
+    "position",
+    "sticky",
+  );
+  await invoiceDialog.getByLabel("Payment reference").fill(`BANK-${crypto.randomUUID()}`);
+  await invoiceDialog.getByRole("button", { name: /Record full payment/ }).click();
   await expect(
     page.getByText("Payment recorded and balance reconciled.", { exact: true }),
   ).toBeVisible();
-  await expect(page.getByRole("button", { name: /Record full payment/ })).toHaveCount(0);
+  await expect(invoiceDialog.getByRole("button", { name: /Record full payment/ })).toHaveCount(0);
   const invoiceDownload = page.waitForEvent("download");
-  await page.getByRole("button", { name: "Download invoice PDF" }).click();
+  await invoiceDialog.getByRole("button", { name: "Download invoice PDF" }).click();
   const invoiceFile = await invoiceDownload;
   expect(invoiceFile.suggestedFilename()).toBe(`${invoice.number}.pdf`);
   const invoicePath = await invoiceFile.path();
@@ -79,17 +84,29 @@ test("finance records a full payment, downloads real documents and cancels recur
   await page.goto("/subscriptions");
   await page.getByRole("textbox", { name: "Search subscriptions" }).fill(order.number);
   await page.getByRole("row").filter({ hasText: order.number }).click();
-  await page.getByLabel("Quantity", { exact: true }).fill("2");
-  await page.getByLabel("Reason", { exact: true }).fill("Customer adds a second service unit");
-  await page.getByRole("button", { name: "Apply change", exact: true }).click();
+  const subscriptionDialog = page.getByRole("dialog", { name: "Care Plan 2yr", exact: true });
+  await expect(subscriptionDialog).toBeVisible();
+  await expect(subscriptionDialog.locator("[data-slot='dialog-footer']")).toHaveCSS(
+    "position",
+    "sticky",
+  );
+  await subscriptionDialog.getByLabel("Quantity", { exact: true }).fill("2");
+  await subscriptionDialog
+    .getByLabel("Reason", { exact: true })
+    .fill("Customer adds a second service unit");
+  await subscriptionDialog.getByRole("button", { name: "Apply change", exact: true }).click();
   await expect(
     page.getByText(
       "Subscription updated. Any prorated invoice or credit is in the invoice register.",
       { exact: true },
     ),
   ).toBeVisible();
-  await page.getByLabel("Reason", { exact: true }).fill("Customer cancels the recurring plan");
-  await page.getByRole("button", { name: "Cancel and credit unused service", exact: true }).click();
+  await subscriptionDialog
+    .getByLabel("Reason", { exact: true })
+    .fill("Customer cancels the recurring plan");
+  await subscriptionDialog
+    .getByRole("button", { name: "Cancel and credit unused service", exact: true })
+    .click();
   await expect(
     page.getByText(
       "Subscription cancelled. Unused service credit issued; future billing stopped.",
