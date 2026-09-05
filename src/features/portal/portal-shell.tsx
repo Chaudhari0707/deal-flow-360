@@ -8,6 +8,7 @@ import { LockKeyhole, LogOut } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ThemeToggle } from "@/features/shell/theme-toggle";
 import { authClient } from "@/lib/auth/client";
 import { fetchJson } from "@/lib/swr/fetcher";
 
@@ -48,10 +49,13 @@ export function PortalShell({ children }: { children: ReactNode }) {
               Customer portal
             </Badge>
           </Link>
-          <Button variant="outline" aria-label="Sign out" disabled={pending} onClick={signOut}>
-            <LogOut />
-            <span className="hidden sm:inline">Sign out</span>
-          </Button>
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+            <Button variant="outline" aria-label="Sign out" disabled={pending} onClick={signOut}>
+              <LogOut />
+              <span className="hidden sm:inline">Sign out</span>
+            </Button>
+          </div>
         </div>
       </header>
       <main className="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-8 md:px-8 md:py-12">
