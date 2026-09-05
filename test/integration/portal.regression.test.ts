@@ -94,6 +94,7 @@ async function request(path: string, method = "GET", cookie?: string, body?: unk
     new Request(`http://localhost/api/v1${path}`, {
       method,
       headers: {
+        ...(method === "GET" ? {} : { origin: new URL(Bun.env.BETTER_AUTH_URL!).origin }),
         ...(cookie ? { cookie } : {}),
         ...(body === undefined ? {} : { "content-type": "application/json" }),
       },
@@ -199,4 +200,40 @@ describe("portal scoped access regressions", () => {
     expect((await request("/portal/logout", "POST", cookie)).status).toBe(200);
     expect((await request(`/portal/${item.quoteId}`, "GET", cookie)).status).toBe(401);
   });
+});
+
+test("portal rejects missing and opaque origins before redeeming a valid access token", async () => {
+  const item = await fixture();
+  for (const origin of [undefined, "null", "https://untrusted.example"]) {
+    const response = await api.handle(
+      new Request("http://localhost/api/v1/portal/redeem", {
+        method: "POST",
+        headers: { "content-type": "application/json", ...(origin ? { origin } : {}) },
+        body: JSON.stringify({ token: item.token }),
+      }),
+    );
+    expect(response.status).toBe(403);
+    expect(response.headers.get("set-cookie")).toBeNull();
+  }
+  const redeemed = await request("/portal/redeem", "POST", undefined, { token: item.token });
+  expect(redeemed.status).toBe(200);
+  const cookie = redeemed.headers.get("set-cookie")!.split(";")[0]!;
+  const logout = await api.handle(
+    new Request("http://localhost/api/v1/portal/logout", { method: "POST", headers: { cookie } }),
+  );
+  expect(logout.status).toBe(403);
+  expect((await request(`/portal/${item.quoteId}`, "GET", cookie)).status).toBe(200);
+});
+
+test("configured trailing slash does not reject the canonical browser origin", async () => {
+  const previous = Bun.env.BETTER_AUTH_URL;
+  const item = await fixture();
+  try {
+    Bun.env.BETTER_AUTH_URL = `${new URL(previous!).origin}/`;
+    expect((await request("/portal/redeem", "POST", undefined, { token: item.token })).status).toBe(
+      200,
+    );
+  } finally {
+    Bun.env.BETTER_AUTH_URL = previous;
+  }
 });

@@ -6,16 +6,23 @@ process. The application launcher never stops, resets, or starts an unrelated da
 
 After installing dependencies and configuring the sanitized environment contract, start the configured
 PostgreSQL database and run `bun run dev:setup` to validate configuration, apply committed migrations,
-and seed the local demo. Then run `bun scripts/dev-local.ts` to launch both Next.js and the stock feed.
-`bun scripts/dev-local.ts --check` validates the local origin, matching ports, database connectivity,
+and seed the local demo. Then run `bun run local` to launch both Next.js and the stock feed.
+`bun run local:check` validates the local origin, matching ports, database connectivity,
 and the presence of the migrated order schema without starting application servers.
 
-The launcher uses the Bun runtime and the installed Next.js Webpack development mode. Webpack avoids
-the dependency-resolution failure observed with this workspace's ExcelJS dependency under Turbopack.
+The launcher uses Bun and native Next.js Turbopack with `postcss.config.ts`. The supported package
+bundling configuration avoids Bun's cold external-alias resolution issue; see the
+[runtime decision](../architecture/runtime.md). There is no PostCSS JavaScript compatibility file.
 Both processes use the same environment and database. The launcher rejects occupied ports instead of
 choosing another port or stopping an existing listener. Ctrl+C or SIGTERM stops both application
 processes. If either child exits unexpectedly, the other is stopped and the launcher returns failure.
 The graceful shutdown window is five seconds, followed by forced termination of only its own children.
+
+The local companion enables automatic billing by default. It checks due subscription periods on
+startup and every minute, using the same transactional rules as Finance's manual due run. A restart
+discovers unfinished periods from PostgreSQL; invoice identities prevent duplicate charges. Its
+health response reports whether billing is enabled, the last run/success time and failure state.
+Tests set `AUTOMATIC_BILLING=false` except the dedicated restart regression.
 
 Use the canonical `127.0.0.1` host consistently. Better Auth cookies, the allowed WebSocket origin,
 and the local content security policy use that host. `REALTIME_PORT`, when specified, must be 101
@@ -44,3 +51,18 @@ browser scenarios deliberately fulfill or settle seeded orders.
 
 Verified behavior is limited to the exercised local macOS/Bun environment. Cross-platform graceful
 process handling remains a separate verification task; no hosted deployment is configured.
+
+## Small local workload measurement
+
+With the configured local application already running, `bun scripts/local-load.ts` authenticates a
+demo account, warms three bounded read endpoints, measures 60 seconds at 5 requests/second and a
+10-second burst at 20 requests/second, then signs out that measurement session. Credentials come from
+ignored `LOAD_TEST_EMAIL`/`LOAD_TEST_PASSWORD` settings or the demo defaults; they are never logged or
+written to the report. The default concurrency limit is 10, with a maximum configurable limit of 20.
+
+The JSON artifact at `.local/local-load-report.json` records requested and achieved rates, elapsed
+time, HTTP/transport errors, skipped launch slots, and full-response p50/p95/max latency. The script
+returns failure when requests fail or the requested schedule exceeds its concurrency budget. Options
+shown by `bun scripts/local-load.ts --help` allow a shorter run or a different local origin. Targets
+must remain loopback HTTP addresses. This measurement covers one authenticated session reading the
+seeded workspace; write contention and multi-user behavior have separate integration tests.

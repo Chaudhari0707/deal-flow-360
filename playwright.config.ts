@@ -43,7 +43,7 @@ export default defineConfig({
     : [
         {
           name: "Next.js test application",
-          command: "bun --bun next dev --webpack --hostname 127.0.0.1 --port 3001",
+          command: "bun --bun next dev --hostname 127.0.0.1 --port 3001",
           env: {
             BETTER_AUTH_URL: baseURL,
             DATABASE_URL: testDatabaseUrl,
@@ -58,7 +58,12 @@ export default defineConfig({
         {
           name: "Authenticated test stock feed",
           command: "bun run scripts/realtime.ts",
-          env: { BETTER_AUTH_URL: baseURL, DATABASE_URL: testDatabaseUrl, REALTIME_PORT: "3102" },
+          env: {
+            BETTER_AUTH_URL: baseURL,
+            DATABASE_URL: testDatabaseUrl,
+            REALTIME_PORT: "3102",
+            AUTOMATIC_BILLING: "false",
+          },
           gracefulShutdown: { signal: "SIGTERM", timeout: 5000 },
           reuseExistingServer: Bun.env.PLAYWRIGHT_REUSE_SERVER === "true",
           timeout: 30_000,
