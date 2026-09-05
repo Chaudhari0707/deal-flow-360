@@ -62,7 +62,28 @@ test("purchase recommendations: best sellers, customer switch and add @regressio
     exact: true,
   });
   await expect(add).toBeVisible();
-  await expect(page.getByText(/Max discount .* · Margin /).first()).toBeVisible();
+  await expect(page.getByText(/^(Promotion discount|Estimated margin) /).first()).toBeVisible();
+  await expect(page.getByText(/Max discount .* · Margin /)).toHaveCount(0);
+  for (const id of recommendations.productIds) {
+    const suggested = data.products.find((item) => item.id === id);
+    if (!suggested) continue;
+    const card = page
+      .getByRole("button", {
+        name: `Add ${suggested.name} recommendation to quote`,
+        exact: true,
+      })
+      .locator("../..");
+    const promoted = suggested.promoted && suggested.promotionBps > 0;
+    await expect(
+      card.getByText(promoted ? /^Promotion discount / : /^Estimated margin /),
+    ).toBeVisible();
+    await expect(
+      card.getByText(promoted ? /^Estimated margin / : /^Promotion discount /),
+    ).toHaveCount(0);
+  }
+  expect(
+    await page.getByRole("button", { name: / recommendation to quote$/ }).count(),
+  ).toBeLessThanOrEqual(5);
   await select(returning!);
   await expect(
     page.getByText("From this customer’s last purchase.", { exact: true }),
@@ -72,8 +93,23 @@ test("purchase recommendations: best sellers, customer switch and add @regressio
   ).toHaveCount(0);
   await select(fresh);
   await expect(add).toBeVisible();
+  const refreshed = page.waitForResponse(
+    (response) =>
+      response.url().includes("/quotes/recommendations?") &&
+      response.url().includes("selectedProductIds") &&
+      response.request().method() === "GET",
+  );
   await add.click();
+  const refreshedResponse = await refreshed;
+  expect(refreshedResponse.ok(), await refreshedResponse.text()).toBe(true);
+  const updated = (await refreshedResponse.json()) as PurchaseRecommendations;
+  expect(updated.productIds).not.toContain(product!.id);
+  expect(updated.productIds.length).toBeLessThanOrEqual(5);
   await expect(add).toHaveCount(0);
+  await expect(page.getByLabel(`${product!.name} quantity`, { exact: true })).toHaveValue("1");
+  await page.getByRole("button", { name: `Remove ${product!.name}`, exact: true }).click();
+  await expect(add).toBeVisible();
+  await add.click();
   await expect(page.getByLabel(`${product!.name} quantity`, { exact: true })).toHaveValue("1");
   const saved = page.waitForResponse(
     (response) =>

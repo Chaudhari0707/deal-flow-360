@@ -1,9 +1,18 @@
 "use client";
 import { useState } from "react";
+import { ChevronDown, ChevronUp } from "lucide-react";
 import useSWR from "swr";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { DataTable } from "@/components/ui/data-table";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
@@ -30,6 +39,7 @@ function isApprovalStatus(
 
 export function ReportWorkspace() {
   const workspace = useWorkspace();
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [customerId, setCustomerId] = useState("all");
@@ -99,157 +109,176 @@ export function ReportWorkspace() {
         <CardHeader>
           <CardTitle>Sales and financial report</CardTitle>
           <CardDescription>
-            Dates use each quote/order creation date and each invoice/credit issue date in UTC.
-            Product/category select whole records with matching lines. Payment status only filters
-            financial records.
+            {parameters.size
+              ? `${parameters.size} active filter${parameters.size === 1 ? "" : "s"}`
+              : "All records · No filters applied"}
           </CardDescription>
+          <CardAction>
+            <Button
+              type="button"
+              variant="outline"
+              aria-expanded={filtersOpen}
+              aria-controls="report-filters"
+              onClick={() => setFiltersOpen((open) => !open)}
+            >
+              {filtersOpen ? <ChevronUp /> : <ChevronDown />}
+              {filtersOpen ? "Hide filters" : "Show filters"}
+            </Button>
+          </CardAction>
         </CardHeader>
-        <CardContent className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-          <Field>
-            <FieldLabel htmlFor="report-from">From</FieldLabel>
-            <Input
-              id="report-from"
-              type="date"
-              value={from}
-              onChange={(event) => setFrom(event.target.value)}
-            />
-          </Field>
-          <Field>
-            <FieldLabel htmlFor="report-to">To</FieldLabel>
-            <Input
-              id="report-to"
-              type="date"
-              value={to}
-              onChange={(event) => setTo(event.target.value)}
-            />
-          </Field>
-          <Field>
-            <FieldLabel>Customer</FieldLabel>
-            <Select
-              value={customerId}
-              onValueChange={(value) => {
-                if (value) setCustomerId(value);
-              }}
-            >
-              <SelectTrigger aria-label="Report customer" className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All customers</SelectItem>
-                {workspace.data.customers.map((customer) => (
-                  <SelectItem key={customer.id} value={customer.id}>
-                    {customer.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </Field>
-          <Field>
-            <FieldLabel>Category</FieldLabel>
-            <Select
-              value={category}
-              onValueChange={(value) => {
-                if (value) setCategory(value);
-              }}
-            >
-              <SelectTrigger aria-label="Report category" className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All categories</SelectItem>
-                {[...new Set(workspace.data.products.map((product) => product.category))].map(
-                  (value) => (
-                    <SelectItem key={value} value={value}>
-                      {value}
-                    </SelectItem>
-                  ),
-                )}
-              </SelectContent>
-            </Select>
-          </Field>
-          <Field>
-            <FieldLabel>Payment status</FieldLabel>
-            <Select
-              value={status}
-              onValueChange={(value) => {
-                if (value) setStatus(value);
-              }}
-            >
-              <SelectTrigger aria-label="Report status" className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All statuses</SelectItem>
-                <SelectItem value="PAID">Paid</SelectItem>
-                <SelectItem value="UNPAID">Unpaid</SelectItem>
-              </SelectContent>
-            </Select>
-          </Field>
-          {[
-            {
-              label: "Representative",
-              value: repId,
-              setValue: setRepId,
-              items:
-                report.data?.options.representatives.map((rep) => ({
-                  value: rep.id,
-                  label: rep.name,
-                })) ?? [],
-            },
-            {
-              label: "Team",
-              value: team,
-              setValue: setTeam,
-              items: report.data?.options.teams.map((value) => ({ value, label: value })) ?? [],
-            },
-            {
-              label: "Approval status",
-              value: approvalStatus,
-              setValue: setApprovalStatus,
-              items: [
-                { value: "NOT_SUBMITTED", label: "Not submitted" },
-                { value: "PENDING", label: "Pending approval" },
-                { value: "APPROVED", label: "Approved current terms" },
-                { value: "RETURNED", label: "Returned" },
-                { value: "REJECTED", label: "Rejected" },
-              ],
-            },
-            {
-              label: "Product",
-              value: productId,
-              setValue: setProductId,
-              items: workspace.data.products.map((product) => ({
-                value: product.id,
-                label: product.name,
-              })),
-            },
-          ].map((field) => (
-            <Field key={field.label}>
-              <FieldLabel>{field.label}</FieldLabel>
+        <div id="report-filters" hidden={!filtersOpen}>
+          <CardContent className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+            <p className="text-muted-foreground sm:col-span-2 lg:col-span-5">
+              Dates use each quote/order creation date and each invoice/credit issue date in UTC.
+              Product/category select whole records with matching lines. Payment status only filters
+              financial records.
+            </p>
+            <Field>
+              <FieldLabel htmlFor="report-from">From</FieldLabel>
+              <Input
+                id="report-from"
+                type="date"
+                value={from}
+                onChange={(event) => setFrom(event.target.value)}
+              />
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="report-to">To</FieldLabel>
+              <Input
+                id="report-to"
+                type="date"
+                value={to}
+                onChange={(event) => setTo(event.target.value)}
+              />
+            </Field>
+            <Field>
+              <FieldLabel>Customer</FieldLabel>
               <Select
-                value={field.value}
+                value={customerId}
                 onValueChange={(value) => {
-                  if (value) field.setValue(value);
+                  if (value) setCustomerId(value);
                 }}
               >
-                <SelectTrigger
-                  aria-label={`Report ${field.label.toLowerCase()}`}
-                  className="w-full"
-                >
+                <SelectTrigger aria-label="Report customer" className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All</SelectItem>
-                  {field.items.map((item) => (
-                    <SelectItem key={item.value} value={item.value}>
-                      {item.label}
+                  <SelectItem value="all">All customers</SelectItem>
+                  {workspace.data.customers.map((customer) => (
+                    <SelectItem key={customer.id} value={customer.id}>
+                      {customer.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </Field>
-          ))}
-        </CardContent>
+            <Field>
+              <FieldLabel>Category</FieldLabel>
+              <Select
+                value={category}
+                onValueChange={(value) => {
+                  if (value) setCategory(value);
+                }}
+              >
+                <SelectTrigger aria-label="Report category" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All categories</SelectItem>
+                  {[...new Set(workspace.data.products.map((product) => product.category))].map(
+                    (value) => (
+                      <SelectItem key={value} value={value}>
+                        {value}
+                      </SelectItem>
+                    ),
+                  )}
+                </SelectContent>
+              </Select>
+            </Field>
+            <Field>
+              <FieldLabel>Payment status</FieldLabel>
+              <Select
+                value={status}
+                onValueChange={(value) => {
+                  if (value) setStatus(value);
+                }}
+              >
+                <SelectTrigger aria-label="Report status" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All statuses</SelectItem>
+                  <SelectItem value="PAID">Paid</SelectItem>
+                  <SelectItem value="UNPAID">Unpaid</SelectItem>
+                </SelectContent>
+              </Select>
+            </Field>
+            {[
+              {
+                label: "Representative",
+                value: repId,
+                setValue: setRepId,
+                items:
+                  report.data?.options.representatives.map((rep) => ({
+                    value: rep.id,
+                    label: rep.name,
+                  })) ?? [],
+              },
+              {
+                label: "Team",
+                value: team,
+                setValue: setTeam,
+                items: report.data?.options.teams.map((value) => ({ value, label: value })) ?? [],
+              },
+              {
+                label: "Approval status",
+                value: approvalStatus,
+                setValue: setApprovalStatus,
+                items: [
+                  { value: "NOT_SUBMITTED", label: "Not submitted" },
+                  { value: "PENDING", label: "Pending approval" },
+                  { value: "APPROVED", label: "Approved current terms" },
+                  { value: "RETURNED", label: "Returned" },
+                  { value: "REJECTED", label: "Rejected" },
+                ],
+              },
+              {
+                label: "Product",
+                value: productId,
+                setValue: setProductId,
+                items: workspace.data.products.map((product) => ({
+                  value: product.id,
+                  label: product.name,
+                })),
+              },
+            ].map((field) => (
+              <Field key={field.label}>
+                <FieldLabel>{field.label}</FieldLabel>
+                <Select
+                  value={field.value}
+                  onValueChange={(value) => {
+                    if (value) field.setValue(value);
+                  }}
+                >
+                  <SelectTrigger
+                    aria-label={`Report ${field.label.toLowerCase()}`}
+                    className="w-full"
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All</SelectItem>
+                    {field.items.map((item) => (
+                      <SelectItem key={item.value} value={item.value}>
+                        {item.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </Field>
+            ))}
+          </CardContent>
+        </div>
       </Card>
       {invalid ? (
         <Alert variant="destructive">

@@ -16,6 +16,10 @@ generic mechanics remain in the shared component.
 
 ## Required usage
 
+- Search-only toolbars MUST remain visible without Show/Hide controls. Sections containing
+  multiple filters SHOULD start collapsed and preserve their values when hidden.
+  Keep create/edit actions and column view controls outside collapsed sections.
+
 - Keep the TanStack v9 `filterFns` and `sortFns` registries registered alongside their row-model
   features. Controls can render while filtering/sorting silently does nothing without the registries.
 

@@ -15,11 +15,15 @@ const returning = `${prefix}-returning`,
 const productIds = Array.from({ length: 8 }, (_, i) => `${prefix}-${i}`);
 const cookies: Partial<Record<Role, string>> = {};
 
-async function request(customerId: string, role?: Role) {
+async function request(customerId: string, role?: Role, selectedProductIds?: string[]) {
   return api.handle(
     new Request(
       new URL(
-        `/api/v1/quotes/recommendations?customerId=${encodeURIComponent(customerId)}`,
+        `/api/v1/quotes/recommendations?customerId=${encodeURIComponent(customerId)}${
+          selectedProductIds
+            ?.map((id) => `&selectedProductIds=${encodeURIComponent(id)}`)
+            .join("") ?? ""
+        }`,
         Bun.env.BETTER_AUTH_URL,
       ),
       {
@@ -121,7 +125,7 @@ describe("quotation purchase recommendations", () => {
     expect(result.source).toBe("best_sellers");
     expect(result.productIds.slice(0, 3)).toEqual([productIds[2], productIds[0], productIds[1]]);
     expect(result.productIds).not.toContain(productIds[7]);
-    expect(result.productIds.length).toBeLessThanOrEqual(6);
+    expect(result.productIds.length).toBeLessThanOrEqual(5);
     expect(Object.keys(result).sort()).toEqual(["productIds", "source"]);
   });
 
@@ -132,7 +136,7 @@ describe("quotation purchase recommendations", () => {
     });
   });
 
-  test("returns at most six deterministically ordered products from a larger last purchase", async () => {
+  test("returns five products and refills after selection, restoring removed products", async () => {
     const [order] = await db
       .select()
       .from(orders)
@@ -145,8 +149,25 @@ describe("quotation purchase recommendations", () => {
         .where(eq(orders.id, order!.id));
       expect(await (await request(returning, "rep")).json()).toEqual({
         source: "last_purchase",
-        productIds: productIds.slice(0, 6),
+        productIds: productIds.slice(0, 5),
       });
+      expect(
+        await (await request(returning, "rep", [productIds[0]!, productIds[1]!])).json(),
+      ).toEqual({
+        source: "last_purchase",
+        productIds: productIds.slice(2, 7),
+      });
+      expect(await (await request(returning, "rep", productIds)).json()).toEqual({
+        source: "last_purchase",
+        productIds: [],
+      });
+      expect((await (await request(returning, "rep", [])).json()).productIds).toEqual(
+        productIds.slice(0, 5),
+      );
+      const best = await (await request(fresh, "rep", [productIds[0]!, productIds[2]!])).json();
+      expect(best.productIds).not.toContain(productIds[0]);
+      expect(best.productIds).not.toContain(productIds[2]);
+      expect(best.productIds).toHaveLength(5);
     } finally {
       await db.update(orders).set({ lines: original }).where(eq(orders.id, order!.id));
     }
@@ -162,5 +183,15 @@ describe("quotation purchase recommendations", () => {
   test("validates customer selection", async () => {
     expect((await request(`${prefix}-missing`, "rep")).status).toBe(404);
     expect((await request("", "rep")).status).toBe(400);
+    expect((await request(returning, "rep", [""])).status).toBe(400);
+    expect(
+      (
+        await request(
+          returning,
+          "rep",
+          Array.from({ length: 101 }, () => "id"),
+        )
+      ).status,
+    ).toBe(400);
   });
 });

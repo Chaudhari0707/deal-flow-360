@@ -149,6 +149,7 @@ test("finance records a full payment, downloads real documents and cancels recur
   await expect(page.getByRole("heading", { name: "Reports", exact: true })).toBeVisible();
   await expect(page.getByText("Quotes created", { exact: true })).toBeVisible();
   await expect(page.getByText("Quotations and confirmed orders", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Show filters", exact: true }).click();
   for (const filter of [
     {
       label: "Report representative",
