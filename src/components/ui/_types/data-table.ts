@@ -33,6 +33,31 @@ export type DataTableBulkRemoveImpactRow = {
   label: string;
 };
 
+/**
+ * Per-slot class overrides so a screen can replace the table chrome without forking the
+ * component. Every slot is optional; omitting `classNames` keeps the default appearance.
+ */
+export type DataTableClassNames = {
+  /** Every body `<td>`. */
+  cell?: string;
+  /** Wrapper around the horizontally scrolling table (default: bordered, rounded box). */
+  container?: string;
+  /** The single `<td>` rendered for the empty state (falls back to `cell`). */
+  emptyCell?: string;
+  /** Every header `<th>`. */
+  head?: string;
+  /** The header `<tr>`. */
+  headerRow?: string;
+  /** The pagination strip rendered below the table. */
+  pagination?: string;
+  /** Every body `<tr>`. */
+  row?: string;
+  /** The scrolling viewport that holds the table and pins its header. */
+  scroller?: string;
+  /** The `<table>` element. */
+  table?: string;
+};
+
 export type DataTableColumnApplyToAllMeta<TData> = {
   /** Label for aria/title; falls back to `meta.label` then column id. */
   fieldLabel?: string;

@@ -30,12 +30,14 @@ export function PortalAccess() {
       });
   }, []);
   return error ? (
-    <Alert variant="destructive">
-      <AlertTitle>This quotation link is unavailable</AlertTitle>
+    <Alert variant="destructive" className="max-w-[60ch] py-1">
+      <AlertTitle className="text-base">This quotation link is unavailable</AlertTitle>
       <AlertDescription>
-        It may have expired or already been used. Ask your account manager for a fresh link, or sign
-        in with your customer account.
-        <div className="mt-4">
+        <span className="block leading-relaxed">
+          It may have expired or already been used. Ask your account manager for a fresh link, or
+          sign in with your customer account.
+        </span>
+        <div className="mt-5">
           <Button nativeButton={false} render={<Link href="/login" />}>
             Sign in
           </Button>

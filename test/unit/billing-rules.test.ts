@@ -25,7 +25,7 @@ describe("billing calendars and integer money", () => {
   test("counts calendar days across daylight savings and ignores time of day", () => {
     expect(actualDays(new Date("2026-03-01T23:59:00Z"), new Date("2026-04-01T01:00:00Z"))).toBe(31);
   });
-  test("prorates the documented 30-day $46 charge to 15 unused days", () => {
+  test("prorates the documented 30-day ₹46 charge to 15 unused days", () => {
     expect(
       proratedAdjustment(4600, 0, date("2026-04-01"), date("2026-05-01"), date("2026-04-16")),
     ).toBe(-2300);

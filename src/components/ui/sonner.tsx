@@ -21,19 +21,18 @@ const Toaster = ({ ...props }: ToasterProps) => {
       duration={5000}
       offset={72}
       position="top-right"
-      richColors
       icons={{
-        success: <CircleCheckIcon className="size-4" />,
-        info: <InfoIcon className="size-4" />,
-        warning: <TriangleAlertIcon className="size-4" />,
-        error: <OctagonXIcon className="size-4" />,
-        loading: <Loader2Icon className="size-4 animate-spin" />,
+        success: <CircleCheckIcon className="size-4 text-ink-positive" />,
+        info: <InfoIcon className="size-4 text-ink-accent" />,
+        warning: <TriangleAlertIcon className="size-4 text-ink-risk" />,
+        error: <OctagonXIcon className="size-4 text-ink-risk" />,
+        loading: <Loader2Icon className="size-4 animate-spin text-muted-foreground" />,
       }}
       style={
         {
           "--normal-bg": "var(--popover)",
           "--normal-text": "var(--popover-foreground)",
-          "--normal-border": "var(--border)",
+          "--normal-border": "var(--border-strong)",
           "--border-radius": "var(--radius)",
         } as React.CSSProperties
       }

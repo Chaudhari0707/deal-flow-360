@@ -5,6 +5,7 @@ Load only what the task touches.
 | Trigger | Playbook |
 | --- | --- |
 | Linear issue, worktree, parallel device, branch handoff | `.agents/coordination.md` |
+| DF-41 / DF-42 / DF-43 continuation, fulfillment dialog, PDF layout, warehouse restock | `docs/engineering/session-df-41-42-43.md` |
 | Next.js, React Server Components, routes, caching | `.agents/nextjs.md` |
 | Elysia API composition, feature routes, Eden, OpenAPI, Next API adapter | `.agents/elysia.md` |
 | Better Auth, sessions, login, password, account access | `.agents/auth.md` |
@@ -20,7 +21,7 @@ Load only what the task touches.
 | Seed, reset, fixture, demo/reference data | `.agents/seeding.md` |
 | UI, forms, accessibility, client state | `.agents/frontend.md` |
 | Authentication, authorization, secrets, hostile input | `.agents/security.md` |
-| Architecture docs, public docs, diagrams | `.agents/docs.md` |
+| User-flow changes, architecture docs, public docs, diagrams | `.agents/docs.md` |
 | Agent instruction or harness changes | `.agents/instructions.md` |
 | Lessons, durable repository memory | `.agents/memory.md` |
 

@@ -11,6 +11,9 @@ import type { JsonTransport } from "@/lib/api/_types/client";
 export type FulfillmentDetail = JsonTransport<Static<typeof fulfillmentDetailModel>>;
 export type FulfillmentList = JsonTransport<Static<typeof fulfillmentListModel>>;
 export type FulfillmentPlan = JsonTransport<Static<typeof allocationPlanModel>>;
+export type InventoryProductRow = JsonTransport<
+  Static<typeof inventorySnapshotModel>
+>["products"][number];
 export type InventorySnapshot = JsonTransport<Static<typeof inventorySnapshotModel>>;
 export type StockRow = InventorySnapshot["stocks"][number];
 export type WarehouseRow = InventorySnapshot["warehouses"][number];

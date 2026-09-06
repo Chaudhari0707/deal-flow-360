@@ -1,10 +1,22 @@
 import { t } from "elysia";
 
+import { customerModel, deliveryStatusModel } from "@/server/models";
+
 const id = t.String({ minLength: 1, maxLength: 100 });
 const name = t.String({ minLength: 1, maxLength: 120 });
 const cents = t.Integer({ minimum: 0, maximum: 10_000_000 });
 
 export const catalogIdParamsModel = t.Object({ id });
+
+export const customerInvitationModel = t.Object({
+  id,
+  status: deliveryStatusModel,
+  message: t.Union([t.String(), t.Null()]),
+});
+export const customerCreatedModel = t.Intersect([
+  customerModel,
+  t.Object({ invitation: customerInvitationModel }),
+]);
 
 export const productBodyModel = t.Object(
   {
@@ -21,7 +33,7 @@ export const productBodyModel = t.Object(
     active: t.Optional(t.Boolean()),
     promoted: t.Optional(t.Boolean()),
     promotionBps: t.Optional(t.Integer({ minimum: 0, maximum: 10_000 })),
-    pairedProductIds: t.Optional(t.Array(id, { maxItems: 20 })),
+    pairedProductIds: t.Optional(t.Array(id, { maxItems: 5 })),
   },
   { additionalProperties: false },
 );
@@ -42,6 +54,8 @@ export const settingBodyModel = t.Object(
 );
 
 export const catalogModels = {
+  CustomerInvitation: customerInvitationModel,
+  CustomerCreated: customerCreatedModel,
   CatalogCustomerInput: customerBodyModel,
   CatalogProductInput: productBodyModel,
   CatalogSettingInput: settingBodyModel,

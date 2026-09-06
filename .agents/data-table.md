@@ -16,8 +16,14 @@ generic mechanics remain in the shared component.
 
 ## Required usage
 
+- Search-only toolbars MUST remain visible without Show/Hide controls. Sections containing
+  multiple filters SHOULD start collapsed and preserve their values when hidden.
+  Keep create/edit actions and column view controls outside collapsed sections.
+
 - Keep the TanStack v9 `filterFns` and `sortFns` registries registered alongside their row-model
   features. Controls can render while filtering/sorting silently does nothing without the registries.
+- Pass `initialSorting` when a list must open newest-first (or another stable default) even though
+  the server already ordered `data`; otherwise a user sort reset can hide that contract.
 
 - Every selectable table MUST pass a stable `getRowId`; array indexes can retarget selection after
   refresh/reorder.

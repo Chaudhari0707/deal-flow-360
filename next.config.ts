@@ -40,6 +40,7 @@ const nextConfig: NextConfig = {
   cacheComponents: true,
   reactCompiler: true,
   experimental: {
+    authInterrupts: true,
     useTypeScriptCli: true,
   },
   async headers() {

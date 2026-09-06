@@ -1,18 +1,13 @@
-"use client";
-
-import useSWR from "swr";
-
+import { eyebrowType } from "@/components/editorial/editorial";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import type { LineInput } from "@/features/quotes/_types/quotes";
-import { calculateQuote, defaultDiscounts, money, priceLines } from "@/features/quotes/rules";
-import { apiClient, apiData } from "@/lib/api/client";
+import { defaultDiscounts, money } from "@/features/quotes/rules";
+import { recommendUpsells } from "@/features/quotes/upsell-recommendations";
 import type { Workspace } from "@/lib/domain/_types/workspace";
+import { cn } from "@/lib/utils";
 
 export function PurchaseRecommendations({
-  customerId,
   products,
-  existingIds,
+  selectedProductIds,
   disabled,
   limits,
   orderDiscountBps,
@@ -20,9 +15,8 @@ export function PurchaseRecommendations({
   pricelists,
   tier,
 }: {
-  customerId: string;
   products: Workspace["products"];
-  existingIds: string[];
+  selectedProductIds: string[];
   disabled: boolean;
   limits?: Record<string, number>;
   orderDiscountBps: number;
@@ -30,80 +24,56 @@ export function PurchaseRecommendations({
   pricelists?: Record<string, number>;
   tier: string;
 }) {
-  const { data, error, isLoading, mutate } = useSWR(
-    customerId
-      ? `/api/v1/quotes/recommendations?customerId=${encodeURIComponent(customerId)}`
-      : null,
-    async () =>
-      apiData(await apiClient.api.v1.quotes.recommendations.get({ query: { customerId } })),
-    { keepPreviousData: false },
-  );
   const validDiscount =
     Number.isInteger(orderDiscountBps) && orderDiscountBps >= 0 && orderDiscountBps <= 10000;
-  const suggestions = (validDiscount ? (data?.productIds ?? []) : []).flatMap((id) => {
-    const product = products.find((item) => item.id === id && item.active);
-    if (!product || existingIds.includes(id)) return [];
-    const input: LineInput = {
-      productId: id,
-      quantity: 1,
-      discountBps: product.promoted ? product.promotionBps : 0,
-    };
-    const policy = limits ?? defaultDiscounts;
-    const [line] = calculateQuote(
-      priceLines(products, tier, [input], pricelists),
-      orderDiscountBps,
-      tier,
-      policy,
-    ).lines;
-    if (!line) return [];
-    return [
-      {
-        marginCents: line.netCents - line.costCents * line.quantity,
-        maxDiscountBps: Math.min(policy[tier] ?? 0, policy[product.category] ?? 0),
-        product,
-      },
-    ];
-  });
+  const suggestions = validDiscount
+    ? recommendUpsells({
+        limits: limits ?? defaultDiscounts,
+        orderDiscountBps,
+        pricelists,
+        products,
+        selectedProductIds,
+        tier,
+      })
+    : [];
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Recommended products</CardTitle>
-        <CardDescription>
-          {data?.source === "last_purchase"
-            ? "From this customer’s last purchase."
-            : data
-              ? "Best sellers — this customer has no purchases yet."
-              : "Suggestions for the selected customer."}
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {!customerId ? (
-          <p>Select a customer to see recommendations.</p>
-        ) : isLoading ? (
-          <p role="status">Loading recommendations…</p>
-        ) : error ? (
-          <div role="alert">
-            <p>Couldn’t load recommendations.</p>
-            <Button type="button" variant="outline" onClick={() => void mutate()}>
-              Retry recommendations
-            </Button>
-          </div>
+    <section>
+      <div className="border-b border-border-strong pb-3">
+        <p className={cn(eyebrowType, "text-foreground")}>Upsell recommendations</p>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Configured add-ons for the products currently selected on this quotation. Up to five are
+          shown, rotating across products when more than one is selected.
+        </p>
+      </div>
+      <div aria-live="polite">
+        {!selectedProductIds.length ? (
+          <p className="py-4 text-sm text-muted-foreground">
+            Add a product to see its configured upsell recommendations.
+          </p>
         ) : !validDiscount ? (
-          <p className="text-sm text-muted-foreground">
+          <p className="py-4 text-sm text-muted-foreground">
             Enter an order discount between 0% and 100% to see recommendations.
           </p>
         ) : suggestions.length ? (
           suggestions.map((product) => (
-            <div key={product.product.id} className="space-y-2">
-              <p className="font-medium">{product.product.name}</p>
-              <p className="text-xs text-muted-foreground">
-                Max discount {(product.maxDiscountBps / 100).toFixed(2)}% · Margin{" "}
-                {money(product.marginCents)}
-              </p>
-              <div>
+            <div
+              key={product.product.id}
+              className="flex items-baseline justify-between gap-4 border-b border-border py-3.5 last:border-b-0"
+            >
+              <div className="min-w-0">
+                <p className="text-sm text-foreground">{product.product.name}</p>
+                <p className="mt-1 text-xs text-muted-foreground tabular-nums">
+                  Estimated price {money(product.netCents)} · Margin {money(product.marginCents)}
+                  {product.product.promoted && product.product.promotionBps > 0
+                    ? ` · Promotion discount ${(product.product.promotionBps / 100).toFixed(2)}%`
+                    : ""}
+                </p>
+              </div>
+              <div className="shrink-0">
                 <Button
                   type="button"
                   size="sm"
+                  variant="outline"
                   disabled={disabled}
                   aria-label={`Add ${product.product.name} recommendation to quote`}
                   onClick={() => onAdd(product.product.id)}
@@ -114,11 +84,11 @@ export function PurchaseRecommendations({
             </div>
           ))
         ) : (
-          <p className="text-sm text-muted-foreground">
-            No additional products to recommend. You can still choose products from the catalog.
+          <p className="py-4 text-sm text-muted-foreground">
+            No configured upsell products are available for these quotation lines.
           </p>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </section>
   );
 }

@@ -9,6 +9,8 @@ export interface InvoiceDocument {
   paidCents: number;
   sourceNumber?: string;
   status: string;
+  subtotalCents?: number;
+  taxCents?: number;
   totalCents: number;
 }
 

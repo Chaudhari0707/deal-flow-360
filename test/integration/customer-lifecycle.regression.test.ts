@@ -1,4 +1,4 @@
-import { beforeAll, expect, test } from "bun:test";
+import { beforeAll, expect, mock, test } from "bun:test";
 
 import { eq } from "drizzle-orm";
 
@@ -6,7 +6,12 @@ import { createAuth } from "@/lib/auth/create-auth";
 import { db } from "@/lib/db/connection";
 import { auditEntries, customers, products, profiles } from "@/lib/db/schema";
 import type { Role } from "@/lib/domain/_types/domain";
-import { api } from "@/server/api";
+mock.module("resend", () => ({
+  Resend: class {
+    emails = { send: async () => ({ data: { id: crypto.randomUUID() }, error: null }) };
+  },
+}));
+const { api } = await import("@/server/api");
 
 const cookies: Partial<Record<Role, string>> = {};
 const auth = createAuth(db);
@@ -54,9 +59,9 @@ beforeAll(async () => {
 
 test("customer CRUD roles, invalid data, and unused deletion audit", async () => {
   expect((await request("POST", "/customers", undefined, input())).status).toBe(401);
-  for (const role of ["finance", "ops", "customer"] as Role[])
+  for (const role of ["rep", "finance", "ops", "customer"] as Role[])
     expect((await request("POST", "/customers", role, input())).status).toBe(403);
-  for (const role of ["rep", "manager", "admin"] as Role[]) {
+  for (const role of ["manager", "admin"] as Role[]) {
     const response = await request("POST", "/customers", role, input());
     expect(response.status).toBe(200);
     const customer = await response.json();
@@ -83,19 +88,21 @@ test("customer CRUD roles, invalid data, and unused deletion audit", async () =>
         })
       ).status,
     ).toBe(200);
-    expect((await request("DELETE", `/customers/${customer.id}`, "admin")).status).toBe(200);
-    expect((await request("DELETE", `/customers/${customer.id}`, "admin")).status).toBe(404);
-    const audit = await db
-      .select()
-      .from(auditEntries)
-      .where(eq(auditEntries.entityId, customer.id));
+    expect((await request("DELETE", `/customers/${customer.id}`, "admin")).status).toBe(409);
+    // Legacy unused customer records still support deletion; newly provisioned
+    // customers have linked logins and must retain the existing protection.
+    const unusedId = crypto.randomUUID();
+    await db.insert(customers).values({ id: unusedId, ...input() });
+    expect((await request("DELETE", `/customers/${unusedId}`, "admin")).status).toBe(200);
+    expect((await request("DELETE", `/customers/${unusedId}`, "admin")).status).toBe(404);
+    const audit = await db.select().from(auditEntries).where(eq(auditEntries.entityId, unusedId));
     expect(audit.some((entry) => entry.action === "CUSTOMER_DELETED")).toBe(true);
   }
 });
 
 test("tier changes affect new quotes, preserve old quotes and prevent customer deletion", async () => {
   const body = input();
-  const customer = await (await request("POST", "/customers", "rep", body)).json();
+  const customer = await (await request("POST", "/customers", "manager", body)).json();
   const quoteBody = {
     customerId: customer.id,
     lines: [{ productId, quantity: 1, discountBps: 1200 }],
@@ -118,7 +125,10 @@ test("tier changes affect new quotes, preserve old quotes and prevent customer d
 
 test("linked customer email edits update login, revoke sessions and reject conflicts atomically", async () => {
   const body = input();
-  const customer = await (await request("POST", "/customers", "rep", body)).json();
+  const [customer] = await db
+    .insert(customers)
+    .values({ id: crypto.randomUUID(), ...body })
+    .returning();
   const password = `Test-${crypto.randomUUID()}`;
   const signup = await auth.api.signUpEmail({
     body: { email: body.email, name: body.name, password },

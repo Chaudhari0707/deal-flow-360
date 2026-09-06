@@ -4,11 +4,13 @@ import * as React from "react";
 
 import { Input } from "@/components/ui/input";
 import {
+  coerceNumberTyping,
   isPartialNumberInput,
   normalizeNumberInput,
   numberInputValidationMessage,
   parseNumberInput,
 } from "@/components/ui/number-input-utils";
+import { cn } from "@/lib/utils";
 
 type NumberInputProps = Omit<
   React.ComponentProps<typeof Input>,
@@ -30,6 +32,7 @@ function displayValue(value: number | null | undefined) {
 }
 
 function NumberInput({
+  className,
   defaultValue,
   max,
   min,
@@ -69,6 +72,7 @@ function NumberInput({
   return (
     <Input
       {...props}
+      className={cn("tabular-nums", className)}
       type="text"
       inputMode={stepNumber !== undefined && !Number.isInteger(stepNumber) ? "decimal" : "numeric"}
       pattern="-?(?:[0-9]+(?:\\.[0-9]*)?|\\.[0-9]+)"
@@ -81,7 +85,8 @@ function NumberInput({
         setEditing(true);
         setRawValue(event.currentTarget.value);
         lastValidValue.current = event.currentTarget.value;
-        if (event.currentTarget.value === "0") event.currentTarget.select();
+        // Select a lone zero so the next digit replaces it instead of becoming "03".
+        if (/^-?0(?:\.0+)?$/.test(event.currentTarget.value)) event.currentTarget.select();
         onFocus?.(event);
       }}
       onBlur={(event) => {
@@ -94,7 +99,7 @@ function NumberInput({
         onBlur?.(event);
       }}
       onChange={(event) => {
-        const nextValue = event.currentTarget.value.replace(/^(-?)0+(?=\d)/, "$1");
+        const nextValue = coerceNumberTyping(event.currentTarget.value);
         if (!isPartialNumberInput(nextValue)) {
           event.currentTarget.value = lastValidValue.current;
           return;

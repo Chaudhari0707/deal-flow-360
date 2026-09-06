@@ -2,6 +2,7 @@ export interface Actor {
   customerId: string | null;
   email: string;
   id: string;
+  mustChangePassword?: boolean;
   name: string;
   role: Role;
 }

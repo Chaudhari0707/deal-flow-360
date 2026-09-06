@@ -5,12 +5,10 @@ import type { ColumnDef, PaginationState } from "@tanstack/react-table";
 import useSWR from "swr";
 
 import type { DataTableFeatures } from "@/components/ui/_types/data-table";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { DataTable } from "@/components/ui/data-table";
 import type { FulfillmentList } from "@/features/inventory/_types/ui";
 import { FulfillmentDetailDialog } from "@/features/inventory/fulfillment-detail";
-import { useStockFeed } from "@/features/inventory/use-stock-feed";
+import { operationalTable, StatusMark } from "@/features/inventory/inventory-editorial";
 import { PageHeader } from "@/features/shell/page-header";
 import { WorkspaceState } from "@/features/shell/workspace-state";
 import { apiClient, apiData } from "@/lib/api/client";
@@ -19,27 +17,35 @@ const columns: ColumnDef<DataTableFeatures, FulfillmentList["items"][number]>[] 
   {
     accessorKey: "number",
     header: "Order",
-    cell: ({ row }) => <span className="font-medium text-primary">{row.original.number}</span>,
+    cell: ({ row }) => <span className="font-medium text-foreground">{row.original.number}</span>,
   },
-  { accessorKey: "customer", header: "Customer" },
+  {
+    accessorKey: "customer",
+    header: "Customer",
+    cell: ({ row }) => <span className="text-foreground">{row.original.customer}</span>,
+  },
   {
     accessorKey: "fulfillmentStatus",
     header: "Status",
-    cell: ({ row }) => (
-      <Badge variant={row.original.fulfillmentStatus === "BACKORDER" ? "destructive" : "secondary"}>
-        {row.original.fulfillmentStatus.replaceAll("_", " ")}
-      </Badge>
-    ),
+    cell: ({ row }) => <StatusMark status={row.original.fulfillmentStatus} />,
   },
   {
     accessorKey: "promisedDate",
     header: "Promised by",
-    cell: ({ row }) => row.original.promisedDate ?? "Not set",
+    cell: ({ row }) => (
+      <span className="text-muted-foreground tabular-nums">
+        {row.original.promisedDate ?? "Not set"}
+      </span>
+    ),
   },
   {
     accessorKey: "createdAt",
     header: "Created",
-    cell: ({ row }) => new Date(row.original.createdAt).toLocaleDateString("en-IN"),
+    cell: ({ row }) => (
+      <span className="text-muted-foreground tabular-nums">
+        {new Date(row.original.createdAt).toLocaleDateString("en-IN")}
+      </span>
+    ),
   },
 ];
 
@@ -56,44 +62,42 @@ export function FulfillmentScreen() {
       ),
     { keepPreviousData: true },
   );
-  const live = useStockFeed();
   if (!data) return <WorkspaceState error={error} retry={() => void mutate()} />;
   const selectedOrder = data.items.find((item) => item.id === selected);
   return (
-    <>
+    <div className="w-full">
       <PageHeader
         title="Fulfillment"
         description="From a confirmed quote to a completed delivery. Choose an order to review its warehouse plan."
-        actions={<Badge variant="outline">{live}</Badge>}
       />
-      <Card>
-        <CardHeader>
-          <CardTitle>Order dispatch queue</CardTitle>
-          <CardDescription>
-            Minimum shipments, protected reservations, and a clear path through backorders.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <DataTable
-            columns={columns}
-            data={data.items}
-            getRowId={(row) => row.id}
-            manualPagination
-            pagination={pagination}
-            pageCount={Math.ceil(data.total / pagination.pageSize)}
-            onPaginationChange={setPagination}
-            onRowClick={(row) => setSelected(row.id)}
-            emptyMessage="Confirmed quotes will appear here automatically."
-          />
-        </CardContent>
-      </Card>
+      <section className="mt-10">
+        <DataTable
+          classNames={operationalTable}
+          title="Order dispatch queue"
+          description="Accept shipment, then Ship. Consolidate remaining backorder when stock arrives."
+          columns={columns}
+          data={data.items}
+          enableColumnResizing={false}
+          getRowId={(row) => row.id}
+          initialSorting={[{ id: "createdAt", desc: true }]}
+          manualPagination
+          pagination={pagination}
+          pageCount={Math.ceil(data.total / pagination.pageSize)}
+          onPaginationChange={setPagination}
+          onRowClick={(row) => setSelected(row.id)}
+          emptyMessage="Confirmed quotes will appear here automatically."
+        />
+      </section>
       {selectedOrder && (
         <FulfillmentDetailDialog
           id={selectedOrder.id}
           title={selectedOrder.number}
-          onClose={() => setSelected(undefined)}
+          onClose={() => {
+            setSelected(undefined);
+            void mutate();
+          }}
         />
       )}
-    </>
+    </div>
   );
 }

@@ -1,4 +1,4 @@
-import { asc, count, desc, eq } from "drizzle-orm";
+import { asc, count, desc, eq, inArray } from "drizzle-orm";
 
 import { stockDemand } from "@/features/inventory/stock";
 import { db } from "@/lib/db/connection";
@@ -7,30 +7,42 @@ import { reservations, stockMovements, stocks, warehouses } from "@/lib/db/schem
 import { DomainError } from "@/server/errors";
 
 export async function inventorySnapshot(page = 0, pageSize = 100) {
-  const [locations, balances, [total]] = await Promise.all([
-    db.select().from(warehouses).orderBy(warehouses.name).limit(100),
+  const [productRows, [total]] = await Promise.all([
     db
-      .select({
-        id: stocks.id,
-        warehouseId: stocks.warehouseId,
-        productId: stocks.productId,
-        onHand: stocks.onHand,
-        reserved: stocks.reserved,
-        version: stocks.version,
-        name: products.name,
-        variant: products.variant,
-        warehouse: warehouses.name,
-        replenishmentThreshold: warehouses.replenishmentThreshold,
-      })
-      .from(stocks)
-      .innerJoin(products, eq(products.id, stocks.productId))
-      .innerJoin(warehouses, eq(warehouses.id, stocks.warehouseId))
-      .orderBy(stocks.id)
+      .select({ id: products.id, name: products.name, variant: products.variant })
+      .from(products)
+      .where(eq(products.stockable, true))
+      .orderBy(asc(products.name), asc(products.id))
       .limit(pageSize)
       .offset(page * pageSize),
-    db.select({ count: count() }).from(stocks),
+    db.select({ count: count() }).from(products).where(eq(products.stockable, true)),
+  ]);
+  const productIds = productRows.map((product) => product.id);
+  const [locations, balances] = await Promise.all([
+    db.select().from(warehouses).orderBy(warehouses.name).limit(100),
+    productIds.length
+      ? db
+          .select({
+            id: stocks.id,
+            warehouseId: stocks.warehouseId,
+            productId: stocks.productId,
+            onHand: stocks.onHand,
+            reserved: stocks.reserved,
+            version: stocks.version,
+            name: products.name,
+            variant: products.variant,
+            warehouse: warehouses.name,
+            replenishmentThreshold: warehouses.replenishmentThreshold,
+          })
+          .from(stocks)
+          .innerJoin(products, eq(products.id, stocks.productId))
+          .innerJoin(warehouses, eq(warehouses.id, stocks.warehouseId))
+          .where(inArray(stocks.productId, productIds))
+          .orderBy(stocks.productId, stocks.id)
+      : Promise.resolve([]),
   ]);
   return {
+    products: productRows,
     warehouses: locations,
     stocks: balances.map((s) => ({ ...s, available: s.onHand - s.reserved })),
     total: total?.count ?? 0,
@@ -50,7 +62,7 @@ export async function fulfillmentList(page = 0, pageSize = 20) {
       })
       .from(orders)
       .innerJoin(customers, eq(orders.customerId, customers.id))
-      .orderBy(desc(orders.createdAt), asc(orders.id))
+      .orderBy(desc(orders.createdAt), desc(orders.id))
       .limit(pageSize)
       .offset(page * pageSize),
     db.select({ count: count() }).from(orders),
@@ -63,7 +75,7 @@ export async function fulfillmentDetail(id: string) {
     async (tx) => {
       const [order] = await tx.select().from(orders).where(eq(orders.id, id));
       if (!order) throw new DomainError("Order not found", 404);
-      const allocations = await tx
+      const reserved = await tx
         .select({
           id: reservations.id,
           productId: reservations.productId,
@@ -79,6 +91,9 @@ export async function fulfillmentDetail(id: string) {
         .innerJoin(products, eq(products.id, reservations.productId))
         .where(eq(reservations.orderId, id))
         .orderBy(reservations.productId, reservations.warehouseId);
+      // Hide released warehouse rows (quantity 0 after override). Keep rows that
+      // still hold shipped history (quantity === shipped > 0).
+      const allocations = reserved.filter((row) => row.quantity > 0);
       const backorders = stockDemand(order.lines)
         .map((line) => ({
           ...line,

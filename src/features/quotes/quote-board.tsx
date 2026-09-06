@@ -2,10 +2,11 @@
 
 import { useId, useState } from "react";
 import Link from "next/link";
-import { ArrowUpRight, GripVertical, Lock, MoveRight } from "lucide-react";
+import { ArrowUpRight, GripVertical, Lock } from "lucide-react";
 import { toast } from "sonner";
 import type { KeyedMutator } from "swr";
 
+import { eyebrowType } from "@/components/editorial/editorial";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -16,9 +17,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -40,6 +39,7 @@ import {
   planMove,
 } from "@/features/quotes/board-transitions";
 import { assertQuoteAction } from "@/features/quotes/client-action";
+import { RiskMark } from "@/features/quotes/quote-columns";
 import { money } from "@/features/quotes/rules";
 import { apiClient, apiData } from "@/lib/api/client";
 import type { Role } from "@/lib/domain/_types/domain";
@@ -53,6 +53,8 @@ interface PendingReason {
   columnLabel: string;
   quote: Quote;
 }
+
+/** Quiet label type: hierarchy from size, weight, case and letter-spacing, never from opacity. */
 
 function withQuoteStatus(
   workspace: WorkspaceResponse,
@@ -158,7 +160,7 @@ export function QuoteBoard({
 
   return (
     <>
-      <div className="-mx-1 flex items-start gap-3 overflow-x-auto pb-3 md:mx-0">
+      <div className="flex items-stretch overflow-x-auto pb-2">
         {BOARD_COLUMNS.map((column) => {
           const rows = quotes.filter((quote) => columnForStatus(quote.status) === column.id);
           const dropPlan = dragging
@@ -167,7 +169,7 @@ export function QuoteBoard({
           const isValidTarget = dropPlan?.ok === true;
           const isOver = overColumn === column.id;
           return (
-            <Card
+            <div
               key={column.id}
               data-column={column.id}
               onDragOver={(event) => {
@@ -188,150 +190,140 @@ export function QuoteBoard({
                 if (quote) requestMove(quote, column.id);
               }}
               className={cn(
-                "w-[min(100%,19rem)] shrink-0 overflow-visible bg-muted/30 transition-colors sm:w-80",
-                isOver && isValidTarget && "ring-2 ring-primary/60",
-                isOver && dragging && !isValidTarget && "ring-2 ring-destructive/40",
-                dragging && !isValidTarget && "opacity-70",
-                column.terminal && "bg-muted/50",
+                "w-[min(100%,19rem)] shrink-0 border-l border-border px-5 pb-4 transition-colors first:border-l-0 first:pl-0 sm:w-80",
+                column.terminal && "bg-muted/40",
+                dragging && isValidTarget && "bg-muted/60",
+                isOver && isValidTarget && "bg-muted",
               )}
             >
-              <CardHeader className="grid-rows-none">
-                <CardTitle className="flex items-center justify-between text-sm">
-                  <span className="flex items-center gap-1.5">
-                    {column.terminal && <Lock className="size-3.5 text-muted-foreground" />}
-                    {column.label}
-                  </span>
-                  <Badge variant="outline">{rows.length}</Badge>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="flex flex-col gap-3 pb-1">
-                {rows.map((quote) => {
-                  const locked = isTerminalStatus(quote.status);
-                  const targets = locked ? [] : allowedTargetColumns(quote, role);
-                  const hint = targets.length === 0 ? boardCardHint(quote, role) : null;
-                  const busy = busyId === quote.id;
-                  const movable = !locked && !busy && targets.length > 0;
-                  return (
-                    <Card
-                      key={quote.id}
-                      size="sm"
-                      draggable={movable}
-                      aria-disabled={!movable}
-                      onDragStart={(event) => {
-                        if (!movable) {
-                          event.preventDefault();
-                          return;
-                        }
-                        event.dataTransfer.effectAllowed = "move";
-                        event.dataTransfer.setData("text/plain", quote.id);
-                        setDragging(quote);
-                      }}
-                      onDragEnd={() => {
-                        setDragging(null);
-                        setOverColumn(null);
-                      }}
-                      className={cn(
-                        "overflow-visible shadow-none",
-                        movable && "cursor-grab active:cursor-grabbing",
-                        busy && "opacity-60",
-                        dragging?.id === quote.id && "opacity-40",
-                      )}
-                    >
-                      <CardHeader className="grid-rows-none gap-2">
-                        <div className="flex items-start justify-between gap-2">
-                          <p className="flex items-center gap-1 text-xs text-muted-foreground">
-                            {movable ? (
-                              <GripVertical
-                                aria-hidden
-                                className="size-3.5 text-muted-foreground"
-                              />
-                            ) : (
-                              <Lock className="size-3" />
-                            )}
-                            {quote.number}
-                          </p>
-                          <Badge
-                            variant={quote.risk === "HIGH" ? "destructive" : "secondary"}
-                            className="shrink-0"
-                          >
-                            {quote.risk === "NONE" ? "Within policy" : `${quote.risk} risk`}
-                          </Badge>
-                        </div>
-                        <CardTitle className="text-sm leading-5">
-                          {customerName(quote.customerId)}
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <p className="text-lg font-semibold tabular-nums">
-                          {money(quote.totalCents)}
-                        </p>
-                      </CardContent>
-                      <CardFooter className="justify-between gap-2">
-                        {hint ? (
-                          <Badge variant="outline" className="max-w-44 min-w-0 gap-1 truncate">
-                            {locked && <Lock className="size-3" />}
-                            {hint}
-                          </Badge>
-                        ) : (
-                          <DropdownMenu>
-                            <DropdownMenuTrigger
-                              render={
-                                <Button
-                                  size="xs"
-                                  variant="outline"
-                                  disabled={busy}
-                                  aria-label={`Move ${quote.number} to another stage`}
-                                />
-                              }
-                            >
-                              <MoveRight />
-                              Move
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="start">
-                              <DropdownMenuGroup>
-                                <DropdownMenuLabel>Move to stage</DropdownMenuLabel>
-                                <DropdownMenuSeparator />
-                                {targets.map((targetId) => (
-                                  <DropdownMenuItem
-                                    key={targetId}
-                                    variant={targetId === "rejected" ? "destructive" : "default"}
-                                    onClick={() => requestMove(quote, targetId)}
-                                  >
-                                    {BOARD_COLUMNS.find((item) => item.id === targetId)?.label}
-                                  </DropdownMenuItem>
-                                ))}
-                              </DropdownMenuGroup>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        )}
-                        <Button
-                          size="icon-sm"
-                          variant="ghost"
-                          nativeButton={false}
-                          render={
-                            <Link
-                              aria-label={`Open ${quote.number}`}
-                              href={`/quotations/${quote.id}`}
-                            />
-                          }
-                        >
-                          <ArrowUpRight />
-                        </Button>
-                      </CardFooter>
-                    </Card>
-                  );
-                })}
-                {!rows.length && (
-                  <p className="py-8 text-center text-sm text-muted-foreground">
-                    {isOver && dragging
-                      ? isValidTarget
-                        ? `Drop ${dragging.number} here`
-                        : "This stage change is not allowed"
-                      : "No deals in this stage"}
-                  </p>
+              <div
+                className={cn(
+                  "flex items-baseline justify-between gap-3 border-b border-border-strong pb-2.5",
+                  isOver && isValidTarget && "border-b-2 border-ink-accent",
+                  isOver && dragging && !isValidTarget && "border-b-2 border-ink-risk",
                 )}
-              </CardContent>
-            </Card>
+              >
+                <p className={cn(eyebrowType, "flex items-center gap-1.5 text-foreground")}>
+                  {column.terminal && <Lock className="size-3 text-muted-foreground" />}
+                  {column.label}
+                </p>
+                <span className="text-sm text-muted-foreground tabular-nums">{rows.length}</span>
+              </div>
+              {rows.map((quote) => {
+                const locked = isTerminalStatus(quote.status);
+                const targets = locked ? [] : allowedTargetColumns(quote, role);
+                const hint = targets.length === 0 ? boardCardHint(quote, role) : null;
+                const busy = busyId === quote.id;
+                const movable = !locked && !busy && targets.length > 0;
+                return (
+                  <div
+                    key={quote.id}
+                    draggable={movable}
+                    aria-disabled={!movable}
+                    onDragStart={(event) => {
+                      if (!movable) {
+                        event.preventDefault();
+                        return;
+                      }
+                      event.dataTransfer.effectAllowed = "move";
+                      event.dataTransfer.setData("text/plain", quote.id);
+                      setDragging(quote);
+                    }}
+                    onDragEnd={() => {
+                      setDragging(null);
+                      setOverColumn(null);
+                    }}
+                    className={cn(
+                      "border-b border-border py-4 transition-colors",
+                      movable && "cursor-grab active:cursor-grabbing",
+                      busy && "bg-muted/70",
+                      dragging?.id === quote.id && "bg-muted",
+                    )}
+                  >
+                    <div className="flex items-baseline justify-between gap-3 text-xs">
+                      <p className="flex items-center gap-1.5 text-muted-foreground tabular-nums">
+                        {movable ? (
+                          <GripVertical aria-hidden className="size-3.5 text-muted-foreground" />
+                        ) : (
+                          <Lock className="size-3" />
+                        )}
+                        {quote.number}
+                      </p>
+                      <RiskMark
+                        risk={quote.risk}
+                        label={quote.risk === "NONE" ? "Within policy" : `${quote.risk} risk`}
+                      />
+                    </div>
+                    <p className="mt-2.5 text-sm leading-5 text-foreground">
+                      {customerName(quote.customerId)}
+                    </p>
+                    <p className="mt-1.5 text-xl leading-none font-medium tracking-tight text-foreground tabular-nums">
+                      {money(quote.totalCents)}
+                    </p>
+                    <div className="mt-4 flex items-center justify-between gap-2">
+                      {hint ? (
+                        <p className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
+                          {locked && <Lock className="size-3 shrink-0" />}
+                          <span className="truncate">{hint}</span>
+                        </p>
+                      ) : (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger
+                            render={
+                              <Button
+                                size="xs"
+                                variant="outline"
+                                disabled={busy}
+                                aria-label={`Move ${quote.number} to another stage`}
+                              />
+                            }
+                          >
+                            Move
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="start">
+                            <DropdownMenuGroup>
+                              <DropdownMenuLabel>Move to stage</DropdownMenuLabel>
+                              <DropdownMenuSeparator />
+                              {targets.map((targetId) => (
+                                <DropdownMenuItem
+                                  key={targetId}
+                                  variant={targetId === "rejected" ? "destructive" : "default"}
+                                  onClick={() => requestMove(quote, targetId)}
+                                >
+                                  {BOARD_COLUMNS.find((item) => item.id === targetId)?.label}
+                                </DropdownMenuItem>
+                              ))}
+                            </DropdownMenuGroup>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      )}
+                      <Button
+                        size="icon-sm"
+                        variant="ghost"
+                        nativeButton={false}
+                        render={
+                          <Link
+                            aria-label={`Open ${quote.number}`}
+                            href={`/quotations/${quote.id}`}
+                          />
+                        }
+                      >
+                        <ArrowUpRight />
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })}
+              {!rows.length && (
+                <p className="py-8 text-sm text-muted-foreground">
+                  {isOver && dragging
+                    ? isValidTarget
+                      ? `Drop ${dragging.number} here`
+                      : "This stage change is not allowed"
+                    : "No deals in this stage"}
+                </p>
+              )}
+            </div>
           );
         })}
       </div>

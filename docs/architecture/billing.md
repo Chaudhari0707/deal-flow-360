@@ -22,7 +22,7 @@ flowchart LR
   O --> F[Independent stock and shipment progress]
 ```
 
-An invoice never mixes recurring and one-time streams. All money is USD integer cents, and
+An invoice never mixes recurring and one-time streams. All money is INR integer paise, and
 accepted quote lines retain their commercial snapshots. A rational price basis preserves the accepted
 net charge and quantity, preventing penny drift across repeated quantity changes. No invoice or payment implies shipment.
 The manual **Run due billing** operation catches up missed periods and is safe to retry.
@@ -37,9 +37,9 @@ Leap years use the real calendar. A period starts when the quote confirms. Recur
 are due at the start of each issued period.
 
 The unused portion is `(new charge - old charge) × remaining days / actual period days`.
-Cents use half-up rounding, including negative adjustments. For example, a $46 April charge
-cancelled on April 16 produces a $23 credit for 15 unused days out of 30. Increasing the same
-charge to $92 on April 16 produces a $23 additional invoice.
+Cents use half-up rounding, including negative adjustments. For example, a ₹46 April charge
+cancelled on April 16 produces a ₹23 credit for 15 unused days out of 30. Increasing the same
+charge to ₹92 on April 16 produces a ₹23 additional invoice.
 
 Quantity and plan changes take effect immediately. A plan change must retain the same cadence
 and tax rate; cross-cadence conversion and pause/resume are intentionally unavailable in this
@@ -53,9 +53,11 @@ same identity is rejected.
 Cancellation keeps issued invoices and stops future periods. Unused billed service creates
 credit notes linked to eligible source invoices. Credits cannot exceed that source's billed
 value, including credits already issued. Credits first reduce that source's unpaid balance;
-credit remaining after a prepaid invoice is preserved as available customer credit. This is
-not a cash refund, and automatic application of available credit to a different invoice is
-not implemented.
+credit remaining after a prepaid invoice is preserved as **available customer credit** owed to
+that customer (not locked forever to the source invoice). This is not a cash refund.
+Finance may **manually** apply available customer credit to any unpaid invoice for the same
+customer (`POST /api/v1/invoices/:id/apply-credit`). Automatic application of available credit
+to a different invoice is not implemented.
 
 Invoices issued with zero outstanding balance are immediately `PAID` (settled), including free
 products, fully discounted lines and free recurring renewals. No payment ledger row or cash

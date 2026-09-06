@@ -15,6 +15,8 @@
 - A handler that returns a Promise and declares a response schema MUST be `async`, including a thin
   delegate such as `async (...) => service(...)`. Otherwise the compiled Next.js adapter can
   validate the Promise object and return `400`.
+- Do not return fields the declared 200 schema omits. With `normalize: false`, extra keys 400 after
+  the write commits, so a retry can succeed while the first click looks like a failure.
 - Browser JSON calls use the shared relative same-origin `treaty<Api>` client with a type-only API
   import and shared result/error adapter. Preserve cookies and date transport semantics; do not add
   raw fetch wrappers, handwritten response types, or generic JSON casts. Keep native downloads for

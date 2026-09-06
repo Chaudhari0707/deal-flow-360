@@ -2,14 +2,21 @@
 
 import { type FormEvent, useState } from "react";
 
+import { eyebrowType } from "@/components/editorial/editorial";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { NumberInput } from "@/components/ui/number-input";
 import type { PortalDetail } from "@/features/portal/_types/portal";
+import {
+  currentCalendarDate,
+  isCurrentOrFutureCalendarDate,
+} from "@/features/quotes/delivery-date";
 import { apiClient, apiData, HttpResponseError } from "@/lib/api/client";
+import { cn } from "@/lib/utils";
+
+/** Quiet label type: hierarchy from size, weight, case and letter-spacing, never from opacity. */
 
 export function PortalCounter({
   data,
@@ -21,6 +28,7 @@ export function PortalCounter({
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const minimumDeliveryDate = currentCalendarDate();
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
@@ -29,6 +37,11 @@ export function PortalCounter({
       discountBps: Math.round(Number(form.get(line.id)) * 100),
     }));
     const promisedDate = String(form.get("promisedDate") ?? "");
+    if (promisedDate && !isCurrentOrFutureCalendarDate(promisedDate)) {
+      setError("Requested delivery date must be today or later");
+      setNotice("");
+      return;
+    }
     setPending(true);
     setError("");
     setNotice("");
@@ -53,56 +66,55 @@ export function PortalCounter({
     }
   }
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Request a change</CardTitle>
-        <CardDescription>
-          Propose a line discount or delivery date. Your account manager will review the updated
-          quotation.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <form method="post" onSubmit={submit}>
-          <FieldGroup>
-            {data.quote.lines.map((line) => (
-              <Field key={line.id}>
-                <FieldLabel htmlFor={`discount-${line.id}`}>{line.name} · discount (%)</FieldLabel>
-                <NumberInput
-                  id={`discount-${line.id}`}
-                  name={line.id}
-                  min="0"
-                  max="100"
-                  step="0.01"
-                  required
-                  defaultValue={line.discountBps / 100}
-                />
-              </Field>
-            ))}
-            <Field>
-              <FieldLabel htmlFor="counter-date">Requested delivery date</FieldLabel>
-              <Input
-                id="counter-date"
-                name="promisedDate"
-                type="date"
-                defaultValue={data.quote.promisedDate ?? ""}
+    <section>
+      <div className="border-b border-border-strong pb-3">
+        <h2 className={cn(eyebrowType, "text-foreground")}>Request a change</h2>
+      </div>
+      <p className="mt-5 max-w-[52ch] text-sm leading-relaxed text-muted-foreground">
+        Propose a line discount or delivery date. Your account manager will review the updated
+        quotation.
+      </p>
+      <form method="post" onSubmit={submit} className="mt-7">
+        <FieldGroup>
+          {data.quote.lines.map((line) => (
+            <Field key={line.id}>
+              <FieldLabel htmlFor={`discount-${line.id}`}>{line.name} · discount (%)</FieldLabel>
+              <NumberInput
+                id={`discount-${line.id}`}
+                name={line.id}
+                min="0"
+                max="100"
+                step="0.01"
+                required
+                defaultValue={line.discountBps / 100}
               />
             </Field>
-            {error && (
-              <Alert variant="destructive">
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            )}
-            {notice && (
-              <Alert role="status">
-                <AlertDescription>{notice}</AlertDescription>
-              </Alert>
-            )}
-            <Button type="submit" variant="outline" disabled={pending}>
-              {pending ? "Sending request…" : "Request changes"}
-            </Button>
-          </FieldGroup>
-        </form>
-      </CardContent>
-    </Card>
+          ))}
+          <Field>
+            <FieldLabel htmlFor="counter-date">Requested delivery date</FieldLabel>
+            <Input
+              id="counter-date"
+              name="promisedDate"
+              type="date"
+              min={minimumDeliveryDate}
+              defaultValue={data.quote.promisedDate ?? ""}
+            />
+          </Field>
+          {error && (
+            <Alert variant="destructive">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+          {notice && (
+            <Alert role="status">
+              <AlertDescription>{notice}</AlertDescription>
+            </Alert>
+          )}
+          <Button type="submit" variant="outline" className="self-start" disabled={pending}>
+            {pending ? "Sending request…" : "Request changes"}
+          </Button>
+        </FieldGroup>
+      </form>
+    </section>
   );
 }

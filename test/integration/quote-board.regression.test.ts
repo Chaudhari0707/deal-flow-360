@@ -102,6 +102,25 @@ function draftInput(productId: string, discountBps: number) {
 }
 
 describe("board moves drive the persisted quotation status", () => {
+  test("quotation API rejects a past delivery date and persists an allowed future date", async () => {
+    const before = await db.select().from(quotes).where(eq(quotes.customerId, customerId));
+    const past = await request("/quotes", "rep", {
+      ...draftInput(richProductId, 0),
+      promisedDate: "2000-01-01",
+    });
+    expect(past.status).toBe(400);
+    expect(await db.select().from(quotes).where(eq(quotes.customerId, customerId))).toHaveLength(
+      before.length,
+    );
+
+    const future = await request("/quotes", "rep", {
+      ...draftInput(richProductId, 0),
+      promisedDate: "2099-01-01",
+    });
+    expect(future.status).toBe(200);
+    expect((await future.json()).promisedDate).toBe("2099-01-01");
+  });
+
   test("rep submit -> manager approve follows the board plan and persists each status", async () => {
     const draft = await saveQuote(draftInput(cheapProductId, 5000), accounts.rep!.actor);
     expect(await statusOf(draft.id)).toBe("DRAFT");

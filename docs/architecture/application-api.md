@@ -20,6 +20,12 @@ The macro resolves a typed actor from Better Auth headers and enforces mutation 
 link identity remains a separate, quote-scoped boundary. SQL resource scoping and transactional
 invariants stay inside the appropriate query or mutation operation.
 
+Role lists are shared with navigation and page guards through `src/lib/domain/permissions.ts`.
+The `/me` identity endpoint permits temporary-password accounts to discover their next step;
+protected domain actions and credential portal access require completion of password replacement.
+Customer provisioning adds public invitation status and retry contracts; see
+[customer onboarding](customer-onboarding.md) and [role access](role-access.md).
+
 Every route validates external input and declares successful plus stable error responses. Reusable
 schemas feed both OpenAPI and the exported `typeof api` contract. A Promise-returning handler with
 a response schema is always declared `async`; compiled App Router validation must receive the

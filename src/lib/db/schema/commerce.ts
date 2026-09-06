@@ -28,6 +28,7 @@ export const profiles = pgTable("profiles", {
     .references(() => user.id, { onDelete: "cascade" }),
   role: text("role").$type<Role>().notNull().default("rep"),
   customerId: text("customer_id").references(() => customers.id),
+  mustChangePassword: boolean("must_change_password").notNull().default(false),
 });
 
 export const products = pgTable(
@@ -53,6 +54,10 @@ export const products = pgTable(
     check(
       "product_amounts",
       sql`${t.priceCents} >= 0 AND ${t.costCents} >= 0 AND ${t.taxBps} BETWEEN 0 AND 10000`,
+    ),
+    check(
+      "product_upsell_limit",
+      sql`jsonb_typeof(${t.pairedProductIds}) = 'array' AND jsonb_array_length(${t.pairedProductIds}) <= 5`,
     ),
   ],
 );

@@ -4,10 +4,10 @@ import { CalendarSyncIcon } from "lucide-react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { DataTable } from "@/components/ui/data-table";
+import { DataTable, DataTableDefaultToolbar } from "@/components/ui/data-table";
 import {
   Dialog,
+  DialogBody,
   DialogContent,
   DialogDescription,
   DialogFooter,
@@ -32,14 +32,23 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { eyebrowType, StatusMark } from "@/features/billing/invoice-editorial";
 import { subscriptionPreview } from "@/features/billing/subscription-preview";
-import { subscriptionColumns } from "@/features/billing/table-columns";
+import { billingTableStyles, subscriptionColumns } from "@/features/billing/table-columns";
 import { useBillingAction } from "@/features/billing/use-billing-action";
 import { displayDate, displayStatus, money } from "@/features/shell/format";
 import { PageHeader } from "@/features/shell/page-header";
 import { useWorkspace } from "@/features/shell/use-workspace";
 import { WorkspaceState } from "@/features/shell/workspace-state";
 import { apiClient, apiData } from "@/lib/api/client";
+import { cn } from "@/lib/utils";
+
+/**
+ * The invoice history is a small static summary, so it uses the table primitive directly: the
+ * ported primitive already carries the letterspaced header rule and hairline rows, and only the
+ * column gutter is set here.
+ */
+const historyGutter = "px-0 pr-6 last:pr-0";
 
 export function SubscriptionWorkspace() {
   const { data, error, mutate } = useWorkspace();
@@ -59,7 +68,7 @@ export function SubscriptionWorkspace() {
   const cadence = (months: number) =>
     months === 12 ? "Yearly" : months === 3 ? "Quarterly" : "Monthly";
   return (
-    <>
+    <div className="mx-auto w-full max-w-300 pb-6">
       <PageHeader
         title="Subscriptions"
         description="Recurring revenue with clear billing periods, actual-day adjustments and a preserved invoice history."
@@ -81,58 +90,58 @@ export function SubscriptionWorkspace() {
         }
       />
       {action.error && (
-        <Alert variant="destructive">
+        <Alert variant="destructive" className="mt-8">
           <AlertTitle>Action could not complete</AlertTitle>
           <AlertDescription>{action.error}</AlertDescription>
         </Alert>
       )}
       {action.message && (
-        <Alert>
+        <Alert className="mt-8">
           <AlertDescription>{action.message}</AlertDescription>
         </Alert>
       )}
-      <Card>
-        <CardHeader>
-          <CardTitle>Recurring contracts</CardTitle>
-          <Input
-            aria-label="Search subscriptions"
-            placeholder="Search plan, customer or order"
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-          />
-          <CardDescription>
-            Monthly, quarterly and yearly cadences. Period end is exclusive and uses UTC calendar
-            days.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <DataTable
-            columns={subscriptionColumns}
-            data={data.subscriptions
-              .map((entry) => ({
-                ...entry,
-                orderNumber:
-                  data.orders.find((order) => order.id === entry.orderId)?.number ?? entry.orderId,
-                customerName:
-                  data.customers.find((customer) => customer.id === entry.customerId)?.name ??
-                  "Customer",
-              }))
-              .filter((entry) =>
-                `${entry.name} ${entry.customerName} ${entry.orderNumber}`
-                  .toLowerCase()
-                  .includes(search.toLowerCase()),
-              )}
-            getRowId={(row) => row.id}
-            onRowClick={(row) => {
-              setSelected(row.id);
-              setQuantity(row.quantity);
-              setProductId(row.productId);
-              setReason("");
-            }}
-            emptyMessage="Confirm a quote with a recurring product to start a subscription."
-          />
-        </CardContent>
-      </Card>
+      <section className="mt-11">
+        <DataTable
+          toolbar={(table, extras) => (
+            <DataTableDefaultToolbar
+              table={table}
+              title="Recurring contracts"
+              description="Monthly, quarterly, and yearly plans."
+              searchValue={search}
+              onSearchValueChange={setSearch}
+              searchLabel="Search subscriptions"
+              searchPlaceholder="Search plan, customer or order"
+              actions={extras.bulkRemove}
+            />
+          )}
+          classNames={billingTableStyles}
+          columns={subscriptionColumns}
+          data={data.subscriptions
+            .map((entry) => ({
+              ...entry,
+              orderNumber:
+                data.orders.find((order) => order.id === entry.orderId)?.number ?? entry.orderId,
+              customerName:
+                data.customers.find((customer) => customer.id === entry.customerId)?.name ??
+                "Customer",
+            }))
+            .filter((entry) =>
+              `${entry.name} ${entry.customerName} ${entry.orderNumber}`
+                .toLowerCase()
+                .includes(search.toLowerCase()),
+            )}
+          enableColumnResizing={false}
+          getRowId={(row) => row.id}
+          initialSorting={[{ id: "createdAt", desc: true }]}
+          onRowClick={(row) => {
+            setSelected(row.id);
+            setQuantity(row.quantity);
+            setProductId(row.productId);
+            setReason("");
+          }}
+          emptyMessage="Confirm a quote with a recurring product to start a subscription."
+        />
+      </section>
       {subscription && (
         <Dialog
           open
@@ -141,20 +150,22 @@ export function SubscriptionWorkspace() {
           }}
         >
           <DialogContent className="sm:max-w-3xl">
-            <DialogHeader>
-              <DialogTitle>{subscription.name}</DialogTitle>
-              <DialogDescription>
+            <DialogHeader className="gap-3 border-b border-border-strong pb-4">
+              <DialogTitle className="text-xl leading-none tracking-tight">
+                {subscription.name}
+              </DialogTitle>
+              <DialogDescription className="max-w-[76ch] leading-relaxed">
                 {displayDate(subscription.periodStart)} to {displayDate(subscription.periodEnd)} ·{" "}
                 {cadence(subscription.intervalMonths)} · Invoice history is retained after
                 cancellation.
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-5">
+            <DialogBody className="space-y-8">
               {canManage && subscription.status === "ACTIVE" ? (
                 <form
                   id="subscription-change"
                   method="post"
-                  className="space-y-5"
+                  className="space-y-6"
                   onSubmit={(event) => {
                     event.preventDefault();
                     if (valid)
@@ -175,7 +186,7 @@ export function SubscriptionWorkspace() {
                       );
                   }}
                 >
-                  <div className="grid gap-5 md:grid-cols-3">
+                  <div className="grid gap-x-8 gap-y-6 md:grid-cols-3">
                     <Field>
                       <FieldLabel>Plan</FieldLabel>
                       <Select
@@ -217,7 +228,15 @@ export function SubscriptionWorkspace() {
                         onValueChange={(value) => setQuantity(value ?? Number.NaN)}
                       />
                       {(!Number.isInteger(quantity) || quantity < 1 || quantity > 10000) && (
-                        <FieldError>Enter 1 to 10,000 whole units.</FieldError>
+                        <FieldError>
+                          {!Number.isFinite(quantity)
+                            ? "Enter a quantity."
+                            : !Number.isInteger(quantity)
+                              ? "Use a whole number (no decimals)."
+                              : quantity < 1
+                                ? "Enter at least 1."
+                                : "Enter at most 10,000."}
+                        </FieldError>
                       )}
                     </Field>
                     <Field>
@@ -257,29 +276,45 @@ export function SubscriptionWorkspace() {
                   </AlertDescription>
                 </Alert>
               )}
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Invoice</TableHead>
-                    <TableHead>Stream</TableHead>
-                    <TableHead>Total</TableHead>
-                    <TableHead>Status</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {data.invoices
-                    .filter((entry) => entry.subscriptionId === subscription.id)
-                    .map((entry) => (
-                      <TableRow key={entry.id}>
-                        <TableCell>{entry.number}</TableCell>
-                        <TableCell>{displayStatus(entry.kind)}</TableCell>
-                        <TableCell>{money(entry.totalCents)}</TableCell>
-                        <TableCell>{displayStatus(entry.status)}</TableCell>
-                      </TableRow>
-                    ))}
-                </TableBody>
-              </Table>
-            </div>
+              <section>
+                <h3 className={cn(eyebrowType, "text-muted-foreground")}>Invoice history</h3>
+                <Table className="mt-4 text-[0.8125rem]">
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className={historyGutter}>Invoice</TableHead>
+                      <TableHead className={historyGutter}>Stream</TableHead>
+                      <TableHead className={cn(historyGutter, "text-right")}>Total</TableHead>
+                      <TableHead className={historyGutter}>Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {data.invoices
+                      .filter((entry) => entry.subscriptionId === subscription.id)
+                      .map((entry) => (
+                        <TableRow key={entry.id}>
+                          <TableCell className={cn(historyGutter, "font-medium text-foreground")}>
+                            {entry.number}
+                          </TableCell>
+                          <TableCell className={cn(historyGutter, "text-muted-foreground")}>
+                            {displayStatus(entry.kind)}
+                          </TableCell>
+                          <TableCell
+                            className={cn(historyGutter, "text-right font-medium tabular-nums")}
+                          >
+                            {money(entry.totalCents)}
+                          </TableCell>
+                          <TableCell className={historyGutter}>
+                            <StatusMark
+                              label={displayStatus(entry.status)}
+                              tone={entry.status === "PAID" ? "settled" : "open"}
+                            />
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                  </TableBody>
+                </Table>
+              </section>
+            </DialogBody>
             <DialogFooter showCloseButton>
               {canManage && subscription.status === "ACTIVE" && (
                 <>
@@ -318,6 +353,6 @@ export function SubscriptionWorkspace() {
           </DialogContent>
         </Dialog>
       )}
-    </>
+    </div>
   );
 }

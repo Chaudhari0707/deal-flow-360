@@ -149,6 +149,7 @@ test("finance records a full payment, downloads real documents and cancels recur
   await expect(page.getByRole("heading", { name: "Reports", exact: true })).toBeVisible();
   await expect(page.getByText("Quotes created", { exact: true })).toBeVisible();
   await expect(page.getByText("Quotations and confirmed orders", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Show filters", exact: true }).click();
   for (const filter of [
     {
       label: "Report representative",
@@ -187,15 +188,17 @@ test("finance records a full payment, downloads real documents and cancels recur
     const report = await response.json();
     expect(report.sales.quotes.some((entry: { id: string }) => entry.id === quote.id)).toBe(true);
   }
+  await page.getByRole("tab", { name: "Financial report", exact: true }).click();
   const excelDownload = page.waitForEvent("download");
-  await page.getByRole("button", { name: "Download report Excel" }).click();
+  await page.getByRole("button", { name: "Download financial report Excel", exact: true }).click();
   const excel = await excelDownload;
   expect(excel.suggestedFilename()).toBe("dealflow-report.xlsx");
   const excelPath = await excel.path();
   expect(
     new TextDecoder().decode(new Uint8Array(await Bun.file(excelPath!).arrayBuffer()).slice(0, 2)),
   ).toBe("PK");
+  await page.getByRole("tab", { name: "Sales report", exact: true }).click();
   const reportDownload = page.waitForEvent("download");
-  await page.getByRole("button", { name: "Download report PDF" }).click();
+  await page.getByRole("button", { name: "Download sales report PDF", exact: true }).click();
   expect((await reportDownload).suggestedFilename()).toBe("dealflow-report.pdf");
 });

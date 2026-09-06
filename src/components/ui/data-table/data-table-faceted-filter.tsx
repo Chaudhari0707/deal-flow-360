@@ -1,8 +1,8 @@
 import { type Column, type RowData } from "@tanstack/react-table";
-import { Check, CirclePlus, type LucideIcon } from "lucide-react";
+import { Check, type LucideIcon } from "lucide-react";
 
+import { eyebrowType } from "@/components/editorial/editorial";
 import type { DataTableFeatures } from "@/components/ui/_types/data-table";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Command,
@@ -16,6 +16,8 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
+
+/** Quiet label type: hierarchy from size, weight, case and letter-spacing, never from opacity. */
 
 interface DataTableFacetedFilterProps<TData extends RowData, TValue> {
   column?: Column<DataTableFeatures, TData, TValue>;
@@ -38,34 +40,33 @@ export function DataTableFacetedFilter<TData extends RowData, TValue>({
 
   return (
     <Popover>
-      <PopoverTrigger render={<Button variant="outline" size="sm" className="h-8 border-dashed" />}>
-        <CirclePlus aria-hidden="true" className="size-4" />
+      <PopoverTrigger
+        render={
+          <Button
+            variant="outline"
+            size="sm"
+            className={cn(
+              eyebrowType,
+              "h-8 rounded-none bg-transparent px-3 text-muted-foreground hover:text-foreground",
+            )}
+          />
+        }
+      >
         {title}
         {selectedValues?.size > 0 && (
           <>
-            <Separator orientation="vertical" className="mx-2 h-4" />
-            <Badge variant="secondary" className="rounded-sm px-1 font-normal lg:hidden">
-              {selectedValues.size}
-            </Badge>
-            <div className="hidden gap-1 lg:flex">
+            {/* Selection reads as text past a hairline rule rather than as a cluster of pills. */}
+            <Separator orientation="vertical" className="mx-2 h-3.5 bg-border-strong" />
+            <span className="text-foreground tabular-nums lg:hidden">{selectedValues.size}</span>
+            <span className="hidden items-center gap-2 text-foreground lg:flex">
               {selectedValues.size > 2 ? (
-                <Badge variant="secondary" className="rounded-sm px-1 font-normal">
-                  {selectedValues.size} selected
-                </Badge>
+                <span className="tabular-nums">{selectedValues.size} selected</span>
               ) : (
                 options
                   .filter((option) => selectedValues.has(option.value))
-                  .map((option) => (
-                    <Badge
-                      variant="secondary"
-                      key={option.value}
-                      className="rounded-sm px-1 font-normal"
-                    >
-                      {option.label}
-                    </Badge>
-                  ))
+                  .map((option) => <span key={option.value}>{option.label}</span>)
               )}
-            </div>
+            </span>
           </>
         )}
       </PopoverTrigger>
@@ -92,20 +93,18 @@ export function DataTableFacetedFilter<TData extends RowData, TValue>({
                   >
                     <div
                       className={cn(
-                        "mr-2 flex size-4 items-center justify-center rounded-sm border border-primary",
-                        isSelected
-                          ? "border-primary bg-primary text-primary-foreground"
-                          : "border-input [&_svg]:invisible",
+                        "flex size-4 shrink-0 items-center justify-center border border-border-strong",
+                        isSelected ? "bg-primary text-primary-foreground" : "[&_svg]:invisible",
                       )}
                     >
-                      <Check aria-hidden="true" className="size-3.5 text-primary-foreground" />
+                      <Check aria-hidden="true" className="size-3" />
                     </div>
                     {option.icon ? (
                       <option.icon aria-hidden="true" className="size-4 text-muted-foreground" />
                     ) : null}
                     <span>{option.label}</span>
                     {facets?.get(option.value) && (
-                      <span className="ml-auto flex size-4 items-center justify-center font-mono text-xs text-muted-foreground">
+                      <span className="ml-auto text-xs text-muted-foreground tabular-nums">
                         {facets.get(option.value)}
                       </span>
                     )}
@@ -119,7 +118,7 @@ export function DataTableFacetedFilter<TData extends RowData, TValue>({
                 <CommandGroup>
                   <CommandItem
                     onSelect={() => column?.setFilterValue(undefined)}
-                    className="justify-center text-center"
+                    className={cn(eyebrowType, "justify-center text-center text-muted-foreground")}
                   >
                     Clear filters
                   </CommandItem>

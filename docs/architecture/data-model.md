@@ -63,7 +63,8 @@ order for that quote in the same transaction as initial reservations and billing
 
 Audit records preserve actor, entity, action, reason, revision and relevant changes. Delivery records
 preserve intent and provider status; token material inside delivery intent is encrypted, while access
-lookups use digests. Settings contain the editable discount, tier-price, health and upsell policies.
+lookups use digests. Settings contain the editable discount, tier-price, health, and approval-chain
+policies.
 
 The application uses one selling organization. Customer IDs are ownership boundaries for customer
 data, not separate SaaS tenants. Larger tenancy or accounting requirements need a new explicit

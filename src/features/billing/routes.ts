@@ -2,13 +2,23 @@ import { eq } from "drizzle-orm";
 import { Elysia, t } from "elysia";
 
 import { invoicePdf, reportPdf, reportSpreadsheet } from "@/features/billing/documents";
-import { billingRunModel, paymentResultModel } from "@/features/billing/model";
+import {
+  applyCreditResultModel,
+  billingRunModel,
+  paymentResultModel,
+} from "@/features/billing/model";
 import { financialReport } from "@/features/billing/reports";
 import { reportOptions, salesReport } from "@/features/billing/sales-report";
-import { changeSubscription, recordPayment, runDueBilling } from "@/features/billing/service";
+import {
+  applyCustomerCredit,
+  changeSubscription,
+  recordPayment,
+  runDueBilling,
+} from "@/features/billing/service";
 import { db } from "@/lib/db/connection";
 import { invoices } from "@/lib/db/schema/billing";
 import { customers, orders, quotes } from "@/lib/db/schema/commerce";
+import { permissions } from "@/lib/domain/permissions";
 import { actorContext } from "@/server/access";
 import { DomainError } from "@/server/errors";
 import { apiErrorResponses, openApiErrorResponses, subscriptionModel } from "@/server/models";
@@ -54,21 +64,35 @@ export const billingRoutes = new Elysia({ name: "billing", tags: ["Billing"] })
     async ({ actor, params, body }) =>
       recordPayment(actor, params.id, body.operationKey, body.reference),
     {
-      authorize: ["finance"],
+      authorize: permissions.billingWrite,
       body: t.Object({ operationKey: key, reference: t.String({ minLength: 3, maxLength: 100 }) }),
       params: id,
       response: { 200: paymentResultModel, ...apiErrorResponses },
     },
   )
+  .post(
+    "/invoices/:id/apply-credit",
+    async ({ actor, params, body }) =>
+      applyCustomerCredit(actor, params.id, body.operationKey, body.amountCents),
+    {
+      authorize: permissions.billingWrite,
+      body: t.Object({
+        amountCents: t.Optional(t.Integer({ minimum: 1, maximum: 2_147_483_647 })),
+        operationKey: key,
+      }),
+      params: id,
+      response: { 200: applyCreditResultModel, ...apiErrorResponses },
+    },
+  )
   .post("/subscriptions/run-due", async ({ actor }) => runDueBilling(actor), {
-    authorize: ["finance"],
+    authorize: permissions.billingWrite,
     response: { 200: billingRunModel, ...apiErrorResponses },
   })
   .post(
     "/subscriptions/:id/change",
     async ({ actor, params, body }) => changeSubscription(actor, params.id, body),
     {
-      authorize: ["finance"],
+      authorize: permissions.billingWrite,
       body: t.Object({
         operationKey: key,
         productId: t.Optional(t.String({ minLength: 1, maxLength: 100 })),
@@ -84,7 +108,7 @@ export const billingRoutes = new Elysia({ name: "billing", tags: ["Billing"] })
     "/subscriptions/:id/cancel",
     async ({ actor, params, body }) => changeSubscription(actor, params.id, body, true),
     {
-      authorize: ["finance"],
+      authorize: permissions.billingWrite,
       body: t.Object({
         operationKey: key,
         reason,
@@ -98,18 +122,17 @@ export const billingRoutes = new Elysia({ name: "billing", tags: ["Billing"] })
     "/invoices/:id/pdf",
     async ({ actor, params }) => {
       const [record] = await db
-        .select({ customer: customers, invoice: invoices, quote: quotes })
+        .select({ customer: customers, invoice: invoices, order: orders, quote: quotes })
         .from(invoices)
         .innerJoin(customers, eq(invoices.customerId, customers.id))
         .innerJoin(orders, eq(invoices.orderId, orders.id))
         .innerJoin(quotes, eq(orders.quoteId, quotes.id))
         .where(eq(invoices.id, params.id));
       if (!record) throw new DomainError("Invoice not found", 404);
-      const { invoice, customer, quote } = record;
+      const { invoice, customer, order, quote } = record;
       if (
         (actor.role === "customer" && actor.customerId !== customer.id) ||
-        (actor.role === "rep" && quote.ownerId !== actor.id) ||
-        ["admin", "ops"].includes(actor.role)
+        (actor.role === "rep" && quote.ownerId !== actor.id)
       )
         throw new DomainError("You cannot access this invoice", 403);
       const bytes = await invoicePdf({
@@ -126,13 +149,16 @@ export const billingRoutes = new Elysia({ name: "billing", tags: ["Billing"] })
         })),
         number: invoice.number,
         paidCents: invoice.paidCents,
+        sourceNumber: `${order.number} · ${quote.number}`,
         status: invoice.status,
+        subtotalCents: invoice.subtotalCents,
+        taxCents: invoice.taxCents,
         totalCents: invoice.totalCents,
       });
       return download(bytes, `${invoice.number}.pdf`, "application/pdf");
     },
     {
-      authorize: true,
+      authorize: [...permissions.invoices, "customer"],
       detail: {
         responses: {
           200: {
@@ -172,7 +198,7 @@ export const billingRoutes = new Elysia({ name: "billing", tags: ["Billing"] })
       return result;
     },
     {
-      authorize: ["admin", "finance", "manager"],
+      authorize: permissions.reports,
       detail: {
         responses: {
           200: {

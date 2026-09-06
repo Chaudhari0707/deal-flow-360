@@ -23,7 +23,7 @@ terms बदलता है तो नया revision फिर approve हो�
 4. In Ops, accept the suggested split and record shipment. In Finance, open the one-time invoice,
    enter a payment reference and record the outstanding amount. Download its real PDF.
 
-Expected sample one-time total is **$78.66** with the unchanged seeded pricing. All figures come from
+Expected sample one-time total is **₹78.66** with the unchanged seeded pricing. All figures come from
 application rules, not hardcoded display values.
 
 ## Flow 2 — governed hybrid deal and customer counter
@@ -38,7 +38,7 @@ application rules, not hardcoded display values.
    the new revision goes through Manager and Finance again. A plain message alone does not invalidate
    an approval.
 5. After reapproval, Acme confirms. In Ops show **22 Main + 2 East** reservations. In Finance show
-   **$26,805.24 one-time** and **$46 recurring**, then record payment/download PDF.
+   **₹26,805.24 one-time** and **₹46 recurring**, then record payment/download PDF.
 
 The 22/2 split assumes the initial seed or equivalent availability; another confirmed order may
 legitimately change it. The automated HERO browser test uses freshly reset test data and asserts the
@@ -51,6 +51,8 @@ exact invoice values, reservation quantities and single subscription.
   reserving twice, then ship. The ledger retains other orders' stock.
 - In Finance, change a subscription quantity and inspect its prorated adjustment. Cancel it, inspect
   the credit and confirm that future billing stops. Repeat the due run to demonstrate idempotency.
+- Invoice status matrix: search Invoices for `INV-SEED-*` (unpaid, overdue, paid, free, hybrid,
+  credits, adjustment). Full checklist: [invoice manual test](engineering/invoice-manual-test.md).
 - Open Deal Health: stalled quotes, unusually high discounts versus the same rep's history, approval
   delay and real delivery slippage link to their source records. Record a nudge and show its audit.
 - Filter Reports by dates, representative, approval status and category/product. Export PDF and XLSX.

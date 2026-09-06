@@ -1,9 +1,10 @@
 "use client";
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
+import { ChevronDown, ChevronUp } from "lucide-react";
 import useSWR from "swr";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/ui/data-table";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
@@ -14,13 +15,80 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { eyebrowType } from "@/features/billing/invoice-editorial";
 import { ReportExportActions } from "@/features/billing/report-export-actions";
-import { reportColumns, salesColumns } from "@/features/billing/table-columns";
+import { billingTableStyles, reportColumns, salesColumns } from "@/features/billing/table-columns";
 import { money } from "@/features/shell/format";
 import { PageHeader } from "@/features/shell/page-header";
 import { useWorkspace } from "@/features/shell/use-workspace";
 import { WorkspaceState } from "@/features/shell/workspace-state";
 import { apiClient, apiData } from "@/lib/api/client";
+import { cn } from "@/lib/utils";
+
+/**
+ * Section rule. Mirrors the shared table masthead so a hand-built section and a DataTable read
+ * as the same object: a quiet letterspaced kicker over one firm rule, with the note beneath it.
+ */
+function SectionHead({
+  actions,
+  note,
+  title,
+}: {
+  actions?: ReactNode;
+  note?: string;
+  title: string;
+}) {
+  return (
+    <div className="flex flex-wrap items-end justify-between gap-x-8 gap-y-3 border-b border-border-strong pb-3">
+      <div className="min-w-0">
+        <h2 className={cn(eyebrowType, "text-foreground")}>{title}</h2>
+        {note ? <p className="mt-2 text-sm text-muted-foreground">{note}</p> : null}
+      </div>
+      {actions ? <div className="flex shrink-0 items-center gap-3">{actions}</div> : null}
+    </div>
+  );
+}
+
+/**
+ * A summary figure in the report band.
+ *
+ * `reports.spec` reads every headline value through `[data-slot="card"]`, so the slot stays on
+ * the figure element — but the card box does not: the band's dividers, alignment and type scale
+ * group these numbers now. `scale` is explicit because two of the sales metrics are sentences,
+ * not figures, and prose set at figure size reads as a mistake.
+ */
+function Figure({
+  accent = false,
+  label,
+  scale = "figure",
+  value,
+}: {
+  accent?: boolean;
+  label: string;
+  scale?: "figure" | "text";
+  value: string;
+}) {
+  return (
+    <div data-slot="card" className="py-7 sm:px-8 sm:first:pl-0 sm:last:pr-0">
+      <span
+        aria-hidden
+        className={cn("mb-4 block h-0.5 w-7", accent ? "bg-ink-accent" : "bg-transparent")}
+      />
+      <dt className={cn(eyebrowType, "text-muted-foreground")}>{label}</dt>
+      <dd
+        className={cn(
+          "mt-3 font-medium text-foreground",
+          scale === "figure"
+            ? "text-[1.75rem] leading-none tracking-tight tabular-nums"
+            : "text-lg leading-snug",
+        )}
+      >
+        {value}
+      </dd>
+    </div>
+  );
+}
 
 function isApprovalStatus(
   value: string,
@@ -30,6 +98,8 @@ function isApprovalStatus(
 
 export function ReportWorkspace() {
   const workspace = useWorkspace();
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [reportTab, setReportTab] = useState<"sales" | "financial">("sales");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [customerId, setCustomerId] = useState("all");
@@ -84,258 +154,276 @@ export function ReportWorkspace() {
       </Alert>
     );
   return (
-    <>
+    <div className="mx-auto w-full max-w-300 pb-6">
       <PageHeader
         title="Reports"
         description="Follow the complete sales journey, from quotations and approvals to confirmed orders, upsells and collected revenue."
         actions={
           <ReportExportActions
-            enabled={!invalid && Boolean(report.data) && !report.isLoading}
+            enabled={!invalid && Boolean(report.data) && !report.isValidating && !report.error}
+            format={reportTab === "sales" ? "pdf" : "xlsx"}
             url={url}
           />
         }
       />
-      <Card>
-        <CardHeader>
-          <CardTitle>Sales and financial report</CardTitle>
-          <CardDescription>
+      <section className="mt-11">
+        <SectionHead
+          title="Sales and financial report"
+          note={
+            parameters.size
+              ? `${parameters.size} active filter${parameters.size === 1 ? "" : "s"}`
+              : "All records · No filters applied"
+          }
+          actions={
+            <Button
+              type="button"
+              variant="outline"
+              aria-expanded={filtersOpen}
+              aria-controls="report-filters"
+              onClick={() => setFiltersOpen((open) => !open)}
+            >
+              {filtersOpen ? <ChevronUp /> : <ChevronDown />}
+              {filtersOpen ? "Hide filters" : "Show filters"}
+            </Button>
+          }
+        />
+        <div id="report-filters" hidden={!filtersOpen}>
+          <p className="max-w-[92ch] pt-6 text-sm leading-relaxed text-muted-foreground">
             Dates use each quote/order creation date and each invoice/credit issue date in UTC.
             Product/category select whole records with matching lines. Payment status only filters
             financial records.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-          <Field>
-            <FieldLabel htmlFor="report-from">From</FieldLabel>
-            <Input
-              id="report-from"
-              type="date"
-              value={from}
-              onChange={(event) => setFrom(event.target.value)}
-            />
-          </Field>
-          <Field>
-            <FieldLabel htmlFor="report-to">To</FieldLabel>
-            <Input
-              id="report-to"
-              type="date"
-              value={to}
-              onChange={(event) => setTo(event.target.value)}
-            />
-          </Field>
-          <Field>
-            <FieldLabel>Customer</FieldLabel>
-            <Select
-              value={customerId}
-              onValueChange={(value) => {
-                if (value) setCustomerId(value);
-              }}
-            >
-              <SelectTrigger aria-label="Report customer" className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All customers</SelectItem>
-                {workspace.data.customers.map((customer) => (
-                  <SelectItem key={customer.id} value={customer.id}>
-                    {customer.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </Field>
-          <Field>
-            <FieldLabel>Category</FieldLabel>
-            <Select
-              value={category}
-              onValueChange={(value) => {
-                if (value) setCategory(value);
-              }}
-            >
-              <SelectTrigger aria-label="Report category" className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All categories</SelectItem>
-                {[...new Set(workspace.data.products.map((product) => product.category))].map(
-                  (value) => (
-                    <SelectItem key={value} value={value}>
-                      {value}
-                    </SelectItem>
-                  ),
-                )}
-              </SelectContent>
-            </Select>
-          </Field>
-          <Field>
-            <FieldLabel>Payment status</FieldLabel>
-            <Select
-              value={status}
-              onValueChange={(value) => {
-                if (value) setStatus(value);
-              }}
-            >
-              <SelectTrigger aria-label="Report status" className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All statuses</SelectItem>
-                <SelectItem value="PAID">Paid</SelectItem>
-                <SelectItem value="UNPAID">Unpaid</SelectItem>
-              </SelectContent>
-            </Select>
-          </Field>
-          {[
-            {
-              label: "Representative",
-              value: repId,
-              setValue: setRepId,
-              items:
-                report.data?.options.representatives.map((rep) => ({
-                  value: rep.id,
-                  label: rep.name,
-                })) ?? [],
-            },
-            {
-              label: "Team",
-              value: team,
-              setValue: setTeam,
-              items: report.data?.options.teams.map((value) => ({ value, label: value })) ?? [],
-            },
-            {
-              label: "Approval status",
-              value: approvalStatus,
-              setValue: setApprovalStatus,
-              items: [
-                { value: "NOT_SUBMITTED", label: "Not submitted" },
-                { value: "PENDING", label: "Pending approval" },
-                { value: "APPROVED", label: "Approved current terms" },
-                { value: "RETURNED", label: "Returned" },
-                { value: "REJECTED", label: "Rejected" },
-              ],
-            },
-            {
-              label: "Product",
-              value: productId,
-              setValue: setProductId,
-              items: workspace.data.products.map((product) => ({
-                value: product.id,
-                label: product.name,
-              })),
-            },
-          ].map((field) => (
-            <Field key={field.label}>
-              <FieldLabel>{field.label}</FieldLabel>
+          </p>
+          <div className="grid gap-x-10 gap-y-6 pt-7 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+            <Field>
+              <FieldLabel htmlFor="report-from">From</FieldLabel>
+              <Input
+                id="report-from"
+                type="date"
+                value={from}
+                onChange={(event) => setFrom(event.target.value)}
+              />
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="report-to">To</FieldLabel>
+              <Input
+                id="report-to"
+                type="date"
+                value={to}
+                onChange={(event) => setTo(event.target.value)}
+              />
+            </Field>
+            <Field>
+              <FieldLabel>Customer</FieldLabel>
               <Select
-                value={field.value}
+                value={customerId}
                 onValueChange={(value) => {
-                  if (value) field.setValue(value);
+                  if (value) setCustomerId(value);
                 }}
               >
-                <SelectTrigger
-                  aria-label={`Report ${field.label.toLowerCase()}`}
-                  className="w-full"
-                >
+                <SelectTrigger aria-label="Report customer" className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All</SelectItem>
-                  {field.items.map((item) => (
-                    <SelectItem key={item.value} value={item.value}>
-                      {item.label}
+                  <SelectItem value="all">All customers</SelectItem>
+                  {workspace.data.customers.map((customer) => (
+                    <SelectItem key={customer.id} value={customer.id}>
+                      {customer.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </Field>
-          ))}
-        </CardContent>
-      </Card>
-      {invalid ? (
-        <Alert variant="destructive">
-          <AlertDescription>Start date must be before the end date.</AlertDescription>
-        </Alert>
-      ) : !report.data || report.isLoading ? (
-        <WorkspaceState error={report.error} retry={() => void report.mutate()} />
-      ) : (
-        <>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <Field>
+              <FieldLabel>Category</FieldLabel>
+              <Select
+                value={category}
+                onValueChange={(value) => {
+                  if (value) setCategory(value);
+                }}
+              >
+                <SelectTrigger aria-label="Report category" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All categories</SelectItem>
+                  {[...new Set(workspace.data.products.map((product) => product.category))].map(
+                    (value) => (
+                      <SelectItem key={value} value={value}>
+                        {value}
+                      </SelectItem>
+                    ),
+                  )}
+                </SelectContent>
+              </Select>
+            </Field>
+            <Field>
+              <FieldLabel>Payment status</FieldLabel>
+              <Select
+                value={status}
+                onValueChange={(value) => {
+                  if (value) setStatus(value);
+                }}
+              >
+                <SelectTrigger aria-label="Report status" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All statuses</SelectItem>
+                  <SelectItem value="PAID">Paid</SelectItem>
+                  <SelectItem value="UNPAID">Unpaid</SelectItem>
+                </SelectContent>
+              </Select>
+            </Field>
             {[
-              { label: "Quotes created", value: String(report.data.sales.metrics.quotesCreated) },
               {
-                label: "Orders confirmed",
-                value: String(report.data.sales.metrics.ordersConfirmed),
+                label: "Representative",
+                value: repId,
+                setValue: setRepId,
+                items:
+                  report.data?.options.representatives.map((rep) => ({
+                    value: rep.id,
+                    label: rep.name,
+                  })) ?? [],
               },
               {
-                label: "Average approval time",
-                value:
-                  report.data.sales.metrics.averageApprovalHours === null
-                    ? "No completed cycles"
-                    : `${report.data.sales.metrics.averageApprovalHours.toFixed(2)} hours`,
+                label: "Team",
+                value: team,
+                setValue: setTeam,
+                items: report.data?.options.teams.map((value) => ({ value, label: value })) ?? [],
               },
               {
-                label: "Top upsold product",
-                value: report.data.sales.metrics.topUpsoldProduct
-                  ? `${report.data.sales.metrics.topUpsoldProduct.name} · ${report.data.sales.metrics.topUpsoldProduct.quantity} units`
-                  : "No confirmed upsells",
+                label: "Approval status",
+                value: approvalStatus,
+                setValue: setApprovalStatus,
+                items: [
+                  { value: "NOT_SUBMITTED", label: "Not submitted" },
+                  { value: "PENDING", label: "Pending approval" },
+                  { value: "APPROVED", label: "Approved current terms" },
+                  { value: "RETURNED", label: "Returned" },
+                  { value: "REJECTED", label: "Rejected" },
+                ],
               },
-            ].map((metric) => (
-              <Card key={metric.label}>
-                <CardHeader>
-                  <CardDescription>{metric.label}</CardDescription>
-                  <CardTitle className="text-xl tabular-nums">{metric.value}</CardTitle>
-                </CardHeader>
-              </Card>
+              {
+                label: "Product",
+                value: productId,
+                setValue: setProductId,
+                items: workspace.data.products.map((product) => ({
+                  value: product.id,
+                  label: product.name,
+                })),
+              },
+            ].map((field) => (
+              <Field key={field.label}>
+                <FieldLabel>{field.label}</FieldLabel>
+                <Select
+                  value={field.value}
+                  onValueChange={(value) => {
+                    if (value) field.setValue(value);
+                  }}
+                >
+                  <SelectTrigger
+                    aria-label={`Report ${field.label.toLowerCase()}`}
+                    className="w-full"
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All</SelectItem>
+                    {field.items.map((item) => (
+                      <SelectItem key={item.value} value={item.value}>
+                        {item.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </Field>
             ))}
           </div>
-          <Card>
-            <CardHeader>
-              <CardTitle>Quotations and confirmed orders</CardTitle>
-              <CardDescription>
-                Includes quotes with no invoice. Ordered value{" "}
-                {money(report.data.sales.metrics.orderedCents)}. Approval average uses{" "}
-                {report.data.sales.metrics.completedApprovalCycles} completed revision cycles;
-                automatic approvals take zero hours.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
+        </div>
+      </section>
+      {invalid ? (
+        <Alert variant="destructive" className="mt-9">
+          <AlertDescription>Start date must be before the end date.</AlertDescription>
+        </Alert>
+      ) : report.error || !report.data || report.isLoading ? (
+        <div className="mt-9">
+          <WorkspaceState error={report.error} retry={() => void report.mutate()} />
+        </div>
+      ) : (
+        <Tabs
+          className="mt-12"
+          value={reportTab}
+          onValueChange={(value) => {
+            if (value === "sales" || value === "financial") setReportTab(value);
+          }}
+        >
+          <TabsList aria-label="Report type">
+            <TabsTrigger value="sales">Sales report</TabsTrigger>
+            <TabsTrigger value="financial">Financial report</TabsTrigger>
+          </TabsList>
+          <TabsContent value="sales">
+            <dl className="grid grid-cols-2 gap-x-10 sm:grid-cols-4 sm:gap-x-0 sm:divide-x sm:divide-border">
+              <Figure
+                accent
+                label="Quotes created"
+                value={String(report.data.sales.metrics.quotesCreated)}
+              />
+              <Figure
+                label="Orders confirmed"
+                value={String(report.data.sales.metrics.ordersConfirmed)}
+              />
+              <Figure
+                scale="text"
+                label="Average approval time"
+                value={
+                  report.data.sales.metrics.averageApprovalHours === null
+                    ? "No completed cycles"
+                    : `${report.data.sales.metrics.averageApprovalHours.toFixed(2)} hours`
+                }
+              />
+              <Figure
+                scale="text"
+                label="Top upsold product"
+                value={
+                  report.data.sales.metrics.topUpsoldProduct
+                    ? `${report.data.sales.metrics.topUpsoldProduct.name} · ${report.data.sales.metrics.topUpsoldProduct.quantity} units`
+                    : "No confirmed upsells"
+                }
+              />
+            </dl>
+            <div className="mt-7">
               <DataTable
+                title="Quotations and confirmed orders"
+                description={`Ordered value ${money(report.data.sales.metrics.orderedCents)}.`}
+                classNames={billingTableStyles}
                 columns={salesColumns}
                 data={[...report.data.sales.quotes, ...report.data.sales.orders]}
+                enableColumnResizing={false}
                 getRowId={(row) => `${row.kind}:${row.id}`}
                 emptyMessage="No sales records match these filters."
               />
-            </CardContent>
-          </Card>
-          <div className="grid gap-4 sm:grid-cols-3">
-            {[
-              { label: "Net billed", value: report.data.totals.billedCents },
-              { label: "Payments collected", value: report.data.totals.paidCents },
-              { label: "Outstanding", value: report.data.totals.outstandingCents },
-            ].map((metric) => (
-              <Card key={metric.label}>
-                <CardHeader>
-                  <CardDescription>{metric.label}</CardDescription>
-                  <CardTitle className="text-2xl tabular-nums">{money(metric.value)}</CardTitle>
-                </CardHeader>
-              </Card>
-            ))}
-          </div>
-          <Card>
-            <CardHeader>
-              <CardTitle>{report.data.rows.length} financial records</CardTitle>
-            </CardHeader>
-            <CardContent>
+            </div>
+          </TabsContent>
+          <TabsContent value="financial">
+            <dl className="grid grid-cols-2 gap-x-10 sm:grid-cols-3 sm:gap-x-0 sm:divide-x sm:divide-border">
+              <Figure accent label="Net billed" value={money(report.data.totals.billedCents)} />
+              <Figure label="Payments collected" value={money(report.data.totals.paidCents)} />
+              <Figure label="Outstanding" value={money(report.data.totals.outstandingCents)} />
+            </dl>
+            <div className="mt-7">
               <DataTable
+                title={`${report.data.rows.length} financial records`}
+                classNames={billingTableStyles}
                 columns={reportColumns}
                 data={report.data.rows}
+                enableColumnResizing={false}
                 getRowId={(row) => row.number}
                 emptyMessage="No records match these filters."
               />
-            </CardContent>
-          </Card>
-        </>
+            </div>
+          </TabsContent>
+        </Tabs>
       )}
-    </>
+    </div>
   );
 }

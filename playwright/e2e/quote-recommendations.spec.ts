@@ -1,11 +1,13 @@
-import { expect, test } from "@playwright/test";
+import { expect, type Page, test } from "@playwright/test";
 
-import type { PurchaseRecommendations } from "@/features/quotes/_types/recommendations";
-import type { Workspace } from "@/lib/domain/_types/workspace";
+async function addProduct(page: Page, name: string) {
+  await page.getByRole("combobox", { name: "Product to add", exact: true }).click();
+  await page.getByRole("option", { name: new RegExp(`^${name} ·`) }).click();
+  await page.getByRole("button", { name: "Add product", exact: true }).click();
+}
 
-test("purchase recommendations: best sellers, customer switch and add @regression", async ({
+test("configured product upsells replace purchase-history recommendations @regression", async ({
   page,
-  baseURL,
 }) => {
   const password = Bun.env.DEMO_PASSWORD ?? Bun.env.PLAYWRIGHT_USER_PASSWORD;
   if (!password) throw new Error("Seeded demo credentials required");
@@ -13,79 +15,45 @@ test("purchase recommendations: best sellers, customer switch and add @regressio
     data: { email: "rep@dealflow360.demo", password },
   });
   expect(login.ok()).toBe(true);
-  const created = await page.request.post("/api/v1/customers", {
-    headers: { origin: new URL(baseURL!).origin },
-    data: {
-      name: `Recommendation ${crypto.randomUUID()}`,
-      email: "recommendation@example.com",
-      tier: "Bronze",
-    },
-  });
-  expect(created.ok(), await created.text()).toBe(true);
-  const fresh = (await created.json()) as Workspace["customers"][number];
-  const workspace = await page.request.get("/api/v1/workspace");
-  expect(workspace.ok()).toBe(true);
-  const data = (await workspace.json()) as Workspace;
-  let returning: Workspace["customers"][number] | undefined;
-  for (const customer of data.customers) {
-    const response = await page.request.get(
-      `/api/v1/quotes/recommendations?customerId=${customer.id}`,
-    );
-    expect(response.ok()).toBe(true);
-    const result = (await response.json()) as PurchaseRecommendations;
-    if (result.source === "last_purchase" && result.productIds.length) {
-      returning = customer;
-      break;
-    }
-  }
-  expect(returning).toBeDefined();
-  const best = await page.request.get(`/api/v1/quotes/recommendations?customerId=${fresh.id}`);
-  expect(best.ok()).toBe(true);
-  const recommendations = (await best.json()) as PurchaseRecommendations;
-  expect(recommendations.source).toBe("best_sellers");
-  const product = data.products.find((item) => item.id === recommendations.productIds[0]);
-  expect(product).toBeDefined();
 
   await page.goto("/quotations/new");
-  const select = async (customer: Workspace["customers"][number]) => {
-    await page.getByRole("combobox", { name: "Customer", exact: true }).click();
-    await page
-      .getByRole("option", { name: `${customer.name} · ${customer.tier}`, exact: true })
-      .click();
-  };
-  await select(fresh);
+  await expect(page.getByText("Upsell recommendations", { exact: true })).toBeVisible();
   await expect(
-    page.getByText("Best sellers — this customer has no purchases yet.", { exact: true }),
+    page.getByText("Add a product to see its configured upsell recommendations.", { exact: true }),
   ).toBeVisible();
-  const add = page.getByRole("button", {
-    name: `Add ${product!.name} recommendation to quote`,
-    exact: true,
-  });
-  await expect(add).toBeVisible();
-  await expect(page.getByText(/Max discount .* · Margin /).first()).toBeVisible();
-  await select(returning!);
+  await expect(page.getByText("Best sellers", { exact: false })).toHaveCount(0);
+
+  await addProduct(page, "Laptop Pro 14");
   await expect(
-    page.getByText("From this customer’s last purchase.", { exact: true }),
+    page.getByRole("button", { name: "Add Care Plan 2yr recommendation to quote", exact: true }),
   ).toBeVisible();
   await expect(
-    page.getByText("Best sellers — this customer has no purchases yet.", { exact: true }),
-  ).toHaveCount(0);
-  await select(fresh);
-  await expect(add).toBeVisible();
-  await add.click();
-  await expect(add).toHaveCount(0);
-  await expect(page.getByLabel(`${product!.name} quantity`, { exact: true })).toHaveValue("1");
+    page.getByRole("button", { name: "Add Wireless Mouse recommendation to quote", exact: true }),
+  ).toBeVisible();
+
+  await addProduct(page, "Docking Station");
+  const labels = await page
+    .getByRole("button", { name: / recommendation to quote$/ })
+    .allTextContents();
+  expect(labels).toEqual([
+    "Add Care Plan 2yr recommendation to quote",
+    "Add Monitoring Add-on recommendation to quote",
+    "Add Wireless Mouse recommendation to quote",
+  ]);
+  expect(labels).toHaveLength(3);
+
+  await page
+    .getByRole("button", { name: "Add Care Plan 2yr recommendation to quote", exact: true })
+    .click();
+  await expect(page.getByLabel("Care Plan 2yr quantity", { exact: true })).toHaveValue("1");
+
   const saved = page.waitForResponse(
     (response) =>
       response.url().endsWith("/api/v1/quotes") && response.request().method() === "POST",
   );
   await page.getByRole("button", { name: "Save draft", exact: true }).click();
-  const response = await saved;
-  expect(response.ok()).toBe(true);
-  const quote = (await response.json()) as Workspace["quotes"][number];
-  expect(quote.customerId).toBe(fresh.id);
-  expect(quote.lines).toHaveLength(1);
-  expect(quote.lines[0]!.productId).toBe(product!.id);
-  expect(quote.lines[0]!.upsell).toBe(false);
-  expect(quote.lines[0]!.priceCents).toBeGreaterThan(0);
+  const quote = (await (await saved).json()) as {
+    lines: { productId: string; upsell?: boolean }[];
+  };
+  expect(quote.lines.find((line) => line.productId === "care2")?.upsell).toBe(true);
 });

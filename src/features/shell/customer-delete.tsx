@@ -61,8 +61,10 @@ export function CustomerDelete({
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete {name}?</AlertDialogTitle>
-            <AlertDialogDescription>
+            <AlertDialogTitle className="text-xl leading-tight font-semibold tracking-tight text-foreground">
+              Delete {name}?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="max-w-[56ch] leading-relaxed">
               This permanently removes an unused customer. Customers with quotations, billing
               history, or portal accounts cannot be deleted.
             </AlertDialogDescription>

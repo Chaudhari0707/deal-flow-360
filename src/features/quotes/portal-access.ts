@@ -59,6 +59,10 @@ export async function portalIdentity(
   if (session) {
     if (session.role !== "customer" || !session.customerId)
       throw new DomainError("The customer portal is available only to customer accounts.", 403);
+    // Portal routes bypass the `authorize` macro, so the temporary-credential gate that
+    // protects every other signed-in surface has to be repeated here.
+    if (session.mustChangePassword)
+      throw new DomainError("Change your temporary password before continuing.", 403);
     return { actor: session };
   }
   const token = portalCookie(request);

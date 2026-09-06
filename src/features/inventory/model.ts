@@ -1,20 +1,30 @@
 import { t } from "elysia";
 
-import { orderModel, stockModel, stockMovementModel, warehouseModel } from "@/server/models";
+import { orderModel, stockMovementModel, warehouseModel } from "@/server/models";
 
 export const inventorySnapshotModel = t.Object({
+  products: t.Array(
+    t.Object({
+      id: t.String(),
+      name: t.String(),
+      variant: t.String(),
+    }),
+  ),
   warehouses: t.Array(warehouseModel),
   stocks: t.Array(
-    t.Intersect([
-      stockModel,
-      t.Object({
-        available: t.Integer(),
-        name: t.String(),
-        variant: t.String(),
-        warehouse: t.String(),
-        replenishmentThreshold: t.Integer(),
-      }),
-    ]),
+    t.Object({
+      id: t.String(),
+      warehouseId: t.String(),
+      productId: t.String(),
+      onHand: t.Integer(),
+      reserved: t.Integer(),
+      version: t.Integer(),
+      available: t.Integer(),
+      name: t.String(),
+      variant: t.String(),
+      warehouse: t.String(),
+      replenishmentThreshold: t.Integer(),
+    }),
   ),
   total: t.Integer(),
 });
@@ -66,10 +76,13 @@ export const allocationPlanModel = t.Object({
 });
 
 export const statusResponseModel = t.Object({ status: t.String() });
-export const movementResponseModel = t.Object({
-  movementId: t.String(),
-  repeated: t.Boolean(),
-});
+export const movementResponseModel = t.Object(
+  {
+    movementId: t.String(),
+    repeated: t.Boolean(),
+  },
+  { additionalProperties: false },
+);
 
 export const inventoryModels = {
   FulfillmentDetail: fulfillmentDetailModel,

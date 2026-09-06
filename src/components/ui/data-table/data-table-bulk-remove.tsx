@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { RowData, Table } from "@tanstack/react-table";
 
+import { eyebrowType } from "@/components/editorial/editorial";
 import type { DataTableBulkRemoveCopy, DataTableFeatures } from "@/components/ui/_types/data-table";
 import {
   AlertDialog,
@@ -15,6 +16,9 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+
+/** Quiet label type: hierarchy from size, weight, case and letter-spacing, never from opacity. */
 
 type DataTableBulkRemoveProps<TData extends RowData> = {
   bulkRemovePending?: boolean;
@@ -62,6 +66,7 @@ export function DataTableBulkRemove<TData extends RowData>({
         type="button"
         size="sm"
         variant="destructive"
+        className={cn(eyebrowType, "h-8 rounded-none px-3")}
         disabled={bulkRemovePending}
         onClick={() => setOpen(true)}
       >
@@ -73,14 +78,19 @@ export function DataTableBulkRemove<TData extends RowData>({
           <AlertDialogDescription>{copy.description}</AlertDialogDescription>
         </AlertDialogHeader>
         {hasImpact ? (
-          <div className="w-full space-y-2 text-left">
-            {copy.impactTitle ? <p className="text-sm font-medium">{copy.impactTitle}</p> : null}
+          <div className="w-full space-y-3 text-left">
+            {copy.impactTitle ? (
+              <p className={cn(eyebrowType, "text-muted-foreground")}>{copy.impactTitle}</p>
+            ) : null}
             {impactRows.length > 0 ? (
-              <ul className="max-h-40 space-y-1 overflow-y-auto rounded-md border bg-muted/40 px-3 py-2 text-sm">
+              /* Impact reads as a hairline-divided figure band: labels quiet, counts tabular. */
+              <ul className="max-h-40 divide-y divide-border overflow-y-auto border-y border-border text-sm">
                 {impactRows.map((row) => (
-                  <li key={row.label} className="flex items-center justify-between gap-3">
+                  <li key={row.label} className="flex items-center justify-between gap-3 py-2">
                     <span className="text-muted-foreground">{row.label}</span>
-                    <span className="font-medium tabular-nums">{row.count.toLocaleString()}</span>
+                    <span className="font-medium text-foreground tabular-nums">
+                      {row.count.toLocaleString()}
+                    </span>
                   </li>
                 ))}
               </ul>

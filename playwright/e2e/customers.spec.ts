@@ -9,7 +9,7 @@ test("customer switching updates hardware tier pricing and approval limits", asy
   expect(
     (
       await page.request.post("/api/auth/sign-in/email", {
-        data: { email: "rep@dealflow360.demo", password },
+        data: { email: "manager@dealflow360.demo", password },
       })
     ).ok(),
   ).toBe(true);
@@ -21,6 +21,14 @@ test("customer switching updates hardware tier pricing and approval limits", asy
     });
     expect(response.ok()).toBe(true);
   }
+  expect(
+    (
+      await page.request.post("/api/auth/sign-in/email", {
+        data: { email: "rep@dealflow360.demo", password },
+        headers: { origin: new URL(baseURL!).origin },
+      })
+    ).ok(),
+  ).toBe(true);
   await page.goto("/quotations/new");
   await page.getByRole("combobox", { name: "Customer", exact: true }).click();
   await page.getByRole("option", { name: `${names.Gold} · Gold`, exact: true }).click();
@@ -40,7 +48,7 @@ test("customer switching updates hardware tier pricing and approval limits", asy
   await expect(page.getByText("MEDIUM", { exact: true })).toBeVisible();
 });
 
-test("rep creates a customer; manager edits tier and deletes an unused customer", async ({
+test("rep reads customers; manager creates, edits tier and protects the linked login", async ({
   browser,
   baseURL,
 }) => {
@@ -60,19 +68,21 @@ test("rep creates a customer; manager edits tier and deletes an unused customer"
     const page = await rep.newPage();
     await page.goto("/dashboard");
     await page.getByRole("link", { name: "Customers", exact: true }).click();
-    await page.getByRole("button", { name: "Add customer", exact: true }).click();
+    await expect(page.getByRole("button", { name: "Add customer", exact: true })).toHaveCount(0);
+    const staff = await manager.newPage();
+    await staff.goto("/customers");
+    await staff.getByRole("button", { name: "Add customer", exact: true }).click();
     const name = `Customer browser ${crypto.randomUUID()}`;
-    await page.getByRole("textbox", { name: "Name", exact: true }).fill(name);
-    await page
+    await staff.getByRole("textbox", { name: "Name", exact: true }).fill(name);
+    await staff
       .getByLabel("Customer email", { exact: true })
       .fill(`customer-${crypto.randomUUID()}@example.com`);
-    await page.getByRole("button", { name: "Save customer", exact: true }).click();
-    await expect(page.getByRole("dialog")).toHaveCount(0);
+    await staff.getByRole("button", { name: "Save customer", exact: true }).click();
+    await expect(staff.getByRole("dialog")).toHaveCount(0);
+    await page.reload();
     await page.getByPlaceholder("Search customers…").fill(name);
     await expect(page.getByRole("row").filter({ hasText: name })).toBeVisible();
     await expect(page.getByRole("button", { name: "Edit customer", exact: true })).toHaveCount(0);
-    const staff = await manager.newPage();
-    await staff.goto("/customers");
     await staff.getByPlaceholder("Search customers…").fill(name);
     await staff.getByRole("button", { name: "Edit customer", exact: true }).click();
     await staff.getByLabel("Tier", { exact: true }).click();
@@ -83,8 +93,7 @@ test("rep creates a customer; manager edits tier and deletes an unused customer"
     await staff.getByRole("button", { name: "Edit customer", exact: true }).click();
     await staff.getByRole("button", { name: "Delete customer", exact: true }).click();
     await staff.getByRole("button", { name: "Confirm deletion", exact: true }).click();
-    await expect(staff.getByRole("dialog")).toHaveCount(0);
-    await expect(staff.getByRole("row").filter({ hasText: name })).toHaveCount(0);
+    await expect(staff.getByRole("alert")).toContainText("linked portal account");
   } finally {
     await rep.close();
     await manager.close();

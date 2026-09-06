@@ -25,6 +25,7 @@ import { saveWarehouse } from "@/features/inventory/warehouse";
 import { db } from "@/lib/db/connection";
 import { products } from "@/lib/db/schema/commerce";
 import { stocks, warehouses } from "@/lib/db/schema/inventory";
+import { permissions } from "@/lib/domain/permissions";
 import { actorContext } from "@/server/access";
 import { audit } from "@/server/audit";
 import { DomainError } from "@/server/errors";
@@ -55,40 +56,45 @@ export const inventoryRoutes = new Elysia({
   tags: ["Inventory"],
 })
   .use(actorContext)
-  .get("/inventory", async ({ query }) => inventorySnapshot(query.page, query.pageSize), {
+  .get("/inventory", async ({ query }) => await inventorySnapshot(query.page, query.pageSize), {
     authorize: ["admin", "ops", "manager", "rep"],
     query: paging,
     response: { 200: inventorySnapshotModel, ...apiErrorResponses },
   })
-  .get("/fulfillment/orders", async ({ query }) => fulfillmentList(query.page, query.pageSize), {
-    authorize: ["admin", "ops", "manager", "rep"],
-    query: paging,
-    response: { 200: fulfillmentListModel, ...apiErrorResponses },
-  })
-  .get("/fulfillment/:id", async ({ params: p }) => fulfillmentDetail(p.id), {
+  .get(
+    "/fulfillment/orders",
+    async ({ query }) => await fulfillmentList(query.page, query.pageSize),
+    {
+      authorize: ["admin", "ops", "manager", "rep"],
+      query: paging,
+      response: { 200: fulfillmentListModel, ...apiErrorResponses },
+    },
+  )
+  .get("/fulfillment/:id", async ({ params: p }) => await fulfillmentDetail(p.id), {
     authorize: ["admin", "ops", "manager", "rep"],
     params,
     response: { 200: fulfillmentDetailModel, ...apiErrorResponses },
   })
-  .post("/fulfillment/:id/accept", async ({ actor, params: p }) => acceptSplit(p.id, actor), {
+  .post("/fulfillment/:id/accept", async ({ actor, params: p }) => await acceptSplit(p.id, actor), {
     authorize: ["ops"],
     params,
     response: { 200: orderModel, ...apiErrorResponses },
   })
   .post(
     "/fulfillment/:id/consolidate",
-    async ({ actor, params: p }) => consolidateBackorder(p.id, actor),
+    async ({ actor, params: p }) => await consolidateBackorder(p.id, actor),
     {
-      authorize: ["ops"],
+      authorize: ["admin", "ops"],
       params,
       response: { 200: allocationPlanModel, ...apiErrorResponses },
     },
   )
   .post(
     "/fulfillment/:id/override",
-    async ({ actor, params: p, body }) => overrideSplit(p.id, body.allocations, body.reason, actor),
+    async ({ actor, params: p, body }) =>
+      await overrideSplit(p.id, body.allocations, body.reason, actor),
     {
-      authorize: ["ops"],
+      authorize: permissions.fulfillmentOperate,
       params,
       body: t.Object(
         {
@@ -104,9 +110,9 @@ export const inventoryRoutes = new Elysia({
   )
   .post(
     "/fulfillment/:id/ship",
-    async ({ actor, params: p, body }) => shipReservation(p.id, body, actor),
+    async ({ actor, params: p, body }) => await shipReservation(p.id, body, actor),
     {
-      authorize: ["ops"],
+      authorize: permissions.fulfillmentOperate,
       params,
       body: t.Object(
         { operationKey: id, quantity: positive, reservationId: id },
@@ -115,8 +121,8 @@ export const inventoryRoutes = new Elysia({
       response: { 200: movementResponseModel, ...apiErrorResponses },
     },
   )
-  .post("/inventory/restock", async ({ actor, body }) => restock(body, actor), {
-    authorize: ["ops"],
+  .post("/inventory/restock", async ({ actor, body }) => await restock(body, actor), {
+    authorize: ["admin", "ops"],
     body: t.Object(
       { operationKey: id, productId: id, quantity: positive, reason, warehouseId: id },
       { additionalProperties: false },
@@ -126,18 +132,18 @@ export const inventoryRoutes = new Elysia({
   .post(
     "/inventory/warehouses",
     async ({ actor, body }) =>
-      saveWarehouse(undefined, { ...body, id: crypto.randomUUID() }, actor),
+      await saveWarehouse(undefined, { ...body, id: crypto.randomUUID() }, actor),
     {
-      authorize: ["admin"],
+      authorize: permissions.stockSetup,
       body: warehouseBody,
       response: { 200: warehouseModel, ...apiErrorResponses },
     },
   )
   .patch(
     "/inventory/warehouses/:id",
-    async ({ actor, params: p, body }) => saveWarehouse(p.id, { ...body, id: p.id }, actor),
+    async ({ actor, params: p, body }) => await saveWarehouse(p.id, { ...body, id: p.id }, actor),
     {
-      authorize: ["admin"],
+      authorize: permissions.stockSetup,
       params,
       body: warehouseBody,
       response: { 200: warehouseModel, ...apiErrorResponses },
@@ -167,7 +173,7 @@ export const inventoryRoutes = new Elysia({
       });
     },
     {
-      authorize: ["admin"],
+      authorize: permissions.stockSetup,
       body: t.Object({ productId: id, warehouseId: id }, { additionalProperties: false }),
       response: { 200: stockModel, ...apiErrorResponses },
     },

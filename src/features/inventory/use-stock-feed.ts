@@ -46,5 +46,6 @@ export function useStockFeed() {
       socket?.close();
     };
   }, [mutate]);
+  if (status === "Connecting" || status === "Reconnecting — refresh available") return null;
   return status;
 }
