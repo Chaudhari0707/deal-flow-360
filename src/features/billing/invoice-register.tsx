@@ -26,12 +26,12 @@ const registerStyles: DataTableClassNames = {
   cell: "border-b border-foreground/10 px-0 py-4 pr-8 align-top last:pr-0",
   container: "rounded-none border-0",
   emptyCell: "border-b border-foreground/10 px-0 text-foreground",
-  head: "h-auto border-b border-foreground/30 px-0 pt-0 pr-8 pb-3 text-[0.6875rem] font-medium tracking-[0.16em] text-foreground/45 uppercase last:pr-0",
+  head: "h-auto border-b border-foreground/30 px-0 pt-0 pr-8 pb-3 text-[0.6875rem] font-medium tracking-[0.16em] text-muted-foreground uppercase last:pr-0",
   pagination: cn(
     "mt-7 border-t border-foreground/15 px-0 pt-4",
     "[&_[data-slot=button]]:rounded-none [&_[data-slot=button]]:border-foreground/20 [&_[data-slot=button]]:bg-transparent",
     "[&_[data-slot=select-trigger]]:rounded-none [&_[data-slot=select-trigger]]:border-foreground/20 [&_[data-slot=select-trigger]]:bg-transparent",
-    "[&_p]:text-[0.6875rem] [&_p]:font-medium [&_p]:tracking-[0.16em] [&_p]:text-foreground/50 [&_p]:uppercase",
+    "[&_p]:text-[0.6875rem] [&_p]:font-medium [&_p]:tracking-[0.16em] [&_p]:text-muted-foreground [&_p]:uppercase",
   ),
   row: "border-0 hover:bg-foreground/[0.035] data-[state=selected]:bg-transparent",
   table: "text-[0.8125rem]",
@@ -71,7 +71,7 @@ export function InvoiceRegister({
           placeholder="Search invoice or customer"
           value={search}
           onChange={(event) => setSearch(event.target.value)}
-          className="h-9 w-full max-w-sm rounded-none border-0 border-b-2 border-foreground/20 bg-transparent px-0 text-sm placeholder:text-foreground/40 focus-visible:border-foreground focus-visible:ring-0 dark:bg-transparent"
+          className="h-9 w-full max-w-sm rounded-none border-0 border-b-2 border-border-strong bg-transparent px-0 text-sm placeholder:text-muted-foreground focus-visible:border-ink-accent focus-visible:ring-0 dark:bg-transparent"
         />
         <div className="flex flex-wrap items-center gap-x-7 gap-y-2">
           {lenses.map((entry) => (
@@ -85,7 +85,7 @@ export function InvoiceRegister({
                 "relative h-auto rounded-none px-0 pb-2.5 text-[0.6875rem] font-medium tracking-[0.16em] uppercase hover:bg-transparent",
                 lens === entry.id
                   ? "text-foreground"
-                  : "text-foreground/45 hover:text-foreground/75",
+                  : "text-muted-foreground hover:text-muted-foreground",
               )}
             >
               {entry.label}

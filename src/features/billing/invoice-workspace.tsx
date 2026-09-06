@@ -3,7 +3,7 @@ import { useState } from "react";
 
 import type { InvoiceRegisterRow } from "@/features/billing/_types/tables";
 import { InvoiceDocument } from "@/features/billing/invoice-document";
-import { editorialInk, Eyebrow, Figure, Meta, Note } from "@/features/billing/invoice-editorial";
+import { Eyebrow, Figure, Meta, Note } from "@/features/billing/invoice-editorial";
 import { InvoiceRegister } from "@/features/billing/invoice-register";
 import { invoiceOutstanding } from "@/features/billing/rules";
 import { useBillingAction } from "@/features/billing/use-billing-action";
@@ -11,7 +11,6 @@ import { displayDate, money } from "@/features/shell/format";
 import { useWorkspace } from "@/features/shell/use-workspace";
 import { WorkspaceState } from "@/features/shell/workspace-state";
 import { apiClient, apiData } from "@/lib/api/client";
-import { cn } from "@/lib/utils";
 
 const dayMs = 86_400_000;
 
@@ -61,7 +60,7 @@ export function InvoiceWorkspace({ initialId }: { initialId?: string }) {
   const canPay = data.actor.role === "finance";
 
   return (
-    <div className={cn(editorialInk, "mx-auto w-full max-w-300 pb-6")}>
+    <div className={"mx-auto w-full max-w-300 pb-6"}>
       <header className="border-t-2 border-foreground pt-7">
         <div className="grid gap-10 lg:grid-cols-12">
           <div className="lg:col-span-7">
@@ -69,7 +68,7 @@ export function InvoiceWorkspace({ initialId }: { initialId?: string }) {
             <h1 className="mt-4 text-4xl leading-[1.05] font-semibold tracking-tight text-foreground md:text-5xl">
               Invoices
             </h1>
-            <p className="mt-5 max-w-[52ch] text-[0.9375rem] leading-relaxed text-foreground/65">
+            <p className="mt-5 max-w-[52ch] text-[0.9375rem] leading-relaxed text-muted-foreground">
               Every rupee, reconciled. One-time, recurring and adjustment invoices stay linked to
               the order that produced them, from issue through settlement.
             </p>

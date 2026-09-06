@@ -9,20 +9,11 @@ import { cn } from "@/lib/utils";
  * and shadows. Keep these pieces local to the route until a second surface adopts them.
  */
 
-/**
- * Route-scoped semantic inks. The shared `--primary` and `--destructive` tokens are tuned as
- * fills, so neither is legible as body text in both themes; these are.
- */
-export const editorialInk = cn(
-  "[--ink-flag:oklch(0.52_0.19_29)] [--ink-settled:oklch(0.46_0.11_162)]",
-  "dark:[--ink-flag:oklch(0.75_0.16_28)] dark:[--ink-settled:oklch(0.78_0.13_162)]",
-);
-
 /** Quiet, letterspaced label type. Labels always recede behind the value they describe. */
 export const eyebrowType = "text-[0.6875rem] font-medium tracking-[0.16em] uppercase";
 
 export function Eyebrow({ children, className }: { children: ReactNode; className?: string }) {
-  return <span className={cn(eyebrowType, "text-foreground/50", className)}>{children}</span>;
+  return <span className={cn(eyebrowType, "text-muted-foreground", className)}>{children}</span>;
 }
 
 /** Label/value pair used in the masthead and the document meta strip. */
@@ -37,8 +28,8 @@ export function Meta({
 }) {
   return (
     <div className={cn(align === "end" && "sm:text-right")}>
-      <dt className={cn(eyebrowType, "text-foreground/45")}>{label}</dt>
-      <dd className="mt-1.5 text-sm text-foreground/85 tabular-nums">{value}</dd>
+      <dt className={cn(eyebrowType, "text-muted-foreground")}>{label}</dt>
+      <dd className="mt-1.5 text-sm text-foreground tabular-nums">{value}</dd>
     </div>
   );
 }
@@ -64,11 +55,11 @@ export function Figure({
         aria-hidden
         className={cn("mb-4 block h-0.5 w-7", accent ? "bg-primary" : "bg-transparent")}
       />
-      <dt className={cn(eyebrowType, "text-foreground/50")}>{label}</dt>
+      <dt className={cn(eyebrowType, "text-muted-foreground")}>{label}</dt>
       <dd className="mt-3 text-[1.75rem] leading-none font-medium tracking-tight text-foreground tabular-nums">
         {value}
       </dd>
-      <p className="mt-3 text-xs text-foreground/55">{note}</p>
+      <p className="mt-3 text-xs text-muted-foreground">{note}</p>
     </div>
   );
 }
@@ -85,13 +76,13 @@ export function SectionHead({
 }) {
   return (
     <div className="flex flex-wrap items-baseline justify-between gap-x-8 gap-y-2 border-b border-foreground/30 pb-3">
-      <h2 className={cn(eyebrowType, "flex items-baseline gap-3 text-foreground/50")}>
+      <h2 className={cn(eyebrowType, "flex items-baseline gap-3 text-muted-foreground")}>
         <span className="text-foreground tabular-nums">{index}</span>
         <span aria-hidden className="h-px w-6 self-center bg-foreground/25" />
         {title}
       </h2>
       {children ? (
-        <p className="flex flex-wrap items-baseline gap-x-2 text-xs text-foreground/55">
+        <p className="flex flex-wrap items-baseline gap-x-2 text-xs text-muted-foreground">
           {children}
         </p>
       ) : null}
@@ -100,15 +91,15 @@ export function SectionHead({
 }
 
 const markTone = {
-  flag: "bg-[var(--ink-flag)]",
+  flag: "bg-ink-risk",
   open: "bg-foreground/40",
-  settled: "bg-[var(--ink-settled)]",
+  settled: "bg-ink-positive",
 } as const;
 
 const textTone = {
-  flag: "text-[var(--ink-flag)]",
-  open: "text-foreground/75",
-  settled: "text-[var(--ink-settled)]",
+  flag: "text-ink-risk",
+  open: "text-muted-foreground",
+  settled: "text-ink-positive",
 } as const;
 
 /** State as a compact marker plus text — never a coloured pill. */
@@ -134,22 +125,14 @@ export function Note({
   return (
     <div
       role={tone === "flag" ? "alert" : "status"}
-      className={cn(
-        "mt-8 border-l-2 pl-5",
-        tone === "flag" ? "border-[var(--ink-flag)]" : "border-primary",
-      )}
+      className={cn("mt-8 border-l-2 pl-5", tone === "flag" ? "border-ink-risk" : "border-primary")}
     >
       {title ? (
-        <p
-          className={cn(
-            eyebrowType,
-            tone === "flag" ? "text-[var(--ink-flag)]" : "text-foreground/60",
-          )}
-        >
+        <p className={cn(eyebrowType, tone === "flag" ? "text-ink-risk" : "text-muted-foreground")}>
           {title}
         </p>
       ) : null}
-      <p className={cn("text-sm text-foreground/80", title && "mt-1.5")}>{children}</p>
+      <p className={cn("text-sm text-foreground", title && "mt-1.5")}>{children}</p>
     </div>
   );
 }

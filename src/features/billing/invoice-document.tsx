@@ -22,20 +22,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  editorialInk,
-  Eyebrow,
-  eyebrowType,
-  Meta,
-  StatusMark,
-} from "@/features/billing/invoice-editorial";
+import { Eyebrow, eyebrowType, Meta, StatusMark } from "@/features/billing/invoice-editorial";
 import { invoiceOutstanding } from "@/features/billing/rules";
 import { displayDate, displayStatus, money } from "@/features/shell/format";
 import type { Workspace } from "@/lib/domain/_types/workspace";
 import { cn } from "@/lib/utils";
 
 const headCell =
-  "h-auto border-b border-foreground/30 px-0 pt-0 pr-6 pb-2.5 text-[0.6875rem] font-medium tracking-[0.16em] text-foreground/45 uppercase last:pr-0";
+  "h-auto border-b border-foreground/30 px-0 pt-0 pr-6 pb-2.5 text-[0.6875rem] font-medium tracking-[0.16em] text-muted-foreground uppercase last:pr-0";
 const bodyCell = "border-b border-foreground/10 px-0 py-3.5 pr-6 align-top last:pr-0";
 
 function TotalLine({
@@ -56,13 +50,13 @@ function TotalLine({
           : "border-b border-foreground/10 py-2.5",
       )}
     >
-      <dt className={strong ? cn(eyebrowType, "text-foreground/60") : "text-foreground/60"}>
+      <dt className={strong ? cn(eyebrowType, "text-muted-foreground") : "text-muted-foreground"}>
         {label}
       </dt>
       <dd
         className={cn(
           "tabular-nums",
-          strong ? "text-lg font-semibold text-foreground" : "text-foreground/85",
+          strong ? "text-lg font-semibold text-foreground" : "text-foreground",
         )}
       >
         {value}
@@ -107,19 +101,14 @@ export function InvoiceDocument({
         if (!open) onClose();
       }}
     >
-      <DialogContent
-        className={cn(
-          editorialInk,
-          "gap-0 rounded-none border-t-2 border-foreground bg-background p-0 ring-foreground/15 sm:max-w-4xl",
-        )}
-      >
+      <DialogContent className="gap-0 rounded-none border-t-2 border-foreground bg-background p-0 sm:max-w-4xl">
         <DialogHeader className="flex-row flex-wrap items-start justify-between gap-x-10 gap-y-6 px-8 pt-9">
           <div>
             <Eyebrow>{displayStatus(invoice.kind)} invoice</Eyebrow>
             <DialogTitle className="mt-3 text-3xl leading-none font-semibold tracking-tight text-foreground">
               {invoice.number}
             </DialogTitle>
-            <DialogDescription className="mt-3 text-sm text-foreground/60">
+            <DialogDescription className="mt-3 text-sm text-muted-foreground">
               {customerName} · {orderNumber}
             </DialogDescription>
           </div>
@@ -154,7 +143,7 @@ export function InvoiceDocument({
           </dl>
 
           <section className="pt-9">
-            <h3 className={cn(eyebrowType, "text-foreground/50")}>Billed items</h3>
+            <h3 className={cn(eyebrowType, "text-muted-foreground")}>Billed items</h3>
             <Table className="mt-4 text-[0.8125rem]">
               <TableHeader>
                 <TableRow>
@@ -170,20 +159,22 @@ export function InvoiceDocument({
                   <TableRow key={line.id} className="border-0 hover:bg-transparent">
                     <TableCell className={cn(bodyCell, "whitespace-normal")}>
                       <span className="block text-foreground">{line.name}</span>
-                      <span className="mt-1 block text-xs text-foreground/45">{line.variant}</span>
+                      <span className="mt-1 block text-xs text-muted-foreground">
+                        {line.variant}
+                      </span>
                     </TableCell>
                     <TableCell
-                      className={cn(bodyCell, "text-right text-foreground/70 tabular-nums")}
+                      className={cn(bodyCell, "text-right text-muted-foreground tabular-nums")}
                     >
                       {line.quantity}
                     </TableCell>
                     <TableCell
-                      className={cn(bodyCell, "text-right text-foreground/70 tabular-nums")}
+                      className={cn(bodyCell, "text-right text-muted-foreground tabular-nums")}
                     >
                       {money(line.priceCents)}
                     </TableCell>
                     <TableCell
-                      className={cn(bodyCell, "text-right text-foreground/50 tabular-nums")}
+                      className={cn(bodyCell, "text-right text-muted-foreground tabular-nums")}
                     >
                       {line.discountBps > 0 ? `${line.discountBps / 100}%` : "—"}
                     </TableCell>
@@ -211,7 +202,10 @@ export function InvoiceDocument({
           {(payments.length > 0 || credits.length > 0) && (
             <section className="pt-10">
               <h3
-                className={cn(eyebrowType, "border-b border-foreground/30 pb-3 text-foreground/50")}
+                className={cn(
+                  eyebrowType,
+                  "border-b border-foreground/30 pb-3 text-muted-foreground",
+                )}
               >
                 Settlement ledger
               </h3>
@@ -221,13 +215,10 @@ export function InvoiceDocument({
                     key={payment.id}
                     className="flex gap-4 border-b border-foreground/10 py-4 text-sm last:border-0"
                   >
-                    <span
-                      aria-hidden
-                      className="mt-1.5 size-1.5 shrink-0 bg-[var(--ink-settled)]"
-                    />
+                    <span aria-hidden className="mt-1.5 size-1.5 shrink-0 bg-ink-positive" />
                     <div className="min-w-0 flex-1">
                       <p className="text-foreground">Payment recorded</p>
-                      <p className="mt-1 text-xs text-foreground/55">
+                      <p className="mt-1 text-xs text-muted-foreground">
                         {displayDate(payment.createdAt)} · Reference {payment.reference}
                       </p>
                     </div>
@@ -244,7 +235,7 @@ export function InvoiceDocument({
                     <span aria-hidden className="mt-1.5 size-1.5 shrink-0 bg-foreground/40" />
                     <div className="min-w-0 flex-1">
                       <p className="text-foreground">Credit note {credit.number}</p>
-                      <p className="mt-1 text-xs text-foreground/55">
+                      <p className="mt-1 text-xs text-muted-foreground">
                         {credit.reason}. Applied {money(credit.appliedCents)}; available{" "}
                         {money(credit.amountCents - credit.appliedCents)}. No cash refund was
                         recorded.
@@ -262,7 +253,10 @@ export function InvoiceDocument({
           {showPaymentForm && (
             <section className="pt-10 pb-9">
               <h3
-                className={cn(eyebrowType, "border-b border-foreground/30 pb-3 text-foreground/50")}
+                className={cn(
+                  eyebrowType,
+                  "border-b border-foreground/30 pb-3 text-muted-foreground",
+                )}
               >
                 Record settlement
               </h3>
@@ -278,7 +272,7 @@ export function InvoiceDocument({
                 <Field>
                   <FieldLabel
                     htmlFor="payment-reference"
-                    className={cn(eyebrowType, "text-foreground/50")}
+                    className={cn(eyebrowType, "text-muted-foreground")}
                   >
                     Payment reference
                   </FieldLabel>
@@ -290,13 +284,13 @@ export function InvoiceDocument({
                     value={reference}
                     onChange={(event) => setReference(event.target.value)}
                     placeholder="Bank transfer or receipt reference"
-                    className="h-9 rounded-none border-0 border-b-2 border-foreground/20 bg-transparent px-0 text-sm placeholder:text-foreground/40 focus-visible:border-foreground focus-visible:ring-0 dark:bg-transparent"
+                    className="h-9 rounded-none border-0 border-b-2 border-border-strong bg-transparent px-0 text-sm placeholder:text-muted-foreground focus-visible:border-ink-accent focus-visible:ring-0 dark:bg-transparent"
                   />
                   {reference.length > 0 && reference.trim().length < 3 && (
                     <FieldError>Use at least 3 characters.</FieldError>
                   )}
                 </Field>
-                <p className="mt-3 text-xs text-foreground/50">
+                <p className="mt-3 text-xs text-muted-foreground">
                   Records the full outstanding balance of {money(outstanding)} against this invoice.
                 </p>
               </form>

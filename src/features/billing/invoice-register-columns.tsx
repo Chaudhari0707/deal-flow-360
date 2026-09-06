@@ -13,7 +13,7 @@ function Numeric({ children, quiet = false }: { children: ReactNode; quiet?: boo
     <span
       className={cn(
         "block text-right tabular-nums",
-        quiet ? "text-foreground/50" : "font-medium text-foreground",
+        quiet ? "text-muted-foreground" : "font-medium text-foreground",
       )}
     >
       {children}
@@ -39,7 +39,7 @@ export const invoiceRegisterColumns: ColumnDef<DataTableFeatures, InvoiceRegiste
     cell: ({ row }) => (
       <span className="block">
         <span className="block font-medium text-foreground">{row.original.number}</span>
-        <span className="mt-1 block text-xs text-foreground/45">{row.original.orderNumber}</span>
+        <span className="mt-1 block text-xs text-muted-foreground">{row.original.orderNumber}</span>
       </span>
     ),
     header: "Document",
@@ -49,7 +49,9 @@ export const invoiceRegisterColumns: ColumnDef<DataTableFeatures, InvoiceRegiste
     cell: ({ row }) => (
       <span className="block">
         <span className="block text-foreground">{row.original.customerName}</span>
-        <span className="mt-1 block text-xs text-foreground/45">{row.original.customerTier}</span>
+        <span className="mt-1 block text-xs text-muted-foreground">
+          {row.original.customerTier}
+        </span>
       </span>
     ),
     header: "Customer",
@@ -57,7 +59,7 @@ export const invoiceRegisterColumns: ColumnDef<DataTableFeatures, InvoiceRegiste
   {
     accessorKey: "kind",
     cell: ({ row }) => (
-      <span className="text-foreground/70">{displayStatus(row.original.kind)}</span>
+      <span className="text-muted-foreground">{displayStatus(row.original.kind)}</span>
     ),
     header: "Stream",
   },
@@ -65,11 +67,11 @@ export const invoiceRegisterColumns: ColumnDef<DataTableFeatures, InvoiceRegiste
     accessorKey: "dueDate",
     cell: ({ row }) => (
       <span className="block">
-        <span className="block text-foreground/80 tabular-nums">
+        <span className="block text-foreground tabular-nums">
           {displayDate(row.original.dueDate)}
         </span>
         {row.original.overdueDays > 0 && (
-          <span className="mt-1 block text-xs text-[var(--ink-flag)] tabular-nums">
+          <span className="mt-1 block text-xs text-ink-risk tabular-nums">
             {row.original.overdueDays} days late
           </span>
         )}
