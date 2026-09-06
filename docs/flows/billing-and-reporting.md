@@ -14,9 +14,9 @@ API authorization; ownership restrictions also apply to individual records.
 | --- | --- |
 | Sales representative | Read their scoped invoices and subscriptions; download their invoice PDFs. |
 | Sales manager | Read invoices/subscriptions, use Reports and Deal health, record nudges, and configure attention rules. |
-| Finance | Read billing, record full payments, change/cancel subscriptions, run due billing, and use Reports. |
+| Finance | Read billing, record full payments (bank reference), change/cancel subscriptions, run due billing, and use Reports. |
 | Administrator | Reporting and workspace setup; billing data is available through the workspace read permission, but finance mutation rights are not implied. Attention-rule API setup is permitted; Deal health navigation is manager-only. |
-| Customer | Invoice PDF access requires that the invoice belongs to their customer account; no finance mutation permission. |
+| Customer | Invoice PDF access and portal Embedded Checkout require that the invoice belongs to their customer account; no finance mutation permission. |
 | Operations | Fulfillment work; no invoice/payment/subscription/report authority. |
 
 Screens are `/invoices`, `/invoices/:id`, `/subscriptions`, `/reports`, and `/health`.
@@ -161,7 +161,32 @@ a recorded balance, not evidence that money has been returned.
 Users with invoice access search the register and open an invoice. Detail shows its source
 order, line amounts, subtotal, tax, recorded payments, applied credits, and outstanding
 balance. Credit entries show both applied and available portions. Finance enters a bank or
-receipt reference (3–100 characters) and selects **Record full payment**.
+receipt reference (3–100 characters) and selects **Record full payment**. Customers with a
+signed-in portal account can also pay any unpaid invoice kind (`ONE_TIME`, `RECURRING`,
+`ADJUSTMENT`) through Embedded Stripe Checkout on `/portal/billing`. Finance bank-reference
+recording remains available as a fallback. Browser success alone does not mark an invoice
+paid: only the verified Stripe webhook (or finance `POST /invoices/:id/pay`) writes the
+payment ledger.
+
+```mermaid
+sequenceDiagram
+  accTitle: Customer pays an invoice through Embedded Checkout
+  accDescr: Customer starts Checkout in the portal; Stripe webhook verifies the signature and records a full payment into the existing ledger using a stable session-derived operation key.
+  actor C as Customer
+  participant Portal as Portal billing
+  participant API as Checkout and webhook
+  participant Stripe as Stripe
+  participant DB as PostgreSQL
+  C->>Portal: Pay outstanding invoice
+  Portal->>API: Create embedded Checkout Session
+  API->>Stripe: Session for outstanding paise (INR)
+  Stripe-->>Portal: client_secret
+  C->>Stripe: Complete Embedded Checkout
+  Stripe->>API: checkout.session.completed (signed)
+  API->>API: Verify raw-body signature
+  API->>DB: recordPayment with stripe session keys
+  DB-->>Portal: Invoice PAID on next refresh
+```
 
 ```mermaid
 sequenceDiagram
@@ -187,15 +212,20 @@ sequenceDiagram
 ```
 
 Example: ₹11,800 billed minus ₹2,000 applied credit leaves ₹9,800. Recording full payment
-adds ₹9,800 to the payment ledger and marks the invoice paid. This is manual recording of
-a received payment, not a payment-gateway charge. Partial-payment entry is not implemented
-by this endpoint. Retrying the same operation key and matching input returns the existing
-payment; reusing it for another invoice/reference/actor produces a conflict. The UI generates
-an operation key for a submission; separate clicks are not described as the same retry.
+adds ₹9,800 to the payment ledger and marks the invoice paid. Customer Checkout charges the
+same outstanding amount in INR paise. This finance path is manual recording of a received
+payment; the portal path is a payment-gateway charge that still lands in the same `payments`
+table. Partial-payment entry is not implemented by either path. Retrying the same operation
+key and matching input returns the existing payment; reusing it for another
+invoice/reference/actor produces a conflict. Stripe retries use a deterministic key derived
+from the Checkout Session id (capped at 100 characters). v1 does not create Stripe
+Subscriptions, does not open the Stripe Customer Portal, does not issue Stripe cash refunds
+(credit notes remain the refund path), and does not add a finance “send pay link” action.
 
 **Download PDF** retrieves the invoice using authenticated access, with a private/no-store
 response and an attachment filename based on the invoice number. The PDF reflects the
 stored invoice and current recorded payment/credit totals; it does not reprice from catalog.
+The PDF does not require Stripe.
 
 ## Reports and export semantics
 
@@ -327,6 +357,7 @@ and test-run output for actual execution evidence.
 | Coverage | Existing source |
 | --- | --- |
 | Real browser: finance login, full payment, invoice PDF, quantity change, cancellation, report filters, PDF/XLS downloads | [billing browser journey](../../playwright/e2e/billing.spec.ts) |
+| Stripe Checkout ledger key bounds and webhook signature verification | [Stripe billing unit](../../test/unit/stripe-billing.test.ts) |
 | All six roles and signed-out report access; persisted-record totals, all nine filters, empty/invalid ranges, PDF/XLSX parsing, and expired-session refresh | [report browser matrix](../../playwright/e2e/reports.spec.ts) |
 | Transactions: confirmation billing, payment/credit concurrency, duplicate operations, version conflicts, cancellation, catch-up, zero balances | [billing integration regressions](../../test/integration/billing.regression.test.ts) |
 | Companion startup/restart and recurring invoice deduplication | [scheduler integration](../../test/integration/billing-scheduler.regression.test.ts) |

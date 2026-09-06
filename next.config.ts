@@ -4,15 +4,15 @@ function securityHeaders() {
   const isDevelopment = Bun.env.NODE_ENV === "development";
   const contentSecurityPolicy = [
     "default-src 'self'",
-    `script-src 'self' 'unsafe-inline'${isDevelopment ? " 'unsafe-eval'" : ""}`,
+    `script-src 'self' 'unsafe-inline' https://js.stripe.com${isDevelopment ? " 'unsafe-eval'" : ""}`,
     "style-src 'self' 'unsafe-inline'",
-    "img-src 'self' data: blob:",
+    "img-src 'self' data: blob: https://*.stripe.com",
     "font-src 'self' data:",
-    "connect-src 'self' ws://127.0.0.1:3101 ws://127.0.0.1:3102 ws://localhost:3101 ws://localhost:3102",
-    "frame-src 'self'",
+    "connect-src 'self' https://api.stripe.com ws://127.0.0.1:3101 ws://127.0.0.1:3102 ws://localhost:3101 ws://localhost:3102",
+    "frame-src 'self' https://js.stripe.com https://hooks.stripe.com",
     "object-src 'none'",
     "base-uri 'self'",
-    "form-action 'self'",
+    "form-action 'self' https://hooks.stripe.com",
     "frame-ancestors 'self'",
     "upgrade-insecure-requests",
   ].join("; ");

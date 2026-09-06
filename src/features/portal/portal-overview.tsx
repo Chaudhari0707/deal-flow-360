@@ -100,10 +100,16 @@ export function PortalOverview() {
         title="Your workspace"
         description={
           data.customer
-            ? `Welcome, ${data.customer.name}. Review your quotes, ask questions, and move forward with confidence.`
+            ? `Welcome, ${data.customer.name}. Review your quotes, pay invoices, and move forward with confidence.`
             : "Review shared quotations and the conversations that bring your next order together."
         }
       />
+      <div className="flex flex-wrap gap-2">
+        <Button nativeButton={false} variant="outline" render={<Link href="/portal/billing" />}>
+          <FileText />
+          View invoices
+        </Button>
+      </div>
       <Card>
         <CardContent>
           {data.quotes.length ? (

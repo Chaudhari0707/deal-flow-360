@@ -50,6 +50,17 @@ export function PortalShell({ children }: { children: ReactNode }) {
             </Badge>
           </Link>
           <div className="flex items-center gap-2">
+            <Button nativeButton={false} variant="ghost" size="sm" render={<Link href="/portal" />}>
+              Quotations
+            </Button>
+            <Button
+              nativeButton={false}
+              variant="ghost"
+              size="sm"
+              render={<Link href="/portal/billing" />}
+            >
+              Invoices
+            </Button>
             <ThemeToggle />
             <Button variant="outline" aria-label="Sign out" disabled={pending} onClick={signOut}>
               <LogOut />
@@ -68,7 +79,7 @@ export function PortalShell({ children }: { children: ReactNode }) {
       </main>
       <footer className="mx-auto flex max-w-6xl items-center justify-center gap-2 px-4 py-8 text-xs text-muted-foreground">
         <LockKeyhole className="size-3.5" />
-        Your quotes. Your conversations. One secure workspace.
+        Your quotes, invoices, and conversations in one secure workspace.
       </footer>
     </div>
   );

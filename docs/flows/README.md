@@ -46,8 +46,8 @@ flowchart TD
     Portal -->|Counter terms| Risk
     Portal -->|Confirm approved revision| Commit[Atomic order, stock reservation and initial billing]
     Commit --> Ops[Ops accepts or adjusts allocation and ships]
-    Commit --> Finance[Finance records payment and manages subscriptions]
-    Finance --> Renew[Scheduled or manual due billing]
+  Commit --> Finance[Finance records payment or customer pays via Stripe]
+  Finance --> Renew[Scheduled or manual due billing]
     Ops --> Reports[Manager, Finance and Admin reports]
     Finance --> Reports
     Reports --> Health[Manager reviews health and records follow-up]
@@ -71,7 +71,7 @@ guides for multi-line examples and the exact rounding, risk and billing rules.
 | Finance | Review current finance approval step; manage invoices/subscriptions; run billing and reports | Stock access, customer creation, quotation authoring, customer acceptance |
 | Ops | Read quotations; inspect stock; receive, allocate and ship orders | Financial datasets/actions, customer setup, reports or approval decisions |
 | Admin | Configure catalog, warehouses and policy; manage customer directory; inspect quotations and reporting | Quote authoring/sending, approval, customer impersonation, dispatch/restock, payments, subscription mutation or health nudges |
-| Customer | Replace initial password; review own portal quotes; ask questions, counter and confirm approved terms | Staff workspace or another customer's records |
+| Customer | Replace initial password; review own portal quotes; pay own invoices via Stripe Checkout; ask questions, counter and confirm approved terms | Staff workspace or another customer's records |
 | Quote-link visitor | Redeem a one-time emailed access link and work on that exact quotation | Another quotation, even belonging to the same customer |
 
 The [shared policy](../../src/lib/domain/permissions.ts) governs role access. Resource ownership,
@@ -141,6 +141,7 @@ implementation handoff; a test file's existence is not proof that a run passed.
 | Warehouses, reservations, receipt, override and shipment | Fulfillment | [Inventory integration](../../test/integration/inventory.regression.test.ts), [browser](../../playwright/e2e/inventory.spec.ts) |
 | Live stock authentication and cross-tab updates | Fulfillment | [Socket integration](../../test/integration/inventory-socket.test.ts), [browser](../../playwright/e2e/inventory.spec.ts) |
 | Invoices, payment, cancellation, credits and downloadable documents | Billing | [Billing browser](../../playwright/e2e/billing.spec.ts), [integration](../../test/integration/billing.regression.test.ts) |
+| Portal Stripe Checkout keys and webhook signature verification | Billing | [Stripe billing unit](../../test/unit/stripe-billing.test.ts) |
 | Due scheduler and calendar/proration correctness | Billing | [Scheduler regression](../../test/integration/billing-scheduler.regression.test.ts), [calendar tests](../../test/unit/billing-rules.test.ts) |
 | Financial/sales reports, filters and limits | Reporting | [Sales report integration](../../test/integration/billing-sales-report.regression.test.ts), [row-cap regression](../../test/integration/billing-report-cap.regression.test.ts) |
 | Reports for every role, totals, filters, exports and session expiry | Reporting | [Report browser matrix](../../playwright/e2e/reports.spec.ts) |

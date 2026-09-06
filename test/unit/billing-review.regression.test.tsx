@@ -50,19 +50,17 @@ describe("CodeRabbit billing regressions", () => {
     const unavailable = renderToStaticMarkup(
       <ReportExportActions
         enabled={false}
+        format="pdf"
         url="/api/v1/reports/financial?from=2026-09-02&to=2026-09-01"
       />,
     );
     expect(unavailable).not.toContain("href=");
-    expect(unavailable.match(/<button /g)).toHaveLength(2);
-    expect(unavailable.match(/ disabled=/g)).toHaveLength(2);
+    expect(unavailable.match(/<button /g)).toHaveLength(1);
+    expect(unavailable.match(/ disabled=/g)).toHaveLength(1);
     const available = renderToStaticMarkup(
-      <ReportExportActions enabled url="/api/v1/reports/financial?category=Service" />,
+      <ReportExportActions enabled format="pdf" url="/api/v1/reports/financial?category=Service" />,
     );
     expect(available).toContain('href="/api/v1/reports/financial?category=Service&amp;format=pdf"');
-    expect(available).toContain(
-      'href="/api/v1/reports/financial?category=Service&amp;format=xlsx"',
-    );
   });
   test("future-start and invalid-price subscriptions cannot crash preview or enable mutation", () => {
     expect(

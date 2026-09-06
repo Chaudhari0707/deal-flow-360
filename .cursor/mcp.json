@@ -1,0 +1,25 @@
+{
+  "mcpServers": {
+    "better-auth": {
+      "url": "https://mcp.better-auth.com/mcp"
+    },
+    "context7": {
+      "type": "stdio",
+      "command": "bunx",
+      "args": ["-y", "@upstash/context7-mcp@4.0.5"]
+    },
+    "linear": {
+      "url": "https://mcp.linear.app/mcp"
+    },
+    "next-devtools": {
+      "type": "stdio",
+      "command": "bunx",
+      "args": ["next-devtools-mcp@0.4.0"]
+    },
+    "shadcn": {
+      "type": "stdio",
+      "command": "bunx",
+      "args": ["shadcn@4.21.0", "mcp"]
+    }
+  }
+}

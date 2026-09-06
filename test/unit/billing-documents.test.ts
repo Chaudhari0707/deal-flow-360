@@ -1,7 +1,13 @@
 import { describe, expect, test } from "bun:test";
 
 import ExcelJS from "exceljs";
-import { decodePDFRawStream, PDFArray, PDFDocument, type PDFRawStream, StandardFonts } from "pdf-lib";
+import {
+  decodePDFRawStream,
+  PDFArray,
+  PDFDocument,
+  type PDFRawStream,
+  StandardFonts,
+} from "pdf-lib";
 
 import type { InvoiceDocument, ReportRow } from "@/features/billing/_types/documents";
 import { invoicePdf, reportPdf, reportSpreadsheet } from "@/features/billing/documents";

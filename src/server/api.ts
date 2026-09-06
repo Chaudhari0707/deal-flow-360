@@ -4,6 +4,7 @@ import { Elysia, t } from "elysia";
 import { healthRoutes } from "@/features/billing/health-routes";
 import { billingModels } from "@/features/billing/model";
 import { billingRoutes } from "@/features/billing/routes";
+import { stripeRoutes } from "@/features/billing/stripe-routes";
 import { catalogRoutes } from "@/features/catalog/routes";
 import { inventoryModels } from "@/features/inventory/model";
 import { inventoryRoutes } from "@/features/inventory/routes";
@@ -78,4 +79,5 @@ export const api = new Elysia({ prefix: "/api/v1", normalize: false })
   .use(portalRoutes)
   .use(inventoryRoutes)
   .use(billingRoutes)
+  .use(stripeRoutes)
   .use(healthRoutes);
