@@ -232,7 +232,8 @@ export async function seedInvoiceStatusFixtures(
     .set({ creditedCents: creditSet.totalCents, paidCents: 0, status: "PAID" })
     .where(eq(s.invoices.id, creditSet.id));
 
-  // 8) Cash-paid + leftover available credit (not auto-applied to other invoices)
+  // 8) Cash-paid + leftover available customer credit (manual apply to other invoices; no auto-apply)
+
   await confirmFixture({
     quoteId: "Q-INV-CREDIT-BANK",
     orderId: "order-inv-credit-bank",

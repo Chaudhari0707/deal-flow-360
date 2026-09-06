@@ -151,11 +151,13 @@ shipping a partial allocation while the rest remains backordered.
 
 An override replaces only unshipped allocations. Operations provides the proposed warehouse
 quantities and a reason. Entering zero releases that allocation; the form omits zero rows from the
-replacement request. Validation counts free stock plus this order's own pending reservations,
-so an order can reuse its protected units but cannot take another order's reservations. Shipped
-units are immutable. Duplicate product/warehouse pairs, nonpositive quantities, excess stock,
-and quantities exceeding remaining demand are rejected. The entire override is transactional:
-failure leaves the previous allocations intact. An unchanged plan is a no-op.
+replacement request. Released warehouses with nothing shipped are removed from the reservation
+ledger and do not appear in the shipment dialog as a zero-quantity row. Validation counts free
+stock plus this order's own pending reservations, so an order can reuse its protected units but
+cannot take another order's reservations. Shipped units are immutable. Duplicate product/warehouse
+pairs, nonpositive quantities, excess stock, and quantities exceeding remaining demand are
+rejected. The entire override is transactional: failure leaves the previous allocations intact. An
+unchanged plan is a no-op.
 
 Example: an order holds 5 unshipped laptops at Main. Operations can move 2 to East if East has
 2 free, leaving 3 at Main. If 1 laptop was already shipped from Main, that shipped unit stays there.

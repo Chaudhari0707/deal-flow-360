@@ -132,6 +132,9 @@ export function InvoiceWorkspace({ initialId }: { initialId?: string }) {
 
       {invoice && (
         <InvoiceDocument
+          availableCustomerCreditCents={data.credits
+            .filter((credit) => credit.customerId === invoice.customerId)
+            .reduce((sum, credit) => sum + credit.amountCents - credit.appliedCents, 0)}
           canPay={canPay}
           credits={data.credits.filter((credit) => credit.invoiceId === invoice.id)}
           customerName={invoice.customerName}
@@ -140,6 +143,17 @@ export function InvoiceWorkspace({ initialId }: { initialId?: string }) {
           payments={data.payments.filter((payment) => payment.invoiceId === invoice.id)}
           pending={action.pending}
           onClose={() => setSelected(null)}
+          onApplyCredit={() => {
+            void action.run(
+              async () =>
+                apiData(
+                  await apiClient.api.v1.invoices({ id: invoice.id })["apply-credit"].post({
+                    operationKey: crypto.randomUUID(),
+                  }),
+                ),
+              "Available customer credit applied to this invoice.",
+            );
+          }}
           onRecordPayment={(reference) => {
             void action.run(
               async () =>

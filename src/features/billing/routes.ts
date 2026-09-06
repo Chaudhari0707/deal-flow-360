@@ -2,10 +2,19 @@ import { eq } from "drizzle-orm";
 import { Elysia, t } from "elysia";
 
 import { invoicePdf, reportPdf, reportSpreadsheet } from "@/features/billing/documents";
-import { billingRunModel, paymentResultModel } from "@/features/billing/model";
+import {
+  applyCreditResultModel,
+  billingRunModel,
+  paymentResultModel,
+} from "@/features/billing/model";
 import { financialReport } from "@/features/billing/reports";
 import { reportOptions, salesReport } from "@/features/billing/sales-report";
-import { changeSubscription, recordPayment, runDueBilling } from "@/features/billing/service";
+import {
+  applyCustomerCredit,
+  changeSubscription,
+  recordPayment,
+  runDueBilling,
+} from "@/features/billing/service";
 import { db } from "@/lib/db/connection";
 import { invoices } from "@/lib/db/schema/billing";
 import { customers, orders, quotes } from "@/lib/db/schema/commerce";
@@ -59,6 +68,20 @@ export const billingRoutes = new Elysia({ name: "billing", tags: ["Billing"] })
       body: t.Object({ operationKey: key, reference: t.String({ minLength: 3, maxLength: 100 }) }),
       params: id,
       response: { 200: paymentResultModel, ...apiErrorResponses },
+    },
+  )
+  .post(
+    "/invoices/:id/apply-credit",
+    async ({ actor, params, body }) =>
+      applyCustomerCredit(actor, params.id, body.operationKey, body.amountCents),
+    {
+      authorize: permissions.billingWrite,
+      body: t.Object({
+        amountCents: t.Optional(t.Integer({ minimum: 1, maximum: 2_147_483_647 })),
+        operationKey: key,
+      }),
+      params: id,
+      response: { 200: applyCreditResultModel, ...apiErrorResponses },
     },
   )
   .post("/subscriptions/run-due", async ({ actor }) => runDueBilling(actor), {

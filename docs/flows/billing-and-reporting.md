@@ -159,22 +159,27 @@ increments its version, retains invoice history, and prevents future recurring r
 Example: cancelling a ₹1,000 tax-inclusive 30-day period with 15 unused days creates a
 ₹500 credit. If the source invoice is unpaid, ₹500 is applied against its outstanding
 balance, leaving ₹500 to collect. If it was fully paid, the ₹500 remains available customer
-credit. No cash refund has been issued.
+credit owed to that customer. No cash refund has been issued.
 
 Credits are bounded by eligible billed service in the current period, including adjustment
 invoices. Applied credits cannot make the invoice outstanding negative. Credit notes have
-their own identities and retain reasons. There is currently no UI/API here for refunding
-cash or allocating available credit automatically to a later invoice; available credit is
-a recorded balance, not evidence that money has been returned.
+their own identities and retain reasons. Cash refunds are not supported. Available credit
+is not applied silently to later invoices; finance opens an unpaid invoice for the same
+customer and selects **Apply credit** to consume the pool (FIFO by credit-note age) against
+that invoice's outstanding balance. The same operation key with matching input is safe to
+retry; reusing it with different input is rejected.
 
 ## Invoice review, payment, and PDF
 
 Users with invoice access search the register, optionally narrow it to All, Open, Past due
-or Settled, and open an invoice. The register marks an unpaid invoice past due once its due
-date has passed, and reports how many days late it is. Detail shows its source order, line
-amounts net of each line's discount so they sum to the subtotal, tax, recorded payments,
-applied credits, and outstanding balance. Credit entries show both applied and available
-portions. Finance enters a bank or
+or Settled, and open an invoice. The register lists newest confirmations first (issued date
+descending) so the latest billing can be settled immediately. It marks an unpaid invoice
+past due once its due date has passed, and reports how many days late it is. Detail shows
+its source order, line amounts net of each line's discount so they sum to the subtotal, tax,
+recorded payments, applied credits, and outstanding balance. Credit entries show both applied
+and available portions. When the customer has leftover credit on file and the invoice is
+unpaid, finance can apply that credit before or instead of recording a bank payment.
+Finance enters a bank or
 receipt reference (3–100 characters) and selects **Record full payment**.
 
 ```mermaid
@@ -345,6 +350,8 @@ and test-run output for actual execution evidence.
 | Real browser: finance login, full payment, invoice PDF, quantity change, cancellation, report filters, PDF/XLS downloads | [billing browser journey](../../playwright/e2e/billing.spec.ts) |
 | All six roles and signed-out report access; persisted-record totals, all nine filters, empty/invalid ranges, PDF/XLSX parsing, and expired-session refresh | [report browser matrix](../../playwright/e2e/reports.spec.ts) |
 | Transactions: confirmation billing, payment/credit concurrency, duplicate operations, version conflicts, cancellation, catch-up, zero balances | [billing integration regressions](../../test/integration/billing.regression.test.ts) |
+| Manual apply of available customer credit to another unpaid invoice | [credit-apply integration](../../test/integration/billing-credit-apply.regression.test.ts) |
+| Confirm → invoice / subscription / fulfillment visibility and newest-first order | [confirm billing integration](../../test/integration/confirm-billing.regression.test.ts) |
 | Companion startup/restart and recurring invoice deduplication | [scheduler integration](../../test/integration/billing-scheduler.regression.test.ts) |
 | Draft reporting, owner/team/product filters, record-specific dates, matching exports | [sales report integration](../../test/integration/billing-sales-report.regression.test.ts) |
 | Filters applied before row caps | [report-cap integration](../../test/integration/billing-report-cap.regression.test.ts) |

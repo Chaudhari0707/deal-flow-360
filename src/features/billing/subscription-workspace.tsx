@@ -132,6 +132,7 @@ export function SubscriptionWorkspace() {
             )}
           enableColumnResizing={false}
           getRowId={(row) => row.id}
+          initialSorting={[{ id: "createdAt", desc: true }]}
           onRowClick={(row) => {
             setSelected(row.id);
             setQuantity(row.quantity);

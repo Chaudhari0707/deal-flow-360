@@ -353,9 +353,9 @@ describe("inventory transaction regressions", () => {
       "Customer delivery preference",
       f.actor,
     );
-    const allocation = (await fulfillmentDetail(f.order.id)).allocations.find(
-      (a) => a.quantity > 0,
-    )!;
+    const afterMove = await fulfillmentDetail(f.order.id);
+    expect(afterMove.allocations.map((a) => a.warehouseId)).toEqual([f.warehouses[1]!.id]);
+    const allocation = afterMove.allocations[0]!;
     await shipReservation(
       f.order.id,
       { operationKey: crypto.randomUUID(), quantity: 3, reservationId: allocation.id },

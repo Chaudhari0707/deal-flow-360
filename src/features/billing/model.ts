@@ -44,6 +44,11 @@ const salesReportModel = t.Object({
 
 export const paymentResultModel = t.Object({ invoice: invoiceModel, payment: paymentModel });
 
+export const applyCreditResultModel = t.Object({
+  appliedCents: t.Integer(),
+  invoice: invoiceModel,
+});
+
 export const billingRunModel = t.Object({
   checked: t.Integer(),
   issued: t.Integer(),
@@ -65,6 +70,7 @@ export const financialReportModel = t.Object({
 });
 
 export const billingModels = {
+  ApplyCreditResult: applyCreditResultModel,
   BillingRun: billingRunModel,
   FinancialReport: financialReportModel,
   PaymentResult: paymentResultModel,

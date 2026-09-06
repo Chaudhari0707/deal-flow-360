@@ -106,6 +106,7 @@ export function InvoiceRegister({
         emptyMessage="No invoices in this view. Confirm a quote to generate its billing."
         enableColumnResizing={false}
         getRowId={(row) => row.id}
+        initialSorting={[{ id: "createdAt", desc: true }]}
         onRowClick={(row) => onSelect(row.id)}
         pageSize={20}
         toolbar={() => null}

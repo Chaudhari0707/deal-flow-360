@@ -109,7 +109,6 @@ export function CatalogEditor({
 }) {
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
-  const [createdCustomerId, setCreatedCustomerId] = useState<string>();
   const [stockable, setStockable] = useState(product?.stockable ?? false);
   const [active, setActive] = useState(product?.active ?? true);
   const [promoted, setPromoted] = useState(product?.promoted ?? false);
@@ -160,14 +159,7 @@ export function CatalogEditor({
         };
         const customers = apiClient.api.v1.customers;
         if (customer) apiData(await customers({ id: customer.id }).patch(body));
-        else {
-          const result = apiData(await customers.post(body));
-          if (result.invitation.status !== "SENT") {
-            setCreatedCustomerId(result.id);
-            await saved();
-            return;
-          }
-        }
+        else apiData(await customers.post(body));
       }
       await saved();
       close();

@@ -66,20 +66,24 @@ function TotalLine({
 }
 
 export function InvoiceDocument({
+  availableCustomerCreditCents,
   canPay,
   credits,
   customerName,
   invoice,
+  onApplyCredit,
   onClose,
   onRecordPayment,
   orderNumber,
   payments,
   pending,
 }: {
+  availableCustomerCreditCents: number;
   canPay: boolean;
   credits: Workspace["credits"];
   customerName: string;
   invoice: Workspace["invoices"][number];
+  onApplyCredit: () => void;
   onClose: () => void;
   onRecordPayment: (reference: string) => void;
   orderNumber: string;
@@ -90,6 +94,8 @@ export function InvoiceDocument({
   const outstanding = invoiceOutstanding(invoice);
   const settled = outstanding === 0;
   const showPaymentForm = canPay && !settled;
+  const applyCreditCents = Math.min(availableCustomerCreditCents, outstanding);
+  const showApplyCredit = canPay && !settled && applyCreditCents > 0;
   const period =
     invoice.periodStart && invoice.periodEnd
       ? `${displayDate(invoice.periodStart)} — ${displayDate(invoice.periodEnd)}`
@@ -250,8 +256,35 @@ export function InvoiceDocument({
             </section>
           )}
 
+          {showApplyCredit && (
+            <section className="pt-10">
+              <h3
+                className={cn(
+                  eyebrowType,
+                  "border-b border-foreground/30 pb-3 text-muted-foreground",
+                )}
+              >
+                Apply customer credit
+              </h3>
+              <p className="mt-4 max-w-[52ch] text-sm text-muted-foreground">
+                This customer has {money(availableCustomerCreditCents)} available credit on file
+                from prior cancellations or prepaid unused service. Applying credit reduces this
+                invoice; it is not a cash refund.
+              </p>
+              <Button
+                type="button"
+                variant="outline"
+                className="mt-5 rounded-none border-foreground/25 bg-transparent"
+                disabled={pending}
+                onClick={onApplyCredit}
+              >
+                Apply {money(applyCreditCents)} credit
+              </Button>
+            </section>
+          )}
+
           {showPaymentForm && (
-            <section className="pt-10 pb-9">
+            <section className={showApplyCredit ? "pt-8 pb-9" : "pt-10 pb-9"}>
               <h3
                 className={cn(
                   eyebrowType,
