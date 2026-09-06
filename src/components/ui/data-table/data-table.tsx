@@ -163,6 +163,9 @@ export function DataTable<TData extends RowData, TValue>({
   const [columnVisibility, setColumnVisibility] = React.useState<ColumnVisibilityState>({});
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
   const [sorting, setSorting] = React.useState<SortingState>([]);
+  // Client-side global filtering only ever sees the rows currently loaded, so it is offered on
+  // client-paginated tables only. On a server-backed table it would silently search one page and
+  // present the result as if it had searched the whole set.
   const [globalFilter, setGlobalFilter] = React.useState("");
   const resolvedColumns =
     enableSelection && !hasSelectionColumn(columns)
@@ -264,10 +267,14 @@ export function DataTable<TData extends RowData, TValue>({
           table={table}
           actions={bulkRemoveAction}
           pageNav={pageNav}
-          searchValue={globalFilter}
-          onSearchValueChange={setGlobalFilter}
-          searchLabel={searchLabel}
-          searchPlaceholder={searchPlaceholder}
+          {...(manualPagination
+            ? {}
+            : {
+                searchValue: globalFilter,
+                onSearchValueChange: setGlobalFilter,
+                searchLabel,
+                searchPlaceholder,
+              })}
           title={title}
           description={description}
         />

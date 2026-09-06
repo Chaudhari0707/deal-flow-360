@@ -45,9 +45,15 @@ export default function CountUp({
   const ref = useRef<HTMLSpanElement>(null);
   const reduceMotion = useReducedMotion();
   const motionValue = useMotionValue(direction === "down" ? to : from);
-  const damping = 20 + 40 * (1 / duration);
-  const stiffness = 100 * (1 / duration);
-  const springValue = useSpring(motionValue, { damping, stiffness });
+  /**
+   * Resolve the spring from `duration` rather than from stiffness/damping. A physics spring
+   * finishes on absolute rest thresholds (0.5 units), so its settling time grows with the
+   * figure: a stiffness/damping pair tuned for 0.9s lands a two-digit count in ~2.4s but needs
+   * ~9.7s for a money figure held in paise, which is neither the requested duration nor a
+   * settled number anybody waits for. A duration-resolved spring ends on `duration` at exactly
+   * `to`, whatever the magnitude.
+   */
+  const springValue = useSpring(motionValue, { bounce: 0, duration: duration * 1000 });
   const isInView = useInView(ref, { once: true, margin: "0px" });
 
   const getDecimalPlaces = (value: number) => {

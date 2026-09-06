@@ -22,7 +22,13 @@ test("credentials sign-in, responsive navigation and logout @regression", async 
   await page.goto("/portal");
   await expect(page).toHaveURL(/\/dashboard$/);
 
+  // The workspace renders a persistent rail on desktop and swaps it for an offcanvas sheet below
+  // the md breakpoint. Awaiting the rail, then awaiting its removal, is the observable proof that
+  // the shell has streamed in and hydrated; a click on still-unhydrated markup is dropped silently.
+  const workspaceRail = page.locator("[data-slot='sidebar']");
+  await expect(workspaceRail).toHaveCount(1);
   await page.setViewportSize({ width: 390, height: 844 });
+  await expect(workspaceRail).toHaveCount(0);
   await page.getByRole("button", { name: "Toggle Sidebar" }).click();
   await expect(page.getByRole("link", { name: "Quotations", exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Sign out", exact: true }).click();

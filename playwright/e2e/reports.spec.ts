@@ -74,21 +74,37 @@ for (const role of ["manager", "finance", "admin", "rep", "ops", "customer"]) {
       "true",
     );
     await expect(page.getByLabel("From", { exact: true })).toBeVisible();
-    for (const [label, value] of [
-      ["Net billed", rupees(initial.totals.billedCents)],
-      ["Payments collected", rupees(initial.totals.paidCents)],
-      ["Outstanding", rupees(initial.totals.outstandingCents)],
-      ["Quotes created", String(initial.sales.metrics.quotesCreated)],
-      ["Orders confirmed", String(initial.sales.metrics.ordersConfirmed)],
-    ]) {
-      await expect(
-        page
-          .locator('[data-slot="card"]')
-          .filter({
-            has: page.getByText(label!, { exact: true }),
-          })
-          .getByText(value!, { exact: true }),
-      ).toBeVisible();
+    // Each report tab owns its own figures: the sales metrics belong to the sales register and
+    // the financial totals to the financial one, so select a tab before reading its figures.
+    const figures: [string, [string, string][]][] = [
+      [
+        "Sales report",
+        [
+          ["Quotes created", String(initial.sales.metrics.quotesCreated)],
+          ["Orders confirmed", String(initial.sales.metrics.ordersConfirmed)],
+        ],
+      ],
+      [
+        "Financial report",
+        [
+          ["Net billed", rupees(initial.totals.billedCents)],
+          ["Payments collected", rupees(initial.totals.paidCents)],
+          ["Outstanding", rupees(initial.totals.outstandingCents)],
+        ],
+      ],
+    ];
+    for (const [tab, entries] of figures) {
+      await page.getByRole("tab", { name: tab, exact: true }).click();
+      for (const [label, value] of entries) {
+        await expect(
+          page
+            .locator('[data-slot="card"]')
+            .filter({
+              has: page.getByText(label, { exact: true }),
+            })
+            .getByText(value, { exact: true }),
+        ).toBeVisible();
+      }
     }
 
     const customer = workspace.customers.find((entry) => entry.id === "acme")!;
@@ -170,10 +186,11 @@ for (const role of ["manager", "finance", "admin", "rep", "ops", "customer"]) {
 
     await page.getByLabel("From", { exact: true }).fill("2199-01-01");
     await page.getByLabel("To", { exact: true }).fill("2199-01-31");
+    await expect(page.getByText("No records match these filters.", { exact: true })).toBeVisible();
+    await page.getByRole("tab", { name: "Sales report", exact: true }).click();
     await expect(
       page.getByText("No sales records match these filters.", { exact: true }),
     ).toBeVisible();
-    await expect(page.getByText("No records match these filters.", { exact: true })).toBeVisible();
     await page.getByLabel("To", { exact: true }).fill("2198-12-31");
     await expect(
       page.getByText("Start date must be before the end date.", { exact: true }),
