@@ -153,7 +153,7 @@ function WorkspaceSidebar({ actor, pathname }: { actor: Actor; pathname: string 
                             aria-hidden
                             className={cn(
                               "absolute inset-y-1 left-0 w-0.5",
-                              active ? "bg-primary" : "bg-transparent",
+                              active ? "bg-ink-accent" : "bg-transparent",
                             )}
                           />
                           <span>{item.title}</span>

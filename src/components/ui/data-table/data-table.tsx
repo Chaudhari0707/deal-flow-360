@@ -305,7 +305,7 @@ export function DataTable<TData extends RowData, TValue>({
                           className={cn(
                             "absolute top-0 right-0 z-10 h-full w-2 cursor-col-resize touch-none select-none",
                             "after:absolute after:inset-y-0 after:right-0 after:w-px after:bg-border/80",
-                            header.column.getIsResizing() && "after:bg-primary",
+                            header.column.getIsResizing() && "after:bg-ink-accent",
                           )}
                         />
                       ) : null}
