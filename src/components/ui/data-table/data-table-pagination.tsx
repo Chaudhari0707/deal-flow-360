@@ -19,6 +19,71 @@ import { cn } from "@/lib/utils";
 /** Square, transparent step controls — the hairline is the boundary, not a filled pill. */
 const stepButton = "size-8 rounded-none bg-transparent";
 
+/**
+ * Compact page navigation for the top right of a table, in the shape a reader already knows from
+ * their mail client: the visible range, the total, and one step in each direction. It sits above
+ * the scrolling rows so it stays put while the body moves.
+ */
+export function DataTablePageNav<TData extends RowData>({
+  className,
+  table,
+}: DataTablePaginationProps<TData>) {
+  "use no memo";
+  const { pageIndex, pageSize } = table.store.state.pagination;
+  const total = table.getFilteredRowModel().rows.length;
+  const first = total === 0 ? 0 : pageIndex * pageSize + 1;
+  const last = Math.min(total, (pageIndex + 1) * pageSize);
+  return (
+    <div className={cn("flex items-center gap-1", className)}>
+      <Select
+        value={`${pageSize}`}
+        onValueChange={(value) => {
+          table.setPageSize(Number(value));
+        }}
+      >
+        <SelectTrigger
+          aria-label="Rows per page"
+          className="h-7 w-14 rounded-none border-0 bg-transparent px-1 text-xs text-muted-foreground tabular-nums"
+        >
+          <SelectValue placeholder={pageSize} />
+        </SelectTrigger>
+        <SelectContent side="bottom">
+          <SelectGroup>
+            {[10, 20, 25, 30, 40, 50].map((size) => (
+              <SelectItem key={size} value={`${size}`}>
+                {size}
+              </SelectItem>
+            ))}
+          </SelectGroup>
+        </SelectContent>
+      </Select>
+      <p className="mr-1 text-xs text-muted-foreground tabular-nums">
+        {first}–{last} of {total}
+      </p>
+      <Button
+        variant="ghost"
+        size="icon-sm"
+        className={cn(stepButton, "size-7")}
+        onClick={() => table.previousPage()}
+        disabled={!table.getCanPreviousPage()}
+      >
+        <span className="sr-only">Go to previous page</span>
+        <ChevronLeft aria-hidden="true" className="size-4" />
+      </Button>
+      <Button
+        variant="ghost"
+        size="icon-sm"
+        className={cn(stepButton, "size-7")}
+        onClick={() => table.nextPage()}
+        disabled={!table.getCanNextPage()}
+      >
+        <span className="sr-only">Go to next page</span>
+        <ChevronRight aria-hidden="true" className="size-4" />
+      </Button>
+    </div>
+  );
+}
+
 interface DataTablePaginationProps<TData extends RowData> {
   className?: string;
   table: Table<DataTableFeatures, TData>;

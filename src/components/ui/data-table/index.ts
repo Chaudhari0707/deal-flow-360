@@ -17,5 +17,8 @@ export { DataTableBulkRemove } from "@/components/ui/data-table/data-table-bulk-
 export { DataTableColumnHeader } from "@/components/ui/data-table/data-table-column-header";
 export { DataTableDefaultToolbar } from "@/components/ui/data-table/data-table-default-toolbar";
 export { DataTableFacetedFilter } from "@/components/ui/data-table/data-table-faceted-filter";
-export { DataTablePagination } from "@/components/ui/data-table/data-table-pagination";
+export {
+  DataTablePageNav,
+  DataTablePagination,
+} from "@/components/ui/data-table/data-table-pagination";
 export { DataTableViewOptions } from "@/components/ui/data-table/data-table-view-options";

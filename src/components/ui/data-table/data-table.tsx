@@ -27,7 +27,7 @@ import { CopyButton } from "@/components/ui/copy-button";
 import { ApplyCellValueToAllButton } from "@/components/ui/data-table/apply-cell-value-to-all-button";
 import { DataTableBulkRemove } from "@/components/ui/data-table/data-table-bulk-remove";
 import { DataTableDefaultToolbar } from "@/components/ui/data-table/data-table-default-toolbar";
-import { DataTablePagination } from "@/components/ui/data-table/data-table-pagination";
+import { DataTablePageNav } from "@/components/ui/data-table/data-table-pagination";
 import {
   columnPinningKey,
   getDataTablePinningStyles,
@@ -254,10 +254,20 @@ export function DataTable<TData extends RowData, TValue>({
           description={description}
         />
       )}
-      <div className={cn("overflow-x-auto overflow-y-hidden", classNames?.container)}>
+      {showPagination ? (
+        <div className="flex items-center justify-end">
+          <DataTablePageNav table={table} />
+        </div>
+      ) : null}
+      <div className={cn(classNames?.container)}>
         <UITable
           className={classNames?.table}
-          containerClassName={hasPinnedColumns ? "overflow-visible" : undefined}
+          containerClassName={cn(
+            hasPinnedColumns
+              ? "overflow-visible"
+              : "max-h-[68svh] overflow-auto overscroll-contain",
+            classNames?.scroller,
+          )}
           style={{
             width: "100%",
             ...(enableColumnResizing || hasPinnedColumns ? { minWidth: table.getTotalSize() } : {}),
@@ -275,9 +285,10 @@ export function DataTable<TData extends RowData, TValue>({
                       key={header.id}
                       colSpan={header.colSpan}
                       className={cn(
+                        "sticky top-0 z-20 bg-background",
                         enableColumnResizing && "relative",
                         isPinned &&
-                          "bg-background group-hover/table-row:bg-muted/50 group-data-[state=selected]/table-row:bg-muted",
+                          "group-hover/table-row:bg-muted group-data-[state=selected]/table-row:bg-muted",
                         classNames?.head,
                       )}
                       style={{
@@ -414,9 +425,6 @@ export function DataTable<TData extends RowData, TValue>({
           </TableBody>
         </UITable>
       </div>
-      {showPagination ? (
-        <DataTablePagination table={table} className={classNames?.pagination} />
-      ) : null}
     </div>
   );
 }

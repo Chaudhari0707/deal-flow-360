@@ -2,12 +2,14 @@
 
 import * as React from "react";
 import { type RowData, type Table } from "@tanstack/react-table";
+import { SlidersHorizontal } from "lucide-react";
 
 import { eyebrowType } from "@/components/editorial/editorial";
 import type { DataTableFeatures } from "@/components/ui/_types/data-table";
 import { Button } from "@/components/ui/button";
 import { DataTableViewOptions } from "@/components/ui/data-table/data-table-view-options";
 import { Input } from "@/components/ui/input";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 
 /**
@@ -77,7 +79,8 @@ export function DataTableDefaultToolbar<TData extends RowData>({
 
   const hasMasthead = Boolean(title || description);
   const hasActions = Boolean(actions) || showViewOptions;
-  const hasControls = Boolean(columnSearchId || onSearchValueChange || filters || isFiltered);
+  const hasSearch = Boolean(columnSearchId || onSearchValueChange);
+  const hasControls = hasSearch || Boolean(filters) || isFiltered;
 
   return (
     <div className="flex flex-col gap-4">
@@ -107,24 +110,64 @@ export function DataTableDefaultToolbar<TData extends RowData>({
       )}
       {hasControls && (
         <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
-          {(columnSearchId || onSearchValueChange) && (
-            <Input
-              aria-label={searchLabel ?? searchPlaceholder}
-              placeholder={searchPlaceholder}
-              value={resolvedSearchValue}
-              onChange={(e) => {
-                if (onSearchValueChange) {
-                  onSearchValueChange(e.target.value);
-                  return;
-                }
+          {hasSearch && (
+            /* Refinement lives inside the search field rather than in a row of its own: the
+               field is the one place a reader already looks to narrow a list. */
+            <div className="flex w-full max-w-sm items-center border-b-2 border-border-strong focus-within:border-ink-accent">
+              <Input
+                aria-label={searchLabel ?? searchPlaceholder}
+                placeholder={searchPlaceholder}
+                value={resolvedSearchValue}
+                onChange={(e) => {
+                  if (onSearchValueChange) {
+                    onSearchValueChange(e.target.value);
+                    return;
+                  }
 
-                table.getColumn(columnSearchId!)?.setFilterValue(e.target.value);
-              }}
-              className="h-9 w-full max-w-sm rounded-none border-0 border-b-2 border-border-strong bg-transparent px-0 text-sm focus-visible:border-ink-accent"
-            />
+                  table.getColumn(columnSearchId!)?.setFilterValue(e.target.value);
+                }}
+                className="h-9 min-w-0 flex-1 rounded-none border-0 bg-transparent px-0 text-sm focus-visible:border-0 focus-visible:ring-0"
+              />
+              {filters ? (
+                <Popover>
+                  <PopoverTrigger
+                    render={
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon-sm"
+                        aria-label="Refine search"
+                        className="shrink-0 rounded-none text-muted-foreground hover:bg-transparent hover:text-foreground"
+                      />
+                    }
+                  >
+                    <SlidersHorizontal />
+                  </PopoverTrigger>
+                  <PopoverContent align="start" className="w-104 max-w-[calc(100vw-2rem)] p-0">
+                    <div className="grid gap-4 p-5">{filters}</div>
+                    {isFiltered && (
+                      <div className="flex justify-end border-t border-border px-5 py-3">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className={cn(eyebrowType, "rounded-none")}
+                          onClick={() => {
+                            table.resetColumnFilters();
+                            onSearchValueChange?.("");
+                          }}
+                        >
+                          Reset
+                        </Button>
+                      </div>
+                    )}
+                  </PopoverContent>
+                </Popover>
+              ) : null}
+            </div>
           )}
-          {filters}
-          {isFiltered && (
+          {!hasSearch && filters}
+          {isFiltered && !filters && (
             <Button
               type="button"
               variant="ghost"

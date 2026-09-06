@@ -52,6 +52,8 @@ export type DataTableClassNames = {
   pagination?: string;
   /** Every body `<tr>`. */
   row?: string;
+  /** The scrolling viewport that holds the table and pins its header. */
+  scroller?: string;
   /** The `<table>` element. */
   table?: string;
 };
