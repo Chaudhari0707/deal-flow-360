@@ -8,6 +8,9 @@ import {
   auditEntries,
   customers,
   deliveries,
+  invoiceDeliveries,
+  invoices,
+  orders,
   products,
   quoteAccess,
   quoteRevisions,
@@ -16,7 +19,13 @@ import {
 } from "@/lib/db/schema";
 import type { Actor } from "@/lib/domain/_types/domain";
 
-type Envelope = { from: string; subject: string; text: string; to: string };
+type Envelope = {
+  attachments?: { content: string; contentType: string; filename: string }[];
+  from: string;
+  subject: string;
+  text: string;
+  to: string;
+};
 type ProviderResult = { data: { id: string } | null; error: { message: string } | null };
 const calls: { message: Envelope; key: string }[] = [];
 let reject = false;
@@ -36,15 +45,16 @@ mock.module("resend", () => ({
 }));
 
 const { sendQuotation, tokenDigest } = await import("@/features/quotes/email");
+const { sendOrderInvoiceEmail } = await import("@/features/billing/invoice-email");
 const { redeemAccess } = await import("@/features/quotes/portal-access");
-const { saveQuote, submitQuote } = await import("@/features/quotes/service");
+const { confirmQuote, saveQuote, submitQuote } = await import("@/features/quotes/service");
 const prefix = `mail-${crypto.randomUUID()}`;
 const original = {
   transport: Bun.env.EMAIL_TRANSPORT,
   key: Bun.env.RESEND_API_KEY,
   recipient: Bun.env.EMAIL_TEST_RECIPIENT,
 };
-let actor: Actor, quoteId: string;
+let actor: Actor, quoteId: string, quoteRevision: number, orderId: string;
 
 beforeAll(async () => {
   if (!new URL(Bun.env.DATABASE_URL!).pathname.endsWith("_test"))
@@ -88,7 +98,7 @@ beforeAll(async () => {
     actor,
   );
   quoteId = draft.id;
-  await submitQuote(draft.id, draft.revision, actor);
+  quoteRevision = (await submitQuote(draft.id, draft.revision, actor)).revision;
 });
 
 afterAll(async () => {
@@ -101,6 +111,12 @@ afterAll(async () => {
     else Bun.env[name] = value;
   }
   if (quoteId) {
+    if (orderId) {
+      await db.delete(invoiceDeliveries).where(eq(invoiceDeliveries.orderId, orderId));
+      await db.delete(invoices).where(eq(invoices.orderId, orderId));
+      await db.delete(auditEntries).where(eq(auditEntries.entityId, orderId));
+      await db.delete(orders).where(eq(orders.id, orderId));
+    }
     await db.delete(deliveries).where(eq(deliveries.quoteId, quoteId));
     await db.delete(quoteAccess).where(eq(quoteAccess.quoteId, quoteId));
     await db.delete(auditEntries).where(eq(auditEntries.entityId, quoteId));
@@ -202,5 +218,47 @@ describe("quotation mail provider boundary", () => {
       await Promise.allSettled([first, second]);
       dispatch = undefined;
     }
+  });
+  test("confirmation sends the generated invoice PDF and retries with the same delivery identity", async () => {
+    const order = await confirmQuote(quoteId, quoteRevision, {
+      customerId: prefix,
+      email: `customer-${prefix}@example.test`,
+      id: "",
+      name: "Mail fixture customer",
+      role: "customer",
+    });
+    orderId = order.id;
+    const [queued] = await db
+      .select()
+      .from(invoiceDeliveries)
+      .where(eq(invoiceDeliveries.orderId, order.id));
+    expect(queued?.invoiceIds).toHaveLength(1);
+
+    const before = calls.length;
+    reject = true;
+    expect((await sendOrderInvoiceEmail(order.id, actor)).status).toBe("FAILED");
+    reject = false;
+    const delivered = await sendOrderInvoiceEmail(order.id, actor);
+    expect(delivered.status).toBe("SENT");
+
+    const attempts = calls.slice(before);
+    expect(attempts).toHaveLength(2);
+    expect(attempts[0]!.key).toBe(attempts[1]!.key);
+    const message = attempts[1]!.message;
+    expect(message.subject).toContain("your invoice");
+    expect(message.text).toContain(order.number);
+    expect(message.to).toBe("delivered@resend.dev");
+    expect(message.attachments).toHaveLength(1);
+    const [pdf] = message.attachments!;
+    expect(pdf!.contentType).toBe("application/pdf");
+    expect(pdf!.filename).toMatch(/^INV-[A-F0-9]{8}\.pdf$/);
+    expect(new TextDecoder().decode(Uint8Array.fromBase64(pdf!.content).slice(0, 4))).toBe("%PDF");
+
+    const [stored] = await db
+      .select()
+      .from(invoiceDeliveries)
+      .where(eq(invoiceDeliveries.id, delivered.deliveryId));
+    expect(stored?.attempts).toBe(2);
+    expect(stored?.status).toBe("SENT");
   });
 });

@@ -34,7 +34,7 @@ price change does not rewrite already-issued invoices.
 ```mermaid
 flowchart TD
   accTitle: Order confirmation creates separate billing streams
-  accDescr: A confirmed order creates one invoice for all one-time lines and one subscription plus initial invoice per recurring line, with stable retry identities.
+  accDescr: A confirmed order creates one invoice for all one-time lines and one subscription plus initial invoice per recurring line, then persists an email intent for those initial invoice PDFs.
   A[Customer confirms eligible quotation] --> B[Create order in transaction]
   B --> C{Line cadence}
   C -->|One-time| D[Combine one-time lines into one invoice]
@@ -42,9 +42,11 @@ flowchart TD
   C -->|Monthly, quarterly, yearly| F[Create subscription per recurring line]
   F --> G[Issue initial recurring invoice due on period start]
   G --> H[Retain cadence, anchor day, tax and price basis]
-  E --> I[Commit order and billing together]
+  E --> I[Commit order, billing and invoice-email intent together]
   H --> I
-  I --> J[Repeated confirmation cannot duplicate invoice identities]
+  I --> J[Render the initial invoice PDFs after commit]
+  J --> K[Send one customer email with a stable provider key]
+  K --> L[Repeated confirmation cannot duplicate invoice or accepted-mail identities]
 ```
 
 Example: an order contains a ₹10,000 setup service and a ₹1,000 monthly care plan, both
@@ -56,6 +58,15 @@ are backordered; it is not shipment-triggered invoicing.
 
 The invoice types are `ONE_TIME`, `RECURRING`, and `ADJUSTMENT`. An invoice with zero
 outstanding starts `PAID` without creating a fictional payment record.
+
+After that transaction commits, DealFlow360 sends the customer one email with the initial invoice
+PDF or PDFs attached. It uses the same stored-invoice renderer as the finance download, so catalog
+changes cannot reprice the attachment. The delivery record snapshots the confirmation recipient and
+the initial invoice IDs: a later recurring renewal, adjustment, or credit never changes this email's
+attachments. Provider acceptance marks it `SENT`; a configuration, rendering, or provider failure
+marks it `FAILED` without rolling back the order. Repeating the confirmation request retries the
+same durable delivery identity and provider idempotency key. This records an attempted delivery,
+not proof of inbox receipt.
 
 ## Subscription renewal and automatic billing
 
@@ -199,6 +210,8 @@ an operation key for a submission; separate clicks are not described as the same
 **Download PDF** retrieves the invoice using authenticated access, with a private/no-store
 response and an attachment filename based on the invoice number. The PDF reflects the
 stored invoice and current recorded payment/credit totals; it does not reprice from catalog.
+Confirmation email attachments call that same PDF renderer directly after the order commits; they do
+not expose an invoice URL or weaken the authenticated download endpoint.
 
 ## Reports and export semantics
 
@@ -339,6 +352,7 @@ and test-run output for actual execution evidence.
 | Approval revision timing and multi-step completion | [approval metric tests](../../test/unit/billing-approval-metrics.test.ts) |
 | Valid/invalid subscription previews and disabled exports | [UI regressions](../../test/unit/billing-review.regression.test.tsx) |
 | Real document bytes, pagination, numeric spreadsheets and text handling | [document tests](../../test/unit/billing-documents.test.ts) |
+| Confirmation invoice attachment, durable retry identity and provider acceptance | [email integration](../../test/integration/email.regression.test.ts) |
 | Historical discount comparisons, fulfilled-order exclusion, collection signal wording | [health regressions](../../test/unit/billing-health.regression.test.ts) |
 
 For a manual demonstration, create and confirm a mixed one-time/recurring quotation, then
