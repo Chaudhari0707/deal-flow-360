@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 
 import { db } from "@/lib/db/connection";
-import { customers, profiles, quotes } from "@/lib/db/schema";
+import { customerInvitations, customers, profiles, quotes, user } from "@/lib/db/schema";
 import type { Actor } from "@/lib/domain/_types/domain";
 import { audit } from "@/server/audit";
 import { DomainError } from "@/server/errors";
@@ -28,18 +28,51 @@ export async function deleteCatalogCustomer(customerId: string, actor: Actor) {
         .from(quotes)
         .where(eq(quotes.customerId, customerId))
         .limit(1);
-      const [profile] = await tx
-        .select({ id: profiles.userId })
+      const linkedProfiles = await tx
+        .select({ userId: profiles.userId, role: profiles.role })
         .from(profiles)
         .where(eq(profiles.customerId, customerId))
-        .limit(1);
-      if (quote || profile)
+        .for("update");
+      if (quote)
         throw new DomainError(
-          "This customer has quotations or a linked portal account and cannot be deleted.",
+          "This customer has quotations, billing history, or other linked records and cannot be deleted.",
           409,
         );
+      if (
+        linkedProfiles.length > 1 ||
+        linkedProfiles.some((profile) => profile.role !== "customer")
+      )
+        throw new DomainError(
+          "This customer has multiple or non-customer logins and cannot be deleted automatically.",
+          409,
+        );
+
+      const [invitation] = await tx
+        .select({ userId: customerInvitations.userId })
+        .from(customerInvitations)
+        .where(eq(customerInvitations.customerId, customerId))
+        .for("update");
+      const profile = linkedProfiles[0];
+      if (profile && invitation && profile.userId !== invitation.userId)
+        throw new DomainError(
+          "This customer has inconsistent portal records and cannot be deleted automatically.",
+          409,
+        );
+
+      const portalUserId = profile?.userId ?? invitation?.userId;
+      if (portalUserId) {
+        await tx.delete(customerInvitations).where(eq(customerInvitations.customerId, customerId));
+        await tx.delete(profiles).where(eq(profiles.userId, portalUserId));
+        await tx.delete(user).where(eq(user.id, portalUserId));
+      }
       await tx.delete(customers).where(eq(customers.id, customerId));
-      await audit(tx, actor, customerId, "CUSTOMER_DELETED", "Unused customer deleted");
+      await audit(
+        tx,
+        actor,
+        customerId,
+        "CUSTOMER_DELETED",
+        portalUserId ? "Unused customer and portal login deleted" : "Unused customer deleted",
+      );
       return customer;
     });
   } catch (error) {

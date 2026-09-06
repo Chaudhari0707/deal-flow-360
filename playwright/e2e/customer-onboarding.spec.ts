@@ -88,10 +88,14 @@ test("welcome email failure keeps the saved customer and retries the same invita
   await page.getByRole("textbox", { name: "Name", exact: true }).fill("Retry customer");
   await page.getByLabel("Customer email", { exact: true }).fill(email);
   await page.getByRole("button", { name: "Save customer", exact: true }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await page.getByPlaceholder("Search customers…").fill("Retry customer");
+  const row = page.getByRole("row").filter({ hasText: "Retry customer" });
+  await expect(row).toBeVisible();
+  await row.getByRole("button", { name: "Edit customer", exact: true }).click();
   await expect(
     page.getByRole("button", { name: "Retry welcome email", exact: true }),
   ).toBeVisible();
-  await expect(page.getByRole("button", { name: "Save customer", exact: true })).toBeDisabled();
   await page.getByRole("button", { name: "Retry welcome email", exact: true }).click();
   await expect(
     page.getByText("Welcome email accepted by provider.", { exact: true }),
@@ -122,10 +126,14 @@ test("provider test-domain rejection shows configuration guidance without losing
   await page.getByRole("textbox", { name: "Name", exact: true }).fill("Restricted sender customer");
   await page.getByLabel("Customer email", { exact: true }).fill(email);
   await page.getByRole("button", { name: "Save customer", exact: true }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await page.getByPlaceholder("Search customers…").fill("Restricted sender customer");
+  const row = page.getByRole("row").filter({ hasText: "Restricted sender customer" });
+  await expect(row).toBeVisible();
+  await row.getByRole("button", { name: "Edit customer", exact: true }).click();
   const dialog = page.getByRole("dialog");
   await expect(dialog.getByText(/Retrying the same test sender will not fix this/)).toBeVisible();
   await expect(dialog.getByText(/private@example.test/)).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "Save customer", exact: true })).toBeDisabled();
   const workspace = await (await page.request.get("/api/v1/workspace")).json();
   expect(
     workspace.customers.filter((entry: { email: string }) => entry.email === email),

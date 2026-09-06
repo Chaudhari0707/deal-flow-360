@@ -19,6 +19,7 @@
     "db:push": "bun run scripts/db-push.ts",
     "db:reset": "bun run scripts/db-reset.ts",
     "db:seed": "bun run scripts/db-seed.ts",
+    "db:seed:bulk": "bun run scripts/db-seed-bulk.ts",
     "db:studio": "bun --bun x drizzle-kit studio",
     "db:test:migrate": "bun run scripts/db-test-command.ts migrate",
     "db:test:reset": "bun run scripts/db-test-reset.ts",

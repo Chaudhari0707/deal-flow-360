@@ -48,7 +48,7 @@ test("customer switching updates hardware tier pricing and approval limits", asy
   await expect(page.getByText("MEDIUM", { exact: true })).toBeVisible();
 });
 
-test("rep reads customers; manager creates, edits tier and protects the linked login", async ({
+test("rep reads customers; manager creates, edits tier and removes an unused linked customer", async ({
   browser,
   baseURL,
 }) => {
@@ -73,12 +73,19 @@ test("rep reads customers; manager creates, edits tier and protects the linked l
     await staff.goto("/customers");
     await staff.getByRole("button", { name: "Add customer", exact: true }).click();
     const name = `Customer browser ${crypto.randomUUID()}`;
+    const email = `customer-${crypto.randomUUID()}@example.com`;
     await staff.getByRole("textbox", { name: "Name", exact: true }).fill(name);
-    await staff
-      .getByLabel("Customer email", { exact: true })
-      .fill(`customer-${crypto.randomUUID()}@example.com`);
+    await staff.getByLabel("Customer email", { exact: true }).fill(email);
     await staff.getByRole("button", { name: "Save customer", exact: true }).click();
     await expect(staff.getByRole("dialog")).toHaveCount(0);
+    await staff.getByRole("button", { name: "Add customer", exact: true }).click();
+    await staff.getByRole("textbox", { name: "Name", exact: true }).fill(`Duplicate ${name}`);
+    await staff.getByLabel("Customer email", { exact: true }).fill(email);
+    await staff.getByRole("button", { name: "Save customer", exact: true }).click();
+    await expect(staff.getByRole("dialog")).toContainText(
+      "That email already belongs to a customer.",
+    );
+    await staff.getByRole("button", { name: "Cancel", exact: true }).click();
     await page.reload();
     await page.getByPlaceholder("Search customers…").fill(name);
     await expect(page.getByRole("row").filter({ hasText: name })).toBeVisible();
@@ -93,7 +100,21 @@ test("rep reads customers; manager creates, edits tier and protects the linked l
     await staff.getByRole("button", { name: "Edit customer", exact: true }).click();
     await staff.getByRole("button", { name: "Delete customer", exact: true }).click();
     await staff.getByRole("button", { name: "Confirm deletion", exact: true }).click();
-    await expect(staff.getByRole("alert")).toContainText("linked portal account");
+    await expect(staff.getByRole("dialog")).toHaveCount(0);
+    await expect(staff.getByRole("row").filter({ hasText: name })).toHaveCount(0);
+
+    await staff.getByRole("button", { name: "Add customer", exact: true }).click();
+    await staff.getByRole("textbox", { name: "Name", exact: true }).fill(name);
+    await staff.getByLabel("Customer email", { exact: true }).fill(email);
+    await staff.getByRole("button", { name: "Save customer", exact: true }).click();
+    await expect(staff.getByRole("dialog")).toHaveCount(0);
+    await staff.getByPlaceholder("Search customers…").fill(name);
+    await expect(staff.getByRole("row").filter({ hasText: name })).toBeVisible();
+    await staff.getByRole("button", { name: "Edit customer", exact: true }).click();
+    await staff.getByRole("button", { name: "Delete customer", exact: true }).click();
+    await staff.getByRole("button", { name: "Confirm deletion", exact: true }).click();
+    await expect(staff.getByRole("dialog")).toHaveCount(0);
+    await expect(staff.getByRole("row").filter({ hasText: name })).toHaveCount(0);
   } finally {
     await rep.close();
     await manager.close();

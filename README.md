@@ -55,6 +55,11 @@ Set `DEMO_PASSWORD` to opt into the full synthetic demo seed; these accounts sha
 Customer access is separate from the internal workspace. New self-signups become Sales Reps,
 not administrators. Demo accounts are synthetic; no production credentials are included.
 
+For larger datasets, run `bun run db:seed:bulk --dry-run`, then `bun run db:seed:bulk` to add
+100 linked sample scenarios without resetting existing data. Rerun the same batch safely, or use
+`--batch review-2` to add another. See [bulk seeding](docs/engineering/bulk-seeding.md) for counts,
+customer logins, date controls, and the reusable function.
+
 ## Verification
 
 ```bash

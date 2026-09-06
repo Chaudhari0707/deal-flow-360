@@ -65,8 +65,9 @@ export function CustomerDelete({
               Delete {name}?
             </AlertDialogTitle>
             <AlertDialogDescription className="max-w-[56ch] leading-relaxed">
-              This permanently removes an unused customer. Customers with quotations, billing
-              history, or portal accounts cannot be deleted.
+              This permanently removes an unused customer. Its linked portal login is removed at the
+              same time. Customers with quotations, billing history, or other linked records cannot
+              be deleted.
             </AlertDialogDescription>
           </AlertDialogHeader>
           {error && (

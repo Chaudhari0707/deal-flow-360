@@ -4,7 +4,7 @@ import { eq } from "drizzle-orm";
 
 import { createAuth } from "@/lib/auth/create-auth";
 import { db } from "@/lib/db/connection";
-import { auditEntries, customers, products, profiles } from "@/lib/db/schema";
+import { auditEntries, customers, products, profiles, user } from "@/lib/db/schema";
 import type { Role } from "@/lib/domain/_types/domain";
 mock.module("resend", () => ({
   Resend: class {
@@ -80,17 +80,28 @@ test("customer CRUD roles, invalid data, and unused deletion audit", async () =>
         })
       ).status,
     ).toBe(400);
+    const updatedInput = { ...input(), tier: "Silver" as const };
     expect(
-      (
-        await request("PATCH", `/customers/${customer.id}`, "manager", {
-          ...input(),
-          tier: "Silver",
-        })
-      ).status,
+      (await request("PATCH", `/customers/${customer.id}`, "manager", updatedInput)).status,
     ).toBe(200);
-    expect((await request("DELETE", `/customers/${customer.id}`, "admin")).status).toBe(409);
-    // Legacy unused customer records still support deletion; newly provisioned
-    // customers have linked logins and must retain the existing protection.
+    expect((await request("DELETE", `/customers/${customer.id}`, "admin")).status).toBe(200);
+    expect(await db.select().from(customers).where(eq(customers.id, customer.id))).toHaveLength(0);
+    expect(
+      await db.select().from(profiles).where(eq(profiles.customerId, customer.id)),
+    ).toHaveLength(0);
+    expect(await db.select().from(user).where(eq(user.email, updatedInput.email))).toHaveLength(0);
+    const recreated = await request("POST", "/customers", "manager", updatedInput);
+    expect(recreated.status).toBe(200);
+    const recreatedCustomer = await recreated.json();
+    expect(recreatedCustomer.email).toBe(updatedInput.email);
+    expect(
+      await db.select().from(customers).where(eq(customers.email, updatedInput.email)),
+    ).toHaveLength(1);
+    expect(await db.select().from(user).where(eq(user.email, updatedInput.email))).toHaveLength(1);
+    expect((await request("DELETE", `/customers/${recreatedCustomer.id}`, "admin")).status).toBe(
+      200,
+    );
+    // Legacy unused customer records remain deletable.
     const unusedId = crypto.randomUUID();
     await db.insert(customers).values({ id: unusedId, ...input() });
     expect((await request("DELETE", `/customers/${unusedId}`, "admin")).status).toBe(200);
@@ -144,7 +155,6 @@ test("linked customer email edits update login, revoke sessions and reject confl
     .getSetCookie()
     .map((value) => value.split(";")[0])
     .join("; ");
-  expect((await request("DELETE", `/customers/${customer.id}`, "admin")).status).toBe(409);
   const newEmail = `changed-${crypto.randomUUID()}@example.com`;
   expect(
     (await request("PATCH", `/customers/${customer.id}`, "manager", { ...body, email: newEmail }))

@@ -1,6 +1,7 @@
 "use client";
 
 import { type FormEvent, useState } from "react";
+import { toast } from "sonner";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -32,6 +33,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { CustomerInvitationStatus } from "@/features/catalog/customer-invitation-status";
 import { CustomerDelete } from "@/features/shell/customer-delete";
 import { useWorkspace } from "@/features/shell/use-workspace";
 import { apiClient, apiData, HttpResponseError } from "@/lib/api/client";
@@ -129,6 +131,7 @@ export function CatalogEditor({
     }
     setPending(true);
     setError("");
+    let invitationNeedsAttention = false;
     try {
       if (kind === "product") {
         const body = {
@@ -163,6 +166,10 @@ export function CatalogEditor({
       }
       await saved();
       close();
+      if (invitationNeedsAttention)
+        toast.warning(
+          "Customer created. The welcome email needs attention; open Edit customer to retry.",
+        );
     } catch (failure) {
       setError(
         failure instanceof HttpResponseError && failure.status === 403
@@ -448,6 +455,7 @@ export function CatalogEditor({
                   </div>
                 </>
               )}
+              {kind === "customer" && customer && <CustomerInvitationStatus id={customer.id} />}
               {error && (
                 <Alert variant="destructive">
                   <AlertDescription>{error}</AlertDescription>

@@ -60,10 +60,9 @@ test("only managers and admins can add customers; representatives retain directo
         ).toBeVisible();
         await page.getByRole("button", { name: "Delete customer", exact: true }).click();
         await confirmation.getByRole("button", { name: "Confirm deletion", exact: true }).click();
-        await expect(confirmation.getByRole("alert")).toContainText("linked portal account");
-        await confirmation.getByRole("button", { name: "Cancel", exact: true }).click();
-        await page.getByRole("dialog").getByRole("button", { name: "Cancel", exact: true }).click();
-        await expect(page.getByRole("row").filter({ hasText: name })).toBeVisible();
+        await expect(confirmation).toHaveCount(0);
+        await expect(page.getByRole("dialog")).toHaveCount(0);
+        await expect(page.getByRole("row").filter({ hasText: name })).toHaveCount(0);
       }
     } finally {
       await context.close();

@@ -185,7 +185,8 @@ Sources: [portal identity and serialization](../../src/features/quotes/portal-ac
 
 In Customers, managers and administrators select **Edit customer** on an existing row.
 The dialog footer includes **Delete customer**, followed by a separate confirmation dialog.
-Cancel preserves the customer; a blocked deletion explains the linked-record restriction without
+Cancel preserves the customer; a successful deletion removes an unused customer's linked portal
+login in the same transaction. A blocked deletion explains the linked-record restriction without
 closing the editor. The Add customer dialog has no delete action, and representatives do not
 receive customer edit/delete controls.
 
@@ -203,7 +204,7 @@ the original invitation recipient is not rewritten.
 ```mermaid
 flowchart TD
   accTitle: Customer lifecycle preserves linked business history
-  accDescr: Managers or administrators can update contacts with guarded login email synchronization, while deletion is permitted only for unused customers without quotes or linked accounts.
+  accDescr: Managers or administrators can update contacts with guarded login email synchronization, while deletion is permitted only for unused customers without commercial history.
   A[Manager or administrator opens customer] --> B{Edit or delete?}
   B -->|Edit| C{Email changed?}
   C -->|No| D[Save contact and tier]
@@ -211,15 +212,16 @@ flowchart TD
   E -->|No| F[Conflict; administrative review]
   E -->|Yes| G[Update linked login and revoke its sessions if present]
   G --> D
-  B -->|Delete| H{Quotes or linked account exist?}
+  B -->|Delete| H{Quotes, billing or other linked records?}
   H -->|Yes| I[Reject deletion and preserve records]
-  H -->|No| J[Delete unused customer and audit]
+  H -->|No| J[Delete customer, portal login and audit]
 ```
 
 Example: changing a Gold customer to Silver changes the default tier for future quoting.
-Deleting a customer with an existing quote is rejected. Newly onboarded customers already
-have a linked portal account, so this delete action cannot remove them; deletion is for
-unused unlinked records. No cascade erases their order/payment history.
+Deleting a customer with an existing quote is rejected. A newly onboarded customer with no
+commercial history can be deleted; its linked portal login, profile and pending invitation are
+removed atomically with the customer. No cascade erases order/payment history because such a
+customer is not eligible for deletion.
 
 Sources: [customer lifecycle](../../src/features/catalog/customer-lifecycle.ts),
 [customer save service](../../src/features/catalog/service.ts), and

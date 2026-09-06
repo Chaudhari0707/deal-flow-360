@@ -1,9 +1,9 @@
 # Customer directory and tier policy
 
 Customer operations are available under `/customers` and Catalog → Customers.
-Sales representatives can create and read customer records. Managers and admins can
-also edit and delete. Other roles do not have directory mutation rights. Existing rep
-rows are read-only; the server enforces the same policy as the UI.
+Sales representatives can read customer records. Managers and admins can create, edit and
+delete them. Other roles do not have directory mutation rights. Existing rep rows are read-only;
+the server enforces the same policy as the UI.
 
 `POST /api/v1/customers` atomically creates a customer, Better Auth credential login,
 customer profile, and encrypted welcome-email intent. The response includes an `invitation`
@@ -17,11 +17,11 @@ Conflicting emails or ambiguous multiple/non-customer login links return 409 wit
 partial changes. Tier/contact edits do not send another welcome email.
 
 `DELETE /api/v1/customers/:id` returns the deleted customer (200), 404 for missing
-records, or 409 for customers with quotations, linked logins or other FK references.
+records, or 409 for customers with quotations, billing history or other FK references.
 Deletion requires UI confirmation. A row lock and database foreign keys protect
 against concurrent new references. Successful deletion writes an audit event; linked
-commercial history is never cascaded. New customers have linked logins, so their deletion is
-protected; only unused legacy contacts remain deletable. There is no archive flag.
+commercial history is never cascaded. An unused customer's linked portal login, profile and
+pending invitation are removed atomically with the customer. There is no archive flag.
 
 Gold/Silver/Bronze are pricing tiers, not recurring subscription plans. Configurable
 tier ceilings govern discretionary discounts; the effective ceiling is the lower of

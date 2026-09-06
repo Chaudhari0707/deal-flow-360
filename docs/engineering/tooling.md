@@ -23,6 +23,7 @@ The repository uses Bun as package manager and runtime. `package.json` is the co
 | `bun run db:generate` | Generate reviewable Drizzle SQL migrations |
 | `bun run db:migrate` | Apply committed migrations |
 | `bun run db:seed` | Apply deterministic local development seeders |
+| `bun run db:seed:bulk --dry-run` | Preview additive sample data; omit `--dry-run` to apply a named batch ([guide](bulk-seeding.md)) |
 | `bun run db:reset -- --force` | Reset and optionally seed a guarded local `_dev` database |
 | `bun run db:studio` | Open Drizzle Studio |
 | `bun run auth:generate` | Generate Better Auth schema and normalize generated lint |
