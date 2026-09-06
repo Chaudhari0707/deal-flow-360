@@ -79,6 +79,7 @@ export function FulfillmentScreen() {
           data={data.items}
           enableColumnResizing={false}
           getRowId={(row) => row.id}
+          initialSorting={[{ id: "createdAt", desc: true }]}
           manualPagination
           pagination={pagination}
           pageCount={Math.ceil(data.total / pagination.pageSize)}

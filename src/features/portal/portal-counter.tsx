@@ -9,6 +9,10 @@ import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { NumberInput } from "@/components/ui/number-input";
 import type { PortalDetail } from "@/features/portal/_types/portal";
+import {
+  currentCalendarDate,
+  isCurrentOrFutureCalendarDate,
+} from "@/features/quotes/delivery-date";
 import { apiClient, apiData, HttpResponseError } from "@/lib/api/client";
 import { cn } from "@/lib/utils";
 
@@ -24,6 +28,7 @@ export function PortalCounter({
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const minimumDeliveryDate = currentCalendarDate();
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
@@ -32,6 +37,11 @@ export function PortalCounter({
       discountBps: Math.round(Number(form.get(line.id)) * 100),
     }));
     const promisedDate = String(form.get("promisedDate") ?? "");
+    if (promisedDate && !isCurrentOrFutureCalendarDate(promisedDate)) {
+      setError("Requested delivery date must be today or later");
+      setNotice("");
+      return;
+    }
     setPending(true);
     setError("");
     setNotice("");
@@ -86,6 +96,7 @@ export function PortalCounter({
               id="counter-date"
               name="promisedDate"
               type="date"
+              min={minimumDeliveryDate}
               defaultValue={data.quote.promisedDate ?? ""}
             />
           </Field>

@@ -60,22 +60,25 @@ export async function createOrderBilling(
   order: typeof orders.$inferSelect,
   now: Date,
 ) {
+  const issued = [];
   const oneTime = order.lines.filter((line) => line.intervalMonths === 0);
   const start = calendarDate(now);
   if (oneTime.length) {
     const due = new Date(start);
     due.setUTCDate(due.getUTCDate() + 14);
-    await issueInvoice(tx, {
-      customerId: order.customerId,
-      dueDate: dateKey(due),
-      kind: "ONE_TIME",
-      lines: oneTime,
-      operationKey: `order:${order.id}:one-time`,
-      orderId: order.id,
-      subtotalCents: oneTime.reduce((sum, line) => sum + line.netCents, 0),
-      taxCents: oneTime.reduce((sum, line) => sum + line.taxCents, 0),
-      totalCents: oneTime.reduce((sum, line) => sum + line.totalCents, 0),
-    });
+    issued.push(
+      await issueInvoice(tx, {
+        customerId: order.customerId,
+        dueDate: dateKey(due),
+        kind: "ONE_TIME",
+        lines: oneTime,
+        operationKey: `order:${order.id}:one-time`,
+        orderId: order.id,
+        subtotalCents: oneTime.reduce((sum, line) => sum + line.netCents, 0),
+        taxCents: oneTime.reduce((sum, line) => sum + line.taxCents, 0),
+        totalCents: oneTime.reduce((sum, line) => sum + line.totalCents, 0),
+      }),
+    );
   }
   for (const line of order.lines.filter((entry) => entry.intervalMonths > 0)) {
     const id = `${order.id}:${line.id}`;
@@ -102,21 +105,24 @@ export async function createOrderBilling(
       .onConflictDoNothing()
       .returning();
     if (!subscription) continue;
-    await issueInvoice(tx, {
-      customerId: order.customerId,
-      dueDate: dateKey(start),
-      kind: "RECURRING",
-      lines: [line],
-      operationKey: `subscription:${id}:${dateKey(start)}`,
-      orderId: order.id,
-      periodEnd: dateKey(end),
-      periodStart: dateKey(start),
-      subscriptionId: id,
-      subtotalCents: line.netCents,
-      taxCents: line.taxCents,
-      totalCents: line.totalCents,
-    });
+    issued.push(
+      await issueInvoice(tx, {
+        customerId: order.customerId,
+        dueDate: dateKey(start),
+        kind: "RECURRING",
+        lines: [line],
+        operationKey: `subscription:${id}:${dateKey(start)}`,
+        orderId: order.id,
+        periodEnd: dateKey(end),
+        periodStart: dateKey(start),
+        subscriptionId: id,
+        subtotalCents: line.netCents,
+        taxCents: line.taxCents,
+        totalCents: line.totalCents,
+      }),
+    );
   }
+  return issued;
 }
 
 export function subscriptionLine(

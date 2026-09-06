@@ -66,6 +66,93 @@ export async function recordPayment(
   });
 }
 
+/**
+ * Manually apply leftover customer credit (amount − applied on credit notes) to an unpaid
+ * invoice for the same customer. FIFO by credit note age. Does not invent a cash refund and
+ * does not auto-apply; finance must call this explicitly.
+ */
+export async function applyCustomerCredit(
+  actor: Actor,
+  invoiceId: string,
+  operationKey: string,
+  amountCents?: number,
+) {
+  return db.transaction(async (tx) => {
+    await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${operationKey}, 0))`);
+    const [invoice] = await tx
+      .select()
+      .from(invoices)
+      .where(eq(invoices.id, invoiceId))
+      .for("update");
+    if (!invoice) throw new DomainError("Invoice not found", 404);
+    const fingerprint = JSON.stringify({
+      amountCents: amountCents ?? null,
+      invoiceId,
+    });
+    const [previous] = await tx
+      .select()
+      .from(auditEntries)
+      .where(
+        and(
+          eq(auditEntries.entityId, invoiceId),
+          eq(auditEntries.actorId, actor.id),
+          sql`${auditEntries.detail}->>'operationKey' = ${operationKey}`,
+        ),
+      );
+    if (previous) {
+      if (previous.detail?.fingerprint !== fingerprint)
+        throw new DomainError("Operation key was reused with different input", 409);
+      return { appliedCents: Number(previous.detail?.appliedCents ?? 0), invoice };
+    }
+    const outstanding = invoiceOutstanding(invoice);
+    if (outstanding === 0) throw new DomainError("Invoice has no outstanding balance", 409);
+    const notes = await tx
+      .select()
+      .from(credits)
+      .where(eq(credits.customerId, invoice.customerId))
+      .orderBy(asc(credits.createdAt), asc(credits.id))
+      .for("update");
+    const available = notes.reduce(
+      (sum, credit) => sum + Math.max(0, credit.amountCents - credit.appliedCents),
+      0,
+    );
+    if (available === 0) throw new DomainError("No available customer credit", 409);
+    const apply = amountCents ?? Math.min(available, outstanding);
+    if (!Number.isInteger(apply) || apply <= 0)
+      throw new DomainError("Credit amount must be a positive whole number of paise");
+    if (apply > outstanding)
+      throw new DomainError("Credit cannot exceed the invoice outstanding balance", 409);
+    if (apply > available) throw new DomainError("Insufficient available customer credit", 409);
+    let remaining = apply;
+    for (const credit of notes) {
+      if (remaining === 0) break;
+      const free = credit.amountCents - credit.appliedCents;
+      if (free <= 0) continue;
+      const take = Math.min(remaining, free);
+      await tx
+        .update(credits)
+        .set({ appliedCents: credit.appliedCents + take })
+        .where(eq(credits.id, credit.id));
+      remaining -= take;
+    }
+    const creditedCents = invoice.creditedCents + apply;
+    const [updated] = await tx
+      .update(invoices)
+      .set({
+        creditedCents,
+        status: invoiceOutstanding({ ...invoice, creditedCents }) === 0 ? "PAID" : invoice.status,
+      })
+      .where(eq(invoices.id, invoiceId))
+      .returning();
+    await audit(tx, actor, invoiceId, "CREDIT_APPLIED", "Applied available customer credit", {
+      appliedCents: apply,
+      fingerprint,
+      operationKey,
+    });
+    return { appliedCents: apply, invoice: updated };
+  });
+}
+
 async function issueCredits(
   tx: DbTransaction,
   subscription: typeof subscriptions.$inferSelect,

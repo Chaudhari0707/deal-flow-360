@@ -40,9 +40,18 @@ An invitation created with the restricted test sender cannot be repaired merely 
 environment sender. That case still needs a separately implemented account-recovery flow; do not
 delete a linked customer, expose the temporary password, or promise that repeated retries fix it.
 
+The password is a readable eight-character string so the customer can retype it from the welcome
+email; `l`, `o`, `0` and `1` are excluded from the random alphabet. `CUSTOMER_TEMP_PASSWORD` sets a
+shared demo credential and defaults to `test1234`; unsetting it issues a random password per
+customer. A configured value shorter than the Better Auth minimum falls back to a random password
+rather than failing every provisioning call. The email carries this plain value; the encrypted
+envelope exists only so a retry can resend the same message without storing the password.
+
 The generated password is temporary: `profiles.must_change_password` defaults false for existing
 accounts and is true for provisioned customers. `/me` exposes this flag, the login UI routes to
-`/change-password`, and portal credential actions return 403 until replacement. Better Auth verifies
+`/change-password`, and portal credential actions return 403 until replacement. Because portal
+routes resolve identity through `portalIdentity` instead of the `authorize` macro, that gate is
+enforced separately there. Better Auth verifies
 the old password and hashes the new one; its account-update hook clears the flag and encrypted
 invitation payload. The form revokes other sessions. Reusing the same password in the standard
 change-password request is rejected. Quote-scoped magic-link access remains a separate supported

@@ -215,6 +215,19 @@ describe("portal scoped access regressions", () => {
     expect(response.headers.get("cache-control")).toBe("private, no-store");
   });
 
+  test("counteroffer API rejects a past requested delivery date without revising the quote", async () => {
+    const item = await fixture();
+    const cookie = await access(item.token);
+    const response = await request(`/portal/${item.quoteId}/counter`, "POST", cookie, {
+      lines: [{ discountBps: 0, id: item.line.id }],
+      promisedDate: "2000-01-01",
+      revision: 1,
+    });
+    expect(response.status).toBe(400);
+    const [unchanged] = await db.select().from(quotes).where(eq(quotes.id, item.quoteId));
+    expect(unchanged).toMatchObject({ promisedDate: null, revision: 1, status: "SENT" });
+  });
+
   test("line conversation preserves approved confirmation and retries create one order", async () => {
     const item = await fixture();
     const cookie = await access(item.token);

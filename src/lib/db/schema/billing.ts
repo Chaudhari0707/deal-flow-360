@@ -67,6 +67,20 @@ export const invoices = pgTable(
     ),
   ],
 );
+export const invoiceDeliveries = pgTable("invoice_deliveries", {
+  id: text("id").primaryKey(),
+  orderId: text("order_id")
+    .notNull()
+    .unique()
+    .references(() => orders.id, { onDelete: "cascade" }),
+  recipient: text("recipient").notNull(),
+  invoiceIds: jsonb("invoice_ids").$type<string[]>().notNull(),
+  status: text("status").$type<"PENDING" | "SENT" | "FAILED">().notNull().default("PENDING"),
+  providerId: text("provider_id"),
+  error: text("error"),
+  attempts: integer("attempts").notNull().default(0),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
 export const payments = pgTable("payments", {
   id: text("id").primaryKey(),
   invoiceId: text("invoice_id")

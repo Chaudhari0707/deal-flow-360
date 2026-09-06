@@ -3,13 +3,7 @@ import { Elysia, t } from "elysia";
 
 import { sendQuotation } from "@/features/quotes/email";
 import { postQuoteMessage } from "@/features/quotes/messages";
-import {
-  deliveryResultModel,
-  quoteDetailModel,
-  quoteInputModel,
-  recommendationsModel,
-} from "@/features/quotes/model";
-import { purchaseRecommendations } from "@/features/quotes/recommendations";
+import { deliveryResultModel, quoteDetailModel, quoteInputModel } from "@/features/quotes/model";
 import { approvalAction, saveQuote, submitQuote } from "@/features/quotes/service";
 import { db } from "@/lib/db/connection";
 import { auditEntries, messages, quotes } from "@/lib/db/schema";
@@ -24,21 +18,6 @@ const body = quoteInputModel;
 
 export const quoteRoutes = new Elysia({ name: "quotes", tags: ["Quotes"] })
   .use(actorContext)
-  .get(
-    "/quotes/recommendations",
-    async ({ query, set }) => {
-      set.headers["cache-control"] = "private, no-store";
-      return purchaseRecommendations(query.customerId, query.selectedProductIds);
-    },
-    {
-      authorize: permissions.quoteWrite,
-      query: t.Object({
-        customerId: id,
-        selectedProductIds: t.Optional(t.Array(id, { maxItems: 100 })),
-      }),
-      response: { 200: recommendationsModel, ...apiErrorResponses },
-    },
-  )
   .post("/quotes", async ({ actor, body: b }) => saveQuote(b, actor), {
     authorize: permissions.quoteWrite,
     body,

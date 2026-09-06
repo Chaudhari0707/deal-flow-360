@@ -63,6 +63,8 @@ commercial terms or invalidate approval.
 
 1. The representative chooses **Create quotation** from the dashboard or quotation list and reaches
    the new quotation form. Select a customer by name/tier and optionally a promised delivery date.
+   The date must be today or later; the picker blocks earlier dates and the server independently
+   rejects a past or invalid calendar date.
 2. Select an active product and add it. Set quantity and line discount; add or remove other lines.
    Products provide price, cost, tax, variant, category, and billing interval. The server obtains
    these values from the catalog rather than accepting a client-calculated total.
@@ -152,27 +154,29 @@ Source: [pricing rules](../../src/features/quotes/rules.ts),
 
 ## Recommendations and add-ons
 
-**Recommended products** uses the selected customer's latest order, taking up to five active products.
-If the customer has no orders, it uses up to five best sellers ranked by ordered quantity with stable
-ID tie-breaking. If the latest order's products are inactive, the result can be empty; it does not
-fall back to best sellers in that case. Selected products are excluded before limiting results.
-Adding a product fetches the next eligible suggestions; removing it makes it eligible again.
-Promoted products show only their promotion discount; others show only estimated one-unit margin
-(current tier and order discount). A 5% promoted care plan therefore shows its discount, not both metrics.
-Changing the customer or selected product IDs uses a different request key and does not retain stale suggestions. Loading,
-empty, error/retry, and invalid-order-discount states appear in the card.
+Catalog editors can configure up to five **Upsell products** for each catalog item. The database
+enforces that limit, and the API rejects duplicate, missing, or self-referencing product IDs. The
+catalog relationship is directional: configuring a care plan for a laptop does not configure the
+laptop for the care plan.
 
-**A better fit for this deal** uses catalog product pairings. It excludes inactive, dismissed, and
-already-added products, and applies the configured minimum margin (default 20%). Promoted products
-rank first, then absolute margin. Accepting adds a normal line with the promotion discount; rejecting
-a suggestion dismisses it in the current editor. Server pricing checks pairing provenance before
-retaining an upsell flag.
+**Upsell recommendations** replaces customer purchase history and global best sellers. It is driven
+only by products already on the quotation: inactive or already-selected products are excluded. With
+one selected product, its configured upsells are shown. With multiple selected products, the panel
+takes one candidate from each selected product before taking a second from any source. Every pass is
+ordered by current estimated sale value, then margin, promotion discount, and product ID; this keeps
+the maximum five recommendations commercially prioritized while dividing them across the selected
+products. Fewer eligible relationships produce fewer than five results.
 
-Example: a selected laptop can suggest its paired care plan if the plan meets the margin threshold.
-Adding the care plan creates a recurring line, not additional one-time revenue. Source:
-[recommendation query](../../src/features/quotes/recommendations.ts),
+The current customer tier, promotion, and order discount determine the displayed estimated price and
+margin. Adding an item records it as an upsell; saving the quotation independently verifies that an
+already-selected product configured that relationship. For example, selecting a laptop and a dock
+can interleave the laptop's care plan and mouse with the dock's monitoring add-on. A selected,
+inactive, or duplicate candidate is never shown.
+
+Sources: [catalog relationship editor](../../src/features/shell/catalog-editor.tsx),
+[recommendation allocator](../../src/features/quotes/upsell-recommendations.ts),
 [recommendation UI](../../src/features/quotes/purchase-recommendations.tsx), and
-[editor add-ons](../../src/features/quotes/quote-editor.tsx).
+[quotation pricing and provenance](../../src/features/quotes/rules.ts).
 
 ## Approval decisions and board movements
 
@@ -267,8 +271,9 @@ To negotiate, the customer changes line discounts and optionally a delivery date
 The server recalculates current policy, saves a revision/risk snapshot, and routes it to automatic
 approval or the configured approver. While pending, acceptance is unavailable. A date-only counter
 also creates a revision, but risk is still discount-based; it does not independently require a
-delivery-capacity review. The UI's general “sent for review” notice does not imply manual review
-when risk is NONE.
+delivery-capacity review. Requested delivery dates must be today or later, whether submitted from
+the browser or directly to the portal API. The UI's general “sent for review” notice does not imply
+manual review when risk is NONE.
 
 Example: Bronze hardware countered from 5% to 10% discount is high risk with default settings.
 Manager and Finance approve sequentially before the customer can accept that new revision.
@@ -292,13 +297,24 @@ See [portal breakdown](../../src/features/portal/portal-quote-totals.tsx),
 and recurring charges. Customer confirmation locks the quote, verifies that exact revision is
 approved, creates the order, reserves stock, creates billing, marks the quote Confirmed, and writes
 an audit event in one database transaction. Failure rolls the transaction back. A repeated valid
-confirmation returns the existing order, preventing duplicate orders. Fulfillment may still require
-stock/backorder handling; confirmation is not proof of shipment or payment.
+confirmation returns the existing order (and idempotently heals any missing invoice/subscription
+identities), preventing duplicate orders.
+
+After confirmation, staff see the new work **newest-first**:
+
+| Quote lines | Invoice | Subscription | Fulfillment / shipment |
+| --- | --- | --- | --- |
+| One-time only | One `ONE_TIME` invoice | None | Order appears; stockable lines allocate; service-only may be `FULFILLED` with no warehouse rows |
+| Recurring only | One `RECURRING` invoice per recurring line | One subscription per recurring line | Order still appears in the fulfillment queue |
+| Hybrid | Separate one-time and recurring invoices | Subscriptions for recurring lines only | Same order drives shipment for stockable demand |
+
+All payments settle on invoices only. Fulfillment may still require stock/backorder handling;
+confirmation is not proof of shipment or payment.
 
 ```mermaid
 flowchart TD
     accTitle: Customer acceptance consistency boundary
-    accDescr: Customer identity and revision are checked before a transaction creates the order, stock reservation, billing, confirmed status and audit. A retry returns an existing confirmed order.
+    accDescr: Customer identity and revision are checked before a transaction creates the order, stock reservation, billing, confirmed status, audit and email intent. PDF delivery happens only after commit and retries use one stable provider identity.
     Click[Customer confirms displayed revision] --> Lock[Lock quotation]
     Lock --> Check{Own quote and matching revision?}
     Check -->|No| Error[Reject; reload current terms]
@@ -306,15 +322,20 @@ flowchart TD
     Existing -->|Yes| Return[Return existing order]
     Existing -->|No| Approved{Exact revision approved?}
     Approved -->|No| Error
-    Approved -->|Yes| Writes[Create order, reserve stock, create billing, mark confirmed, audit]
+    Approved -->|Yes| Writes[Create order, reserve stock, create billing, mark confirmed, audit and email intent]
     Writes -->|All succeed| Commit[Commit transaction]
     Writes -->|Any failure| Rollback[Roll back transaction and show failure]
+    Commit --> Deliver[Render initial invoice PDFs and send with stable provider key]
+    Return --> Deliver
+    Deliver -->|Accepted| Sent[Show emailed-invoice confirmation]
+    Deliver -->|Failed| Failed[Show order confirmation and email recovery message]
 ```
 
 Source: [portal routes](../../src/features/quotes/portal-routes.ts),
 [conversation UI](../../src/features/portal/portal-conversation.tsx),
 [counter UI](../../src/features/portal/portal-counter.tsx),
-[transactional service](../../src/features/quotes/service.ts).
+[transactional service](../../src/features/quotes/service.ts), and
+[invoice email delivery](../../src/features/billing/invoice-email.ts).
 
 ## Evidence and verification boundaries
 
@@ -332,5 +353,6 @@ prove staff replies or real-time synchronization.
 | Board allowed actions and persisted decisions | [Board unit tests](../../test/unit/quote-board-transitions.regression.test.ts), [integration](../../test/integration/quote-board.regression.test.ts) |
 | Finance return and configurable approval ordering | [Approval integration](../../test/integration/approval-workflow.regression.test.ts) |
 | Quote-scoped access, private-field exclusion, concurrent token redemption, duplicate confirmation | [Portal integration](../../test/integration/portal.regression.test.ts) |
+| Confirm creates invoice / subscription / fulfillment ordering | [Confirm billing integration](../../test/integration/confirm-billing.regression.test.ts) |
 | Failed delivery retry, renewal, late retry races | [Email integration](../../test/integration/email.regression.test.ts) |
 | INR formatting and document output | [Money regression](../../test/unit/money.regression.test.ts), [billing documents](../../test/unit/billing-documents.test.ts) |

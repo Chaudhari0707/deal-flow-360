@@ -1,11 +1,8 @@
 "use client";
 
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Eyebrow, RailHead, TotalLine } from "@/features/quotes/quote-editorial";
+import { Eyebrow, TotalLine } from "@/features/quotes/quote-editorial";
 import type { calculateQuote } from "@/features/quotes/rules";
 import { money } from "@/features/quotes/rules";
-import type { Workspace } from "@/lib/domain/_types/workspace";
 import { cn } from "@/lib/utils";
 
 /** Present calculated lines by billing period; do not mix annual and monthly charges. */
@@ -90,64 +87,6 @@ export function QuoteTotals({ totals }: { totals?: ReturnType<typeof calculateQu
             ? "Sales Manager"
             : "Within policy · automatic approval"}
       </p>
-    </section>
-  );
-}
-
-/**
- * Add-ons for products already on the quote. A ruled list rather than a stack of cards, so the
- * rail reads as one column of related notes.
- */
-export function QuotePairings({
-  onAdd,
-  onDismiss,
-  pairings,
-}: {
-  onAdd: (id: string) => void;
-  onDismiss: (id: string) => void;
-  pairings: { margin: number; product: Workspace["products"][number] }[];
-}) {
-  return (
-    <section>
-      <RailHead title="Suggested pairings">
-        Add-ons linked to products already on this quote. Add one to include it in the quotation.
-      </RailHead>
-      {pairings.length ? (
-        pairings.map((entry) => (
-          <div key={entry.product.id} className="border-b border-border py-4 last:border-b-0">
-            <div className="flex items-center justify-between gap-3">
-              <p className="min-w-0 text-sm text-foreground">{entry.product.name}</p>
-              {entry.product.promoted && <Badge variant="outline">Promotion</Badge>}
-            </div>
-            <p className="mt-1 text-xs text-muted-foreground tabular-nums">
-              +{money(entry.margin)} margin
-              {entry.product.intervalMonths ? ` / ${entry.product.intervalMonths}mo` : ""}
-            </p>
-            <div className="mt-3 flex flex-wrap gap-4">
-              <Button
-                size="sm"
-                variant="outline"
-                aria-label={`Add ${entry.product.name} to quote`}
-                onClick={() => onAdd(entry.product.id)}
-              >
-                Add to quote
-              </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                aria-label={`Dismiss ${entry.product.name} suggestion`}
-                onClick={() => onDismiss(entry.product.id)}
-              >
-                Dismiss
-              </Button>
-            </div>
-          </div>
-        ))
-      ) : (
-        <p className="py-4 text-sm text-muted-foreground">
-          Pairings appear here after you add a product that has suggested add-ons.
-        </p>
-      )}
     </section>
   );
 }

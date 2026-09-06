@@ -83,10 +83,16 @@ sequenceDiagram
 ```
 
 Example: a manager adds “Example Labs”, `contact@example.test`, Gold tier, West
-team. The customer account is linked only to Example Labs. A generated temporary password
+team. The customer account is linked only to Example Labs. A temporary password
 is included in the welcome email alongside the login URL. The normal customer-creation
 response exposes delivery status, not the password. Better Auth stores the credential
 hash; the separate welcome-email envelope is encrypted for bounded retry delivery.
+
+The emailed password is the plain eight-character credential the customer types at
+`/login`, never the encrypted envelope that backs invitation retry. Demo builds issue one
+shared password (`test1234`) so a presenter can sign in as any newly created customer;
+clearing `CUSTOMER_TEMP_PASSWORD` issues a random eight-character password per customer
+instead. Either way the value is temporary and the first password change replaces it.
 
 The account/customer/profile/invitation intent are created together in one transaction.
 Duplicate email or database conflicts roll back that creation, so an existing login is not
@@ -134,8 +140,11 @@ The customer signs in with the emailed temporary password and lands on `/change-
 They enter the temporary password, a different new password, and its confirmation. A mismatch
 or reuse of the temporary password is rejected. Successful change requests revocation of
 other sessions, clears `mustChangePassword`, removes the encrypted invitation payload, and
-opens `/portal`. Protected credential-based customer access is blocked before this step;
-the `/me` identity lookup remains available so login can route correctly.
+opens `/portal`. Protected credential-based customer access is blocked before this step:
+`/api/v1/portal/*` returns 403 and the portal pages bounce to `/change-password` while the
+temporary password is still in place. The `/me` identity lookup remains available so login
+can route correctly. Quote-scoped magic-link sessions are unaffected, because that path
+carries no credential account to change.
 
 ```mermaid
 flowchart TD
@@ -223,7 +232,7 @@ Sources: [customer lifecycle](../../src/features/catalog/customer-lifecycle.ts),
 The administrator opens Product catalog, searches or filters products, then creates a product
 or opens a row to edit. Product configuration contains name, category, unit, variant label,
 description, INR unit price/cost, tax percentage, cadence, inventory tracking, active flag,
-promotion, and suggested pairings. A variant is a catalog-record label, not a generated
+promotion, and upsell products. A variant is a catalog-record label, not a generated
 matrix of sizes/colors with separate hidden pricing rules.
 
 | Configuration | Effect and example |
@@ -234,7 +243,7 @@ matrix of sizes/colors with separate hidden pricing rules.
 | Cadence | One-time, monthly, quarterly, or yearly: 0, 1, 3, or 12 months. Recurring products cannot track stock. |
 | Active | Controls availability for new selection. Existing saved commercial history is retained. |
 | Promoted | Newly added quote lines use the configured promotion as their initial line discount. The discount remains subject to quote validation and approvals. |
-| Suggested pairings | Up to 20 other product IDs suggest related additions. A laptop may suggest a care plan; selecting a suggestion adds an actual quote line. |
+| Upsell products | Up to five other catalog product IDs can be recommended with this item. A laptop may suggest a care plan; selecting a recommendation adds an actual quote line. |
 
 ```mermaid
 flowchart LR
@@ -242,16 +251,16 @@ flowchart LR
   accDescr: Administrator product edits feed new quote pricing, recurring cadence, stock behavior and suggested additions, while issued records retain their stored amounts.
   A[Administrator saves product] --> B[New quotation product selection]
   A --> C[Cadence and inventory eligibility]
-  A --> D[Promotion and pairing suggestions]
+  A --> D[Promotion and upsell recommendations]
   B --> E[Tier price, discount, tax and approval calculation]
   D --> E
   E --> F[Persist quotation snapshots]
   F --> G[Confirmed order and billing retain snapshots]
 ```
 
-Pairings influence suggestions; they do not automatically add products without the user's
-selection. Confirmed upsell reporting checks that an upsell line is supported by a paired
-product present in the quote. Product saves are validated and audited. Deactivate through
+Upsell products influence recommendations; they do not automatically add products without the
+user's selection. Confirmed upsell reporting checks that an upsell line is supported by a configured
+source product present in the quote. Product saves are validated and audited. Deactivate through
 the Active flag; no product-delete endpoint is provided in this catalog route set.
 
 Sources: [catalog editor](../../src/features/shell/catalog-editor.tsx),
@@ -262,7 +271,7 @@ Sources: [catalog editor](../../src/features/shell/catalog-editor.tsx),
 ## Business policy settings and configurable approvals
 
 Manager/admin roles open Settings and save a policy card. Percentages are expressed as basis
-points: 100 = 1%. Allowed policy groups are discounts, pricelists, upsell, health, and
+points: 100 = 1%. Allowed policy groups are discounts, pricelists, health, and
 approvalChain. Unsupported names/keys and out-of-range values are rejected and successful
 changes are audited. New submissions use policy values; do not describe an old approval as
 automatically granted for later edited terms.
@@ -274,7 +283,6 @@ at `/inventory`. Settings contains business policies only; it does not embed the
 | --- | --- |
 | Pricelists | Hardware tier factors. At 9,000 bps a ₹10,000 catalog price becomes ₹9,000 for that tier before discounts/tax. Services/subscriptions do not use this hardware factor. |
 | Discounts | Tier and category ceilings, plus HIGH-risk line/total exceedance thresholds. The tighter tier/category ceiling applies. |
-| Upsell | Minimum margin threshold for suitable suggested additions. |
 | Health | Stale/approval/overdue days and historical discount-anomaly settings; these are attention rules, not approval authority. |
 | Approval chain | Positive unique ranks determine enabled manager/finance order; 0 disables a role. At least one role remains enabled. |
 

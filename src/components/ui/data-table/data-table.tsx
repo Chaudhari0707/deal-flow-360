@@ -118,6 +118,8 @@ interface DataTableProps<TData extends RowData, TValue> {
   pageSize?: number;
   /** Hide pagination chrome (useful for compact/form-embedded tables). Default true. */
   showPagination?: boolean;
+  /** Initial column sort; empty keeps the incoming `data` order. */
+  initialSorting?: SortingState;
   toolbar?: (
     table: Table<DataTableFeatures, TData>,
     extras: DataTableToolbarExtras,
@@ -151,12 +153,13 @@ export function DataTable<TData extends RowData, TValue>({
   pagination,
   pageSize = 25,
   showPagination = true,
+  initialSorting = [],
 }: DataTableProps<TData, TValue>) {
   "use no memo";
   const [rowSelection, setRowSelection] = React.useState({});
   const [columnVisibility, setColumnVisibility] = React.useState<ColumnVisibilityState>({});
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
-  const [sorting, setSorting] = React.useState<SortingState>([]);
+  const [sorting, setSorting] = React.useState<SortingState>(initialSorting);
   const resolvedColumns =
     enableSelection && !hasSelectionColumn(columns)
       ? ([getSelectionColumn<TData>(), ...columns] as ColumnDef<DataTableFeatures, TData, TValue>[])
