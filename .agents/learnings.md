@@ -40,6 +40,11 @@ rejection through the actual editor. | `playwright/e2e/customer-create-access.sp
 recommendation prices; an empty or out-of-range discount must not throw out of render and replace
 the editor with a workspace error. | `playwright/e2e/number-input.spec.ts`
 
+2026-09-06 | Portal identity | Portal routes resolve identity through `portalIdentity`, not the
+`authorize` macro, so a session gate added to the macro does not apply there. A customer owing a
+password change reached `/portal` while every other surface returned 403. |
+`test/integration/customer-onboarding.regression.test.ts` first-login gate.
+
 2026-09-06 | Customer provisioning | Better Auth signup with autoSignIn disabled may return a
 synthetic success for an existing email. Check the persisted identity inside the customer/profile
 transaction; never attach a pre-existing account or replace the creating staff session. |
