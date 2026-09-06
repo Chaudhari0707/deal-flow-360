@@ -293,20 +293,20 @@ See [portal breakdown](../../src/features/portal/portal-quote-totals.tsx),
 **Confirm order** opens a confirmation dialog showing the current revision and separate one-time
 and recurring charges. Customer confirmation locks the quote, verifies that exact revision is
 approved, creates the order, reserves stock, creates billing, marks the quote Confirmed, and writes
-an audit event plus a durable invoice-email intent in one database transaction. Failure rolls the
-transaction back. After commit, the portal renders the confirmed order's initial invoice PDFs with
-the same renderer as **Download PDF** and sends them to the customer email captured at confirmation.
-Mixed one-time/recurring orders send one email with each initial invoice attached; later renewals,
-adjustments, and credits are not added to that confirmation email. A repeated valid confirmation
-returns the existing order and reuses the same delivery identity, preventing duplicate orders or
-accepted provider mail. Fulfillment may still require stock/backorder handling; confirmation is not
-proof of shipment, payment, or inbox delivery.
+an audit event in one database transaction. Failure rolls the transaction back. A repeated valid
+confirmation returns the existing order (and idempotently heals any missing invoice/subscription
+identities), preventing duplicate orders.
 
-The external provider call happens only after the order transaction commits. If PDF generation,
-configuration, or the provider fails, the order remains confirmed and the customer sees that the
-invoice email could not be sent; the persisted attempt is marked failed for a safe request retry
-with the same provider idempotency key. `SENT` means provider acceptance, not proof that the
-customer received or read the attachment.
+After confirmation, staff see the new work **newest-first**:
+
+| Quote lines | Invoice | Subscription | Fulfillment / shipment |
+| --- | --- | --- | --- |
+| One-time only | One `ONE_TIME` invoice | None | Order appears; stockable lines allocate; service-only may be `FULFILLED` with no warehouse rows |
+| Recurring only | One `RECURRING` invoice per recurring line | One subscription per recurring line | Order still appears in the fulfillment queue |
+| Hybrid | Separate one-time and recurring invoices | Subscriptions for recurring lines only | Same order drives shipment for stockable demand |
+
+All payments settle on invoices only. Fulfillment may still require stock/backorder handling;
+confirmation is not proof of shipment or payment.
 
 ```mermaid
 flowchart TD
@@ -350,5 +350,6 @@ prove staff replies or real-time synchronization.
 | Board allowed actions and persisted decisions | [Board unit tests](../../test/unit/quote-board-transitions.regression.test.ts), [integration](../../test/integration/quote-board.regression.test.ts) |
 | Finance return and configurable approval ordering | [Approval integration](../../test/integration/approval-workflow.regression.test.ts) |
 | Quote-scoped access, private-field exclusion, concurrent token redemption, duplicate confirmation | [Portal integration](../../test/integration/portal.regression.test.ts) |
-| Quotation-link and confirmation-invoice delivery retry, renewal, late retry races | [Email integration](../../test/integration/email.regression.test.ts) |
+| Confirm creates invoice / subscription / fulfillment ordering | [Confirm billing integration](../../test/integration/confirm-billing.regression.test.ts) |
+| Failed delivery retry, renewal, late retry races | [Email integration](../../test/integration/email.regression.test.ts) |
 | INR formatting and document output | [Money regression](../../test/unit/money.regression.test.ts), [billing documents](../../test/unit/billing-documents.test.ts) |

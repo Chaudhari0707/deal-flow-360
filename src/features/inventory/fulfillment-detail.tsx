@@ -328,34 +328,36 @@ export function FulfillmentDetail({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {data.allocations.length === 0 ? (
+              {data.allocations.filter((row) => row.quantity > 0).length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={5} className={cn(compactCell, "text-muted-foreground")}>
                     No stock reserved yet. Receive stock, then fill the remaining backorder.
                   </TableCell>
                 </TableRow>
               ) : (
-                data.allocations.map((row) => (
-                  <TableRow key={row.id}>
-                    <TableCell className={cn(compactCell, "font-medium text-foreground")}>
-                      {row.product}
-                    </TableCell>
-                    <TableCell className={cn(compactCell, "text-muted-foreground")}>
-                      {row.warehouse}
-                    </TableCell>
-                    <TableCell className={cn(compactCell, "text-right text-foreground")}>
-                      {row.quantity}
-                    </TableCell>
-                    <TableCell className={cn(compactCell, "text-right text-muted-foreground")}>
-                      {row.shipped}
-                    </TableCell>
-                    <TableCell
-                      className={cn(compactCell, "text-right font-medium text-foreground")}
-                    >
-                      {row.quantity - row.shipped}
-                    </TableCell>
-                  </TableRow>
-                ))
+                data.allocations
+                  .filter((row) => row.quantity > 0)
+                  .map((row) => (
+                    <TableRow key={row.id}>
+                      <TableCell className={cn(compactCell, "font-medium text-foreground")}>
+                        {row.product}
+                      </TableCell>
+                      <TableCell className={cn(compactCell, "text-muted-foreground")}>
+                        {row.warehouse}
+                      </TableCell>
+                      <TableCell className={cn(compactCell, "text-right text-foreground")}>
+                        {row.quantity}
+                      </TableCell>
+                      <TableCell className={cn(compactCell, "text-right text-muted-foreground")}>
+                        {row.shipped}
+                      </TableCell>
+                      <TableCell
+                        className={cn(compactCell, "text-right font-medium text-foreground")}
+                      >
+                        {row.quantity - row.shipped}
+                      </TableCell>
+                    </TableRow>
+                  ))
               )}
             </TableBody>
           </Table>
@@ -364,7 +366,7 @@ export function FulfillmentDetail({
             <DataTable
               classNames={operationalTable}
               columns={columns}
-              data={data.allocations}
+              data={data.allocations.filter((row) => row.quantity > 0)}
               enableColumnResizing={false}
               getRowId={(row) => row.id}
               pageSize={20}

@@ -99,6 +99,11 @@ export const subscriptionColumns: ColumnDef<DataTableFeatures, SubscriptionRow>[
   },
   { accessorKey: "customerName", header: "Customer" },
   {
+    accessorKey: "createdAt",
+    cell: ({ row }) => <span className="tabular-nums">{displayDate(row.original.createdAt)}</span>,
+    header: "Started",
+  },
+  {
     accessorKey: "quantity",
     cell: ({ row }) => <Numeric quiet>{row.original.quantity}</Numeric>,
     header: () => <NumericHeader>Quantity</NumericHeader>,

@@ -62,7 +62,7 @@ export async function fulfillmentList(page = 0, pageSize = 20) {
       })
       .from(orders)
       .innerJoin(customers, eq(orders.customerId, customers.id))
-      .orderBy(desc(orders.createdAt), asc(orders.id))
+      .orderBy(desc(orders.createdAt), desc(orders.id))
       .limit(pageSize)
       .offset(page * pageSize),
     db.select({ count: count() }).from(orders),
@@ -75,7 +75,7 @@ export async function fulfillmentDetail(id: string) {
     async (tx) => {
       const [order] = await tx.select().from(orders).where(eq(orders.id, id));
       if (!order) throw new DomainError("Order not found", 404);
-      const allocations = await tx
+      const reserved = await tx
         .select({
           id: reservations.id,
           productId: reservations.productId,
@@ -91,6 +91,9 @@ export async function fulfillmentDetail(id: string) {
         .innerJoin(products, eq(products.id, reservations.productId))
         .where(eq(reservations.orderId, id))
         .orderBy(reservations.productId, reservations.warehouseId);
+      // Hide released warehouse rows (quantity 0 after override). Keep rows that
+      // still hold shipped history (quantity === shipped > 0).
+      const allocations = reserved.filter((row) => row.quantity > 0);
       const backorders = stockDemand(order.lines)
         .map((line) => ({
           ...line,

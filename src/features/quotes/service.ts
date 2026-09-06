@@ -269,7 +269,10 @@ export async function confirmQuote(id: string, revision: number, actor: Actor) {
       throw new DomainError("Terms changed. Review the current revision.", 409);
     if (quote.status === "CONFIRMED") {
       const [order] = await tx.select().from(orders).where(eq(orders.quoteId, id));
-      return order!;
+      if (!order) throw new DomainError("Confirmed quotation is missing its order", 409);
+      // Idempotent heal: recreate any missing invoice/subscription identities without duplicates.
+      await createOrderBilling(tx, order, new Date());
+      return order;
     }
     if (
       quote.approvedRevision !== revision ||

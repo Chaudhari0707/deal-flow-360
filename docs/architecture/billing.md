@@ -53,9 +53,11 @@ same identity is rejected.
 Cancellation keeps issued invoices and stops future periods. Unused billed service creates
 credit notes linked to eligible source invoices. Credits cannot exceed that source's billed
 value, including credits already issued. Credits first reduce that source's unpaid balance;
-credit remaining after a prepaid invoice is preserved as available customer credit. This is
-not a cash refund, and automatic application of available credit to a different invoice is
-not implemented.
+credit remaining after a prepaid invoice is preserved as **available customer credit** owed to
+that customer (not locked forever to the source invoice). This is not a cash refund.
+Finance may **manually** apply available customer credit to any unpaid invoice for the same
+customer (`POST /api/v1/invoices/:id/apply-credit`). Automatic application of available credit
+to a different invoice is not implemented.
 
 Invoices issued with zero outstanding balance are immediately `PAID` (settled), including free
 products, fully discounted lines and free recurring renewals. No payment ledger row or cash

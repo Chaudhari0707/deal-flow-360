@@ -105,6 +105,11 @@ export async function overrideSplit(
       .update(reservations)
       .set({ quantity: sql`${reservations.shipped}` })
       .where(eq(reservations.orderId, orderId));
+    // Released warehouses (nothing shipped) become quantity 0 — drop them so the
+    // shipment dialog does not list empty Main/East rows after a full move.
+    await tx
+      .delete(reservations)
+      .where(and(eq(reservations.orderId, orderId), eq(reservations.quantity, 0)));
     await addAllocations(tx, orderId, proposed);
     await audit(tx, actor, orderId, "SPLIT_OVERRIDDEN", reason, {
       before: pending,

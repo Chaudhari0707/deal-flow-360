@@ -64,6 +64,13 @@ export const invoiceRegisterColumns: ColumnDef<DataTableFeatures, InvoiceRegiste
     header: "Stream",
   },
   {
+    accessorKey: "createdAt",
+    cell: ({ row }) => (
+      <span className="text-foreground tabular-nums">{displayDate(row.original.createdAt)}</span>
+    ),
+    header: "Issued",
+  },
+  {
     accessorKey: "dueDate",
     cell: ({ row }) => (
       <span className="block">
