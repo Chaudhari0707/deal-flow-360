@@ -1,6 +1,7 @@
 "use client";
 
 import { type FormEvent, useState } from "react";
+import { toast } from "sonner";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -32,6 +33,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { CustomerInvitationStatus } from "@/features/catalog/customer-invitation-status";
 import { CustomerDelete } from "@/features/shell/customer-delete";
 import { useWorkspace } from "@/features/shell/use-workspace";
 import { apiClient, apiData, HttpResponseError } from "@/lib/api/client";
@@ -109,7 +111,6 @@ export function CatalogEditor({
 }) {
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
-  const [createdCustomerId, setCreatedCustomerId] = useState<string>();
   const [stockable, setStockable] = useState(product?.stockable ?? false);
   const [active, setActive] = useState(product?.active ?? true);
   const [promoted, setPromoted] = useState(product?.promoted ?? false);
@@ -130,6 +131,7 @@ export function CatalogEditor({
     }
     setPending(true);
     setError("");
+    let invitationNeedsAttention = false;
     try {
       if (kind === "product") {
         const body = {
@@ -162,15 +164,15 @@ export function CatalogEditor({
         if (customer) apiData(await customers({ id: customer.id }).patch(body));
         else {
           const result = apiData(await customers.post(body));
-          if (result.invitation.status !== "SENT") {
-            setCreatedCustomerId(result.id);
-            await saved();
-            return;
-          }
+          invitationNeedsAttention = result.invitation.status !== "SENT";
         }
       }
       await saved();
       close();
+      if (invitationNeedsAttention)
+        toast.warning(
+          "Customer created. The welcome email needs attention; open Edit customer to retry.",
+        );
     } catch (failure) {
       setError(
         failure instanceof HttpResponseError && failure.status === 403
@@ -456,6 +458,7 @@ export function CatalogEditor({
                   </div>
                 </>
               )}
+              {kind === "customer" && customer && <CustomerInvitationStatus id={customer.id} />}
               {error && (
                 <Alert variant="destructive">
                   <AlertDescription>{error}</AlertDescription>

@@ -123,16 +123,14 @@ export async function createCustomerWithLogin(input: CatalogCustomerInput, actor
       const [existingUser] = await tx
         .select({ id: user.id })
         .from(user)
-        .where(eq(user.email, input.email));
+        .where(sql`lower(${user.email}) = ${input.email}`);
       const [existingCustomer] = await tx
         .select({ id: customers.id })
         .from(customers)
-        .where(eq(customers.email, input.email));
-      if (existingUser || existingCustomer)
-        throw new DomainError(
-          "That email already has a customer or login account. Use a different email.",
-          409,
-        );
+        .where(sql`lower(${customers.email}) = ${input.email}`);
+      if (existingCustomer) throw new DomainError("That email already belongs to a customer.", 409);
+      if (existingUser)
+        throw new DomainError("That email already belongs to a login account.", 409);
       const created = await createAuth(tx, true).api.signUpEmail({
         body: { email: input.email, name: input.name, password },
       });

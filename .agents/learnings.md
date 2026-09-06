@@ -33,6 +33,18 @@ retry 200. | `test/unit/inventory-movement-response.test.ts`
 `api.handle` accepts. Flatten snapshot objects instead of intersecting `stockModel`. |
 `src/features/inventory/model.ts` inventory snapshot stocks.
 
+2026-09-06 | Customer editor success | A persisted customer with a failed welcome-email delivery is
+still a successful create; close the form after the mutation and expose invitation retry from edit,
+instead of returning early and trapping the user in the create dialog. | `playwright/e2e/customer-onboarding.spec.ts`
+
+2026-09-06 | Customer deletion | A provisioned customer has a Better Auth user/profile, so an
+unused customer delete must remove that identity and its invitation in the same transaction;
+only commercial or other linked records should block deletion. | `test/integration/customer-lifecycle.regression.test.ts`
+
+2026-09-06 | Customer identity reuse | Customer email conflicts must compare normalized identities
+case-insensitively, and delete must reconcile the profile/invitation pair before removing the login;
+otherwise a visually deleted customer leaves a globally unique Better Auth email behind. | `test/integration/customer-lifecycle.regression.test.ts`
+
 2026-09-06 | Editor actions | When redesigning a record dialog, preserve existing lifecycle
 actions, not just fields and Save. Test delete visibility, confirmation cancellation, and linked-record
 rejection through the actual editor. | `playwright/e2e/customer-create-access.spec.ts`
