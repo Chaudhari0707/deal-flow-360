@@ -135,7 +135,7 @@ implementation handoff; a test file's existence is not proof that a run passed.
 | Purchase recommendations and add-to-quote | Quotations | [Recommendation browser](../../playwright/e2e/quote-recommendations.spec.ts) |
 | Board transitions and revision conflicts | Quotations | [Board integration](../../test/integration/quote-board.regression.test.ts) |
 | Configured approval order and return routing | Quotations | [Approval integration](../../test/integration/approval-workflow.regression.test.ts) |
-| Quotation mail intent, failure and token lifecycle | Quotations | [Email integration](../../test/integration/email.regression.test.ts) |
+| Quotation-link and confirmation-invoice mail intent, attachment, failure and retry identity | Quotations / Billing | [Email integration](../../test/integration/email.regression.test.ts) |
 | Customer discussion, counter, risk re-approval and acceptance | Quotations | [Portal browser](../../playwright/e2e/portal.spec.ts), [hero journey](../../playwright/e2e/quotation-journey.spec.ts) |
 | Customer/Rep ownership and Admin denials | All domains | [Workspace access regression](../../test/integration/workspace-access.regression.test.ts) |
 | Warehouses, reservations, receipt, override and shipment | Fulfillment | [Inventory integration](../../test/integration/inventory.regression.test.ts), [browser](../../playwright/e2e/inventory.spec.ts) |

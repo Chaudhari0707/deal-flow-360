@@ -157,10 +157,14 @@ export function PortalDetail({ id }: { id: string }) {
     setFailure("");
     setNotice("");
     try {
-      apiData(await apiClient.api.v1.portal({ id }).confirm.post({ revision: quote.revision }));
+      const result = apiData(
+        await apiClient.api.v1.portal({ id }).confirm.post({ revision: quote.revision }),
+      );
       await mutate();
       setNotice(
-        "Your order is confirmed. Your account manager will coordinate delivery and billing.",
+        result.invoiceEmailStatus === "SENT"
+          ? "Your order is confirmed. Your invoice PDF has been emailed to your customer contact."
+          : "Your order is confirmed. We couldn't email the invoice PDF right now; your account manager can help.",
       );
     } catch (problem) {
       setFailure(

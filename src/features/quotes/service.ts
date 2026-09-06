@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 
 import { createOrderBilling } from "@/features/billing/creation";
+import { queueOrderInvoiceEmail } from "@/features/billing/invoice-email";
 import { reserveOrderStock } from "@/features/inventory/stock";
 import type { QuoteInput } from "@/features/quotes/_types/quotes";
 import { requiredApprovalChain } from "@/features/quotes/approval-policy";
@@ -287,7 +288,17 @@ export async function confirmQuote(id: string, revision: number, actor: Actor) {
       })
       .returning();
     await reserveOrderStock(tx, order!, actor);
-    await createOrderBilling(tx, order!, new Date());
+    const issuedInvoices = await createOrderBilling(tx, order!, new Date());
+    const [customer] = await tx
+      .select({ email: customers.email })
+      .from(customers)
+      .where(eq(customers.id, order!.customerId));
+    await queueOrderInvoiceEmail(
+      tx,
+      order!.id,
+      customer!.email,
+      issuedInvoices.map((invoice) => invoice.id),
+    );
     await tx
       .update(quotes)
       .set({ status: "CONFIRMED", updatedAt: new Date() })

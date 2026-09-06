@@ -1,6 +1,7 @@
 import { and, desc, eq, inArray } from "drizzle-orm";
 import { Elysia, t } from "elysia";
 
+import { sendOrderInvoiceEmail } from "@/features/billing/invoice-email";
 import { tokenDigest } from "@/features/quotes/email";
 import { portalDetailModel, portalWorkspaceModel, publicQuoteModel } from "@/features/quotes/model";
 import {
@@ -184,14 +185,25 @@ export const portalRoutes = new Elysia({ name: "portal", tags: ["Portal"] })
     async ({ request, params: p, body }) => {
       const { actor } = await permittedPortalQuote(request, p.id);
       const order = await confirmQuote(p.id, body.revision, actor);
-      return { id: order.id, number: order.number, fulfillmentStatus: order.fulfillmentStatus };
+      const invoiceEmail = await sendOrderInvoiceEmail(order.id, actor);
+      return {
+        id: order.id,
+        number: order.number,
+        fulfillmentStatus: order.fulfillmentStatus,
+        invoiceEmailStatus: invoiceEmail.status,
+      };
     },
     {
       detail: { security: portalSecurity },
       params,
       body: t.Object({ revision }),
       response: {
-        200: t.Object({ id: t.String(), number: t.String(), fulfillmentStatus: t.String() }),
+        200: t.Object({
+          id: t.String(),
+          number: t.String(),
+          fulfillmentStatus: t.String(),
+          invoiceEmailStatus: t.Union([t.Literal("SENT"), t.Literal("FAILED")]),
+        }),
         ...apiErrorResponses,
       },
     },

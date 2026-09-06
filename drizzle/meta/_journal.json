@@ -29,6 +29,20 @@
       "when": 1788640848914,
       "tag": "0003_even_maggott",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1788668803713,
+      "tag": "0004_brainy_freak",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1788668968200,
+      "tag": "0005_aspiring_mole_man",
+      "breakpoints": true
     }
   ]
 }
