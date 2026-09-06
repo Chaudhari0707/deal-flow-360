@@ -302,7 +302,7 @@ export function DataTable<TData extends RowData, TValue>({
                           aria-label={`Resize ${header.column.id} column`}
                           className={cn(
                             "absolute top-0 right-0 z-10 h-full w-2 cursor-col-resize touch-none select-none",
-                            "after:absolute after:inset-y-0 after:right-0 after:w-px after:bg-border/80",
+                            "after:absolute after:inset-y-0 after:right-0 after:w-px after:bg-transparent hover:after:bg-border-strong",
                             header.column.getIsResizing() && "after:bg-ink-accent",
                           )}
                         />

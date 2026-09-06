@@ -139,3 +139,25 @@ Three gates, run before and after every wave:
 2. `bun run test:e2e` — differential against a recorded baseline; any **new** failure is a
    regression.
 3. The runtime AAA audit — every text node, every route, both themes. Target **0**.
+
+The runtime audit is the one that matters, and it must rasterise colours rather than parse
+them: Chrome serialises computed colours as `oklch(...)`, so a naive `rgb()` parser silently
+matches nothing and reports a perfect score. Measure through a canvas, and composite each
+element's background stack before comparing.
+
+## 9. Outcome
+
+| Measure | Before | After |
+| --- | --- | --- |
+| AAA violations (13 routes x 2 themes) | 97 | 0 |
+| `Card` imports in `src/features` + `src/app` | 23 | 0 |
+| `rounded-full` / `rounded-xl` / `rounded-4xl` | 15 | 0 |
+| `shadow-*` (6 of the remainder are `shadow-none`) | 16 | 10 |
+| `eyebrowType` declarations | 18 | 1 |
+
+Ported bottom-up in four waves — tokens, primitives, shared compositions, screens — each with
+an adversarial verifier reading the result and trying to refute it. That structure paid for
+itself: a verifier caught an AAA regression a re-skinner had introduced (an alert link-hover
+ink repainting button labels at 5.63:1 in both themes), a missing `h1` on the 404 page, and a
+focus indicator falling through to `outline-ring/50`, whose 50% alpha halved the ring token to
+2.03:1 — under the 3:1 floor for every control in the app that lacked its own treatment.
