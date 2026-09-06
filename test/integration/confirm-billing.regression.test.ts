@@ -7,7 +7,15 @@ import { confirmQuote, saveQuote, submitQuote } from "@/features/quotes/service"
 import { workspaceSnapshot } from "@/features/workspace/query";
 import { createAuth } from "@/lib/auth/create-auth";
 import { db } from "@/lib/db/connection";
-import { customers, invoices, orders, products, profiles, subscriptions } from "@/lib/db/schema";
+import {
+  customers,
+  invoiceDeliveries,
+  invoices,
+  orders,
+  products,
+  profiles,
+  subscriptions,
+} from "@/lib/db/schema";
 import type { Actor } from "@/lib/domain/_types/domain";
 import type { Workspace } from "@/lib/domain/_types/workspace";
 import { api } from "@/server/api";
@@ -104,6 +112,12 @@ describe("confirmation surfaces for the same customer", () => {
     expect(billed[0]?.kind).toBe("ONE_TIME");
     expect(billed[0]?.customerId).toBe(customerId);
     expect(subs).toHaveLength(0);
+    const queued = await db
+      .select()
+      .from(invoiceDeliveries)
+      .where(eq(invoiceDeliveries.orderId, order.id));
+    expect(queued).toHaveLength(1);
+    expect(queued[0]?.invoiceIds).toEqual([billed[0]!.id]);
 
     const workspace = await workspaceSnapshot(accounts.finance!.actor);
     expect(workspace.invoices.some((invoice) => invoice.orderId === order.id)).toBe(true);
@@ -125,6 +139,12 @@ describe("confirmation surfaces for the same customer", () => {
     expect(subs).toHaveLength(1);
     expect(subs[0]?.customerId).toBe(customerId);
     expect(persisted?.fulfillmentStatus).toBe("FULFILLED");
+    const queued = await db
+      .select()
+      .from(invoiceDeliveries)
+      .where(eq(invoiceDeliveries.orderId, order.id));
+    expect(queued).toHaveLength(1);
+    expect(queued[0]?.invoiceIds).toEqual([billed[0]!.id]);
 
     const workspace = await workspaceSnapshot(accounts.manager!.actor);
     expect(workspace.invoices.some((invoice) => invoice.orderId === order.id)).toBe(true);
@@ -145,6 +165,12 @@ describe("confirmation surfaces for the same customer", () => {
     const subs = await db.select().from(subscriptions).where(eq(subscriptions.orderId, newer.id));
     expect(billed.map((row) => row.kind).sort()).toEqual(["ONE_TIME", "RECURRING"]);
     expect(subs).toHaveLength(1);
+    const queued = await db
+      .select()
+      .from(invoiceDeliveries)
+      .where(eq(invoiceDeliveries.orderId, newer.id));
+    expect(queued).toHaveLength(1);
+    expect(queued[0]?.invoiceIds.sort()).toEqual(billed.map((row) => row.id).sort());
 
     const workspace = await workspaceSnapshot(accounts.finance!.actor);
     expect(workspace.orders[0]?.id).toBe(newer.id);
