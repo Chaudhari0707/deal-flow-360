@@ -262,7 +262,7 @@ export function PortalDetail({ id }: { id: string }) {
                 <AlertDialogHeader>
                   <AlertDialogTitle>Confirm {quote.number}?</AlertDialogTitle>
                 </AlertDialogHeader>
-                <AlertDialogBody className="max-h-[60svh]">
+                <AlertDialogBody>
                   <AlertDialogDescription className="leading-relaxed">
                     You are accepting version {quote.revision} at the prices below. This creates
                     your order and starts fulfillment and billing.

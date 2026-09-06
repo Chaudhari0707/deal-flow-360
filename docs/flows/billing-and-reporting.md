@@ -351,7 +351,7 @@ and test-run output for actual execution evidence.
 | All six roles and signed-out report access; persisted-record totals, all nine filters, empty/invalid ranges, PDF/XLSX parsing, and expired-session refresh | [report browser matrix](../../playwright/e2e/reports.spec.ts) |
 | Transactions: confirmation billing, payment/credit concurrency, duplicate operations, version conflicts, cancellation, catch-up, zero balances | [billing integration regressions](../../test/integration/billing.regression.test.ts) |
 | Manual apply of available customer credit to another unpaid invoice | [credit-apply integration](../../test/integration/billing-credit-apply.regression.test.ts) |
-| Confirm → invoice / subscription / fulfillment visibility and newest-first order | [confirm billing integration](../../test/integration/confirm-billing.regression.test.ts) |
+| Confirm → invoice / subscription / fulfillment visibility, invoice-email queue, and newest-first order | [confirm billing integration](../../test/integration/confirm-billing.regression.test.ts) |
 | Companion startup/restart and recurring invoice deduplication | [scheduler integration](../../test/integration/billing-scheduler.regression.test.ts) |
 | Draft reporting, owner/team/product filters, record-specific dates, matching exports | [sales report integration](../../test/integration/billing-sales-report.regression.test.ts) |
 | Filters applied before row caps | [report-cap integration](../../test/integration/billing-report-cap.regression.test.ts) |

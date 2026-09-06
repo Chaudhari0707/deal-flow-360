@@ -8,7 +8,10 @@ After installing dependencies and configuring the sanitized environment contract
 PostgreSQL database and run `bun run dev:setup` to validate configuration, apply committed migrations,
 and seed the local demo. Then run `bun run local` to launch both Next.js and the stock feed.
 `bun run local:check` validates the local origin, matching ports, database connectivity,
-and the presence of the migrated order schema without starting application servers.
+and the presence of the migrated order and invoice-delivery schema without starting
+application servers. Customer confirmation queues invoice email in the same transaction, so
+a database that still lacks `invoice_deliveries` (migration `0004`+) returns HTTP 500 and
+rolls the order back. Run `bun run db:migrate` or `bun run dev:setup` before confirming.
 
 The launcher uses Bun and native Next.js Turbopack with `postcss.config.ts`. The supported package
 bundling configuration avoids Bun's cold external-alias resolution issue; see the

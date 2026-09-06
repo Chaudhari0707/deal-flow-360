@@ -43,7 +43,8 @@ const database = postgres(Bun.env.DATABASE_URL!, {
 try {
   const [schema] = await database<
     { ready: boolean }[]
-  >`select to_regclass('public.orders') is not null as ready`;
+  >`select to_regclass('public.orders') is not null
+      and to_regclass('public.invoice_deliveries') is not null as ready`;
   if (!schema?.ready) throw new Error("Migrations have not been applied");
 } catch {
   throw new Error(

@@ -353,6 +353,6 @@ prove staff replies or real-time synchronization.
 | Board allowed actions and persisted decisions | [Board unit tests](../../test/unit/quote-board-transitions.regression.test.ts), [integration](../../test/integration/quote-board.regression.test.ts) |
 | Finance return and configurable approval ordering | [Approval integration](../../test/integration/approval-workflow.regression.test.ts) |
 | Quote-scoped access, private-field exclusion, concurrent token redemption, duplicate confirmation | [Portal integration](../../test/integration/portal.regression.test.ts) |
-| Confirm creates invoice / subscription / fulfillment ordering | [Confirm billing integration](../../test/integration/confirm-billing.regression.test.ts) |
+| Confirm creates invoice / subscription / fulfillment ordering and queues invoice email | [Confirm billing integration](../../test/integration/confirm-billing.regression.test.ts) |
 | Failed delivery retry, renewal, late retry races | [Email integration](../../test/integration/email.regression.test.ts) |
 | INR formatting and document output | [Money regression](../../test/unit/money.regression.test.ts), [billing documents](../../test/unit/billing-documents.test.ts) |
