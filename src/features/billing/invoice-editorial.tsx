@@ -53,7 +53,7 @@ export function Figure({
     <div className="py-7 sm:px-8 sm:first:pl-0 sm:last:pr-0">
       <span
         aria-hidden
-        className={cn("mb-4 block h-0.5 w-7", accent ? "bg-primary" : "bg-transparent")}
+        className={cn("mb-4 block h-0.5 w-7", accent ? "bg-ink-accent" : "bg-transparent")}
       />
       <dt className={cn(eyebrowType, "text-muted-foreground")}>{label}</dt>
       <dd className="mt-3 text-[1.75rem] leading-none font-medium tracking-tight text-foreground tabular-nums">

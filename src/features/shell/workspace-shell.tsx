@@ -4,22 +4,8 @@ import { type CSSProperties, type ReactNode, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-  Activity,
-  BarChart3,
-  Boxes,
-  FileText,
-  House,
-  LogOut,
-  PackageCheck,
-  Receipt,
-  RefreshCw,
-  Settings2,
-  ShieldCheck,
-  Warehouse,
-} from "lucide-react";
+import { LogOut } from "lucide-react";
 
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -48,58 +34,41 @@ import { ThemeToggle } from "@/features/shell/theme-toggle";
 import { authClient } from "@/lib/auth/client";
 import type { Actor } from "@/lib/domain/_types/domain";
 import { permissions } from "@/lib/domain/permissions";
+import { cn } from "@/lib/utils";
+
+/**
+ * Navigation is chrome, not content: quiet letterspaced group labels over a hairline,
+ * compact type-only rows, and an active state carried by a marginal rule plus ink weight
+ * rather than a filled pill. Icons are deliberately absent — spacing and type do the work.
+ */
+const eyebrow = "text-[0.6875rem] font-medium tracking-[0.16em] uppercase";
 
 const navigation = [
   {
     label: "Workspace",
     items: [
-      {
-        title: "Overview",
-        href: "/dashboard",
-        icon: House,
-        roles: permissions.workspace,
-      },
-      { title: "Quotations", href: "/quotations", icon: FileText, roles: permissions.quotations },
-      { title: "Customers", href: "/customers", icon: Boxes, roles: permissions.customers },
-      { title: "Approvals", href: "/approvals", icon: ShieldCheck, roles: permissions.approvals },
+      { title: "Overview", href: "/dashboard", roles: permissions.workspace },
+      { title: "Quotations", href: "/quotations", roles: permissions.quotations },
+      { title: "Customers", href: "/customers", roles: permissions.customers },
+      { title: "Approvals", href: "/approvals", roles: permissions.approvals },
     ],
   },
   {
     label: "Operations",
     items: [
-      {
-        title: "Fulfillment",
-        href: "/fulfillment",
-        icon: PackageCheck,
-        roles: permissions.fulfillment,
-      },
-      {
-        title: "Inventory",
-        href: "/inventory",
-        icon: Warehouse,
-        roles: permissions.stockRead,
-      },
-      {
-        title: "Subscriptions",
-        href: "/subscriptions",
-        icon: RefreshCw,
-        roles: permissions.subscriptions,
-      },
-      { title: "Invoices", href: "/invoices", icon: Receipt, roles: permissions.invoices },
-      { title: "Customer health", href: "/health", icon: Activity, roles: permissions.health },
+      { title: "Fulfillment", href: "/fulfillment", roles: permissions.fulfillment },
+      { title: "Inventory", href: "/inventory", roles: permissions.stockRead },
+      { title: "Subscriptions", href: "/subscriptions", roles: permissions.subscriptions },
+      { title: "Invoices", href: "/invoices", roles: permissions.invoices },
+      { title: "Customer health", href: "/health", roles: permissions.health },
     ],
   },
   {
     label: "Management",
     items: [
-      {
-        title: "Reports",
-        href: "/reports",
-        icon: BarChart3,
-        roles: permissions.reports,
-      },
-      { title: "Product catalog", href: "/catalog", icon: Boxes, roles: permissions.catalog },
-      { title: "Settings", href: "/settings", icon: Settings2, roles: permissions.settings },
+      { title: "Reports", href: "/reports", roles: permissions.reports },
+      { title: "Product catalog", href: "/catalog", roles: permissions.catalog },
+      { title: "Settings", href: "/settings", roles: permissions.settings },
     ],
   },
 ];
@@ -125,13 +94,13 @@ function WorkspaceSidebar({ actor, pathname }: { actor: Actor; pathname: string 
     }
   }
   return (
-    <Sidebar variant="inset" collapsible="offcanvas">
-      <SidebarHeader className="px-4 py-5">
+    <Sidebar variant="sidebar" collapsible="offcanvas">
+      <SidebarHeader className="h-14 shrink-0 justify-center border-b border-border px-5 py-0">
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton
               size="lg"
-              className="h-14 hover:bg-transparent"
+              className="h-auto rounded-none p-0 hover:bg-transparent active:bg-transparent"
               render={<Link href="/dashboard" />}
             >
               <Image
@@ -139,7 +108,7 @@ function WorkspaceSidebar({ actor, pathname }: { actor: Actor; pathname: string 
                 alt="DealFlow360"
                 width={180}
                 height={60}
-                className="h-10 w-auto object-contain"
+                className="h-8 w-auto object-contain"
                 priority
               />
             </SidebarMenuButton>
@@ -153,45 +122,56 @@ function WorkspaceSidebar({ actor, pathname }: { actor: Actor; pathname: string 
           );
           if (!items.length) return null;
           return (
-            <SidebarGroup key={group.label}>
-              <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
+            <SidebarGroup key={group.label} className="p-0">
+              <SidebarGroupLabel
+                className={cn(
+                  eyebrow,
+                  "mx-5 mt-7 mb-1.5 h-auto rounded-none border-b border-border px-0 pb-2 text-muted-foreground",
+                )}
+              >
+                {group.label}
+              </SidebarGroupLabel>
               <SidebarGroupContent>
                 <SidebarMenu>
-                  {items.map((item) => (
-                    <SidebarMenuItem key={item.href}>
-                      <SidebarMenuButton
-                        className="h-10 data-active:bg-primary/15 data-active:text-foreground"
-                        onClick={() => setOpenMobile(false)}
-                        isActive={pathname === item.href || pathname.startsWith(`${item.href}/`)}
-                        render={<Link href={item.href} />}
-                      >
-                        <item.icon />
-                        <span>{item.title}</span>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  ))}
+                  {items.map((item) => {
+                    const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
+                    return (
+                      <SidebarMenuItem key={item.href}>
+                        <SidebarMenuButton
+                          className={cn(
+                            "relative h-8 rounded-none px-5 py-0 text-[0.8125rem] transition-colors",
+                            "hover:bg-foreground/[0.035] hover:text-foreground",
+                            "focus-visible:ring-inset",
+                            "data-active:bg-transparent data-active:font-medium data-active:text-foreground",
+                            active ? "text-foreground" : "text-muted-foreground",
+                          )}
+                          onClick={() => setOpenMobile(false)}
+                          isActive={active}
+                          render={<Link href={item.href} />}
+                        >
+                          <span
+                            aria-hidden
+                            className={cn(
+                              "absolute inset-y-1 left-0 w-0.5",
+                              active ? "bg-primary" : "bg-transparent",
+                            )}
+                          />
+                          <span>{item.title}</span>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    );
+                  })}
                 </SidebarMenu>
               </SidebarGroupContent>
             </SidebarGroup>
           );
         })}
       </SidebarContent>
-      <SidebarFooter className="gap-3 p-4">
-        <Separator />
-        <div className="flex items-center gap-2.5">
-          <Avatar>
-            <AvatarFallback className="bg-primary/20 text-foreground">
-              {actor.name
-                .split(" ")
-                .map((part) => part[0])
-                .join("")
-                .slice(0, 2)
-                .toUpperCase()}
-            </AvatarFallback>
-          </Avatar>
+      <SidebarFooter className="gap-2 px-5 pt-4 pb-6">
+        <div className="flex items-center gap-3 border-t border-border pt-4">
           <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-medium text-foreground">{actor.name}</p>
-            <p className="text-xs text-muted-foreground capitalize">{actor.role}</p>
+            <p className={cn(eyebrow, "text-muted-foreground")}>{actor.role}</p>
+            <p className="mt-1 truncate text-sm font-medium text-foreground">{actor.name}</p>
           </div>
           <Button
             variant="ghost"
@@ -204,7 +184,7 @@ function WorkspaceSidebar({ actor, pathname }: { actor: Actor; pathname: string 
           </Button>
         </div>
         {error && (
-          <p role="alert" className="text-xs text-destructive">
+          <p role="alert" className="text-xs text-ink-risk">
             Sign out failed. Please try again.
           </p>
         )}
@@ -224,13 +204,13 @@ export function WorkspaceShell({ children, actor }: { children: ReactNode; actor
     <SidebarProvider style={{ "--sidebar-width": "16rem" } as CSSProperties}>
       <WorkspaceSidebar actor={actor} pathname={pathname} />
       <SidebarInset className="min-w-0">
-        <header className="flex h-16 shrink-0 items-center gap-3 border-b px-4 lg:px-6">
+        <header className="flex h-14 shrink-0 items-center gap-3 border-b border-border px-4 lg:px-6">
           <SidebarTrigger />
           <Separator orientation="vertical" className="h-4!" />
           <Breadcrumb>
             <BreadcrumbList>
               <BreadcrumbItem>
-                <BreadcrumbPage>{title}</BreadcrumbPage>
+                <BreadcrumbPage className={cn(eyebrow, "text-foreground")}>{title}</BreadcrumbPage>
               </BreadcrumbItem>
             </BreadcrumbList>
           </Breadcrumb>

@@ -2,12 +2,18 @@
 
 import * as React from "react";
 import { type RowData, type Table } from "@tanstack/react-table";
-import { X } from "lucide-react";
 
 import type { DataTableFeatures } from "@/components/ui/_types/data-table";
 import { Button } from "@/components/ui/button";
 import { DataTableViewOptions } from "@/components/ui/data-table/data-table-view-options";
 import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
+
+/**
+ * Quiet label type for the shared table chrome. Labels recede through size, weight, case and
+ * letter-spacing — never through transparency, which cannot hold AAA in the light theme.
+ */
+const eyebrowType = "text-[0.6875rem] font-medium tracking-[0.16em] uppercase";
 
 interface DataTableDefaultToolbarProps<TData extends RowData> {
   table: Table<DataTableFeatures, TData>;
@@ -69,56 +75,74 @@ export function DataTableDefaultToolbar<TData extends RowData>({
         ? ((table.getColumn(columnSearchId)?.getFilterValue() as string | undefined) ?? "")
         : "";
 
-  return (
-    <div className="flex items-start justify-between gap-4">
-      <div className="min-w-0 flex-1 space-y-3">
-        {(title || description) && (
-          <div className="space-y-1">
-            {title ? <div className="text-base leading-snug font-medium">{title}</div> : null}
-            {description ? <p className="text-sm text-muted-foreground">{description}</p> : null}
-          </div>
-        )}
-        {(columnSearchId || onSearchValueChange || filters || isFiltered) && (
-          <div className="flex flex-wrap items-center gap-2">
-            {(columnSearchId || onSearchValueChange) && (
-              <Input
-                aria-label={searchLabel ?? searchPlaceholder}
-                placeholder={searchPlaceholder}
-                value={resolvedSearchValue}
-                onChange={(e) => {
-                  if (onSearchValueChange) {
-                    onSearchValueChange(e.target.value);
-                    return;
-                  }
+  const hasMasthead = Boolean(title || description);
+  const hasActions = Boolean(actions) || showViewOptions;
+  const hasControls = Boolean(columnSearchId || onSearchValueChange || filters || isFiltered);
 
-                  table.getColumn(columnSearchId!)?.setFilterValue(e.target.value);
-                }}
-                className="h-8 w-64"
-              />
-            )}
-            {filters}
-            {isFiltered && (
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="h-8 px-2"
-                onClick={() => {
-                  table.resetColumnFilters();
-                  onSearchValueChange?.("");
-                }}
-              >
-                Reset
-                <X aria-hidden="true" className="ml-1 size-4" />
-              </Button>
-            )}
-          </div>
-        )}
-      </div>
-      <div className="ml-auto flex shrink-0 items-center gap-2">
-        {actions}
-        {showViewOptions && <DataTableViewOptions table={table} />}
-      </div>
+  return (
+    <div className="flex flex-col gap-4">
+      {(hasMasthead || hasActions) && (
+        <div
+          className={cn(
+            "flex flex-wrap items-baseline justify-between gap-x-8 gap-y-3",
+            // A firm section rule under the masthead, lighter hairlines inside the table below.
+            hasMasthead && "border-b border-border-strong pb-3",
+          )}
+        >
+          {hasMasthead ? (
+            <div className="min-w-0 flex-1">
+              {title ? <div className={cn(eyebrowType, "text-foreground")}>{title}</div> : null}
+              {description ? (
+                <p className="mt-2 max-w-[68ch] text-sm text-muted-foreground">{description}</p>
+              ) : null}
+            </div>
+          ) : null}
+          {hasActions ? (
+            <div className="ml-auto flex shrink-0 items-center gap-3">
+              {actions}
+              {showViewOptions && <DataTableViewOptions table={table} />}
+            </div>
+          ) : null}
+        </div>
+      )}
+      {hasControls && (
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
+          {(columnSearchId || onSearchValueChange) && (
+            <Input
+              aria-label={searchLabel ?? searchPlaceholder}
+              placeholder={searchPlaceholder}
+              value={resolvedSearchValue}
+              onChange={(e) => {
+                if (onSearchValueChange) {
+                  onSearchValueChange(e.target.value);
+                  return;
+                }
+
+                table.getColumn(columnSearchId!)?.setFilterValue(e.target.value);
+              }}
+              className="h-9 w-full max-w-sm rounded-none border-0 border-b-2 border-border-strong bg-transparent px-0 text-sm focus-visible:border-ink-accent"
+            />
+          )}
+          {filters}
+          {isFiltered && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className={cn(
+                eyebrowType,
+                "h-auto rounded-none px-0 py-1 text-muted-foreground underline decoration-border-strong underline-offset-4 hover:bg-transparent hover:text-foreground hover:decoration-foreground",
+              )}
+              onClick={() => {
+                table.resetColumnFilters();
+                onSearchValueChange?.("");
+              }}
+            >
+              Reset
+            </Button>
+          )}
+        </div>
+      )}
     </div>
   );
 }

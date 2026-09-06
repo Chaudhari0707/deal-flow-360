@@ -1,7 +1,6 @@
 "use client";
 
 import { type RowData, type Table } from "@tanstack/react-table";
-import { Settings2 } from "lucide-react";
 
 import type { DataTableFeatures } from "@/components/ui/_types/data-table";
 import { Button } from "@/components/ui/button";
@@ -14,6 +13,10 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { cn } from "@/lib/utils";
+
+/** Quiet label type: hierarchy from size, weight, case and letter-spacing, never from opacity. */
+const eyebrowType = "text-[0.6875rem] font-medium tracking-[0.16em] uppercase";
 
 export function DataTableViewOptions<TData extends RowData>({
   table,
@@ -23,8 +26,18 @@ export function DataTableViewOptions<TData extends RowData>({
   "use no memo";
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger render={<Button variant="outline" size="sm" className="h-8" />}>
-        <Settings2 aria-hidden="true" className="size-4" />
+      <DropdownMenuTrigger
+        render={
+          <Button
+            variant="outline"
+            size="sm"
+            className={cn(
+              eyebrowType,
+              "h-8 rounded-none bg-transparent px-3 text-muted-foreground hover:text-foreground",
+            )}
+          />
+        }
+      >
         View
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-37.5">

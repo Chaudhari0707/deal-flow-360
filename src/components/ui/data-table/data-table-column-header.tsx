@@ -28,24 +28,32 @@ export function DataTableColumnHeader<TData extends RowData, TValue>({
 
   return (
     <div className={cn("flex items-center gap-2", className)}>
+      {/* The control inherits the header cell's letterspaced type: sorting must not introduce a
+          second, louder label style next to plain string headers in the same row. */}
       <Button
         variant="ghost"
         size="sm"
-        className="-ml-3 h-8 gap-2 px-3"
+        className={cn(
+          "-ml-3 h-8 gap-1.5 rounded-none px-3 text-xs font-medium tracking-[0.08em] uppercase hover:bg-transparent",
+          sortDirection ? "text-foreground" : "text-muted-foreground hover:text-foreground",
+        )}
         onClick={column.getToggleSortingHandler()}
       >
         <span>{title}</span>
-        {sortDirection === "desc" ? (
-          <ArrowDown
-            aria-hidden="true"
-            className={cn("size-3.5", sortDirection ? "text-foreground" : "text-muted-foreground")}
-          />
-        ) : (
-          <ArrowUp
-            aria-hidden="true"
-            className={cn("size-3.5", sortDirection ? "text-foreground" : "text-muted-foreground")}
-          />
-        )}
+        <span className="flex w-3 shrink-0 items-center justify-center">
+          {sortDirection === "desc" ? (
+            <ArrowDown aria-hidden="true" className="size-3" />
+          ) : (
+            <ArrowUp
+              aria-hidden="true"
+              className={cn(
+                "size-3",
+                !sortDirection &&
+                  "opacity-0 transition-opacity group-hover/button:opacity-100 group-focus-visible/button:opacity-100",
+              )}
+            />
+          )}
+        </span>
       </Button>
     </div>
   );

@@ -93,7 +93,7 @@ export function InvoiceRegister({
                 aria-hidden
                 className={cn(
                   "absolute inset-x-0 bottom-0 h-0.5 transition-colors",
-                  lens === entry.id ? "bg-primary" : "bg-transparent",
+                  lens === entry.id ? "bg-ink-accent" : "bg-transparent",
                 )}
               />
             </Button>

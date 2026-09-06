@@ -10,6 +10,7 @@ import {
   numberInputValidationMessage,
   parseNumberInput,
 } from "@/components/ui/number-input-utils";
+import { cn } from "@/lib/utils";
 
 type NumberInputProps = Omit<
   React.ComponentProps<typeof Input>,
@@ -31,6 +32,7 @@ function displayValue(value: number | null | undefined) {
 }
 
 function NumberInput({
+  className,
   defaultValue,
   max,
   min,
@@ -70,6 +72,7 @@ function NumberInput({
   return (
     <Input
       {...props}
+      className={cn("tabular-nums", className)}
       type="text"
       inputMode={stepNumber !== undefined && !Number.isInteger(stepNumber) ? "decimal" : "numeric"}
       pattern="-?(?:[0-9]+(?:\\.[0-9]*)?|\\.[0-9]+)"
