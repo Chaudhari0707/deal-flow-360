@@ -16,6 +16,11 @@ command = "bunx"
 args = ["next-devtools-mcp@0.4.0"]
 startup_timeout_ms = 20000
 
+[mcp_servers.resend]
+url = "https://mcp.resend.com/mcp"
+auth = "oauth"
+enabled = true
+
 [mcp_servers.better-auth]
 url = "https://mcp.better-auth.com/mcp"
 enabled = true

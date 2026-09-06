@@ -223,7 +223,14 @@ export function PortalDetail({ id }: { id: string }) {
         <div className="mt-8">
           <DataTable
             classNames={documentStyles}
-            toolbar={(_table, extras) => <>{extras.bulkRemove}</>}
+            toolbar={(_table, extras) => (
+              <>
+                {extras.bulkRemove}
+                {extras.pageNav ? (
+                  <div className="flex items-center justify-end">{extras.pageNav}</div>
+                ) : null}
+              </>
+            )}
             columns={columns}
             data={quote.lines}
             getRowId={(row) => row.id}

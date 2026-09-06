@@ -85,4 +85,9 @@ export type DataTableFeatures = typeof dataTableFeatures;
 
 export type DataTableToolbarExtras = {
   bulkRemove: ReactNode;
+  /**
+   * The page navigation DataTable builds when `showPagination` is on (`null` otherwise).
+   * A custom toolbar must place this itself — DataTable no longer renders a row for it.
+   */
+  pageNav: ReactNode;
 };

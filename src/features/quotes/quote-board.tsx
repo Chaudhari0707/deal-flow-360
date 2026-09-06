@@ -6,6 +6,7 @@ import { ArrowUpRight, GripVertical, Lock } from "lucide-react";
 import { toast } from "sonner";
 import type { KeyedMutator } from "swr";
 
+import { CountValue } from "@/components/editorial/count-value";
 import { eyebrowType } from "@/components/editorial/editorial";
 import {
   AlertDialog,
@@ -207,7 +208,10 @@ export function QuoteBoard({
                   {column.terminal && <Lock className="size-3 text-muted-foreground" />}
                   {column.label}
                 </p>
-                <span className="text-sm text-muted-foreground tabular-nums">{rows.length}</span>
+                <CountValue
+                  className="text-sm text-muted-foreground tabular-nums"
+                  value={rows.length}
+                />
               </div>
               {rows.map((quote) => {
                 const locked = isTerminalStatus(quote.status);

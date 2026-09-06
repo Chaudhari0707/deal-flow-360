@@ -79,3 +79,9 @@ migration `0004`) 500s and rolls back an otherwise eligible SENT/APPROVED confir
 `bun run db:migrate` before portal confirm; readiness must check this relation, not only
 `orders`. | `src/features/quotes/service.ts`, `scripts/dev-local.ts`,
 `test/integration/confirm-billing.regression.test.ts`
+
+2026-09-06 | Report PDF | A merge from a stale branch reinstated an older `report-pdf.ts`, dropping
+the charted report that had already landed and leaving its tests and `docs/flows` describing
+behaviour no code produced; the older file also carried a local USD `Intl` formatter beside
+`@/lib/money`. Check for a merge-dropped implementation before editing a failing document test, and
+let PDF amounts come only from `documentMoney`. | `test/unit/billing-documents.test.ts`

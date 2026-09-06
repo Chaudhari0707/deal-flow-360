@@ -202,6 +202,7 @@ export function Catalog({ customersOnly = false }: { customersOnly?: boolean }) 
                     ) : null}
                   </>
                 }
+                pageNav={extras.pageNav}
               />
             )}
             columns={productColumns}
@@ -232,6 +233,7 @@ export function Catalog({ customersOnly = false }: { customersOnly?: boolean }) 
                     ) : null}
                   </>
                 }
+                pageNav={extras.pageNav}
               />
             )}
             columns={directoryColumns}

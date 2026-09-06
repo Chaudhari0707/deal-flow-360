@@ -11,6 +11,9 @@
     "linear": {
       "url": "https://mcp.linear.app/mcp"
     },
+    "resend": {
+      "url": "https://mcp.resend.com/mcp"
+    },
     "next-devtools": {
       "type": "stdio",
       "command": "bunx",

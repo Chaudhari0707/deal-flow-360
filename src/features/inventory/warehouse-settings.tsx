@@ -74,7 +74,7 @@ export function WarehouseSettings({
       }}
     >
       <DialogTrigger render={<Button variant="outline" size="sm" />}>
-        {warehouse.id ? `Configure` : "Add warehouse"}
+        {warehouse.id ? `Configure ${warehouse.name}` : "Add warehouse"}
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>

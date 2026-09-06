@@ -3,6 +3,7 @@ import { type ReactNode, useState } from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import useSWR from "swr";
 
+import { CountValue } from "@/components/editorial/count-value";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/ui/data-table";
@@ -67,7 +68,7 @@ function Figure({
   accent?: boolean;
   label: string;
   scale?: "figure" | "text";
-  value: string;
+  value: ReactNode;
 }) {
   return (
     <div data-slot="card" className="py-7 sm:px-8 sm:first:pl-0 sm:last:pr-0">
@@ -341,89 +342,105 @@ export function ReportWorkspace() {
           </div>
         </div>
       </section>
-      {invalid ? (
-        <Alert variant="destructive" className="mt-9">
-          <AlertDescription>Start date must be before the end date.</AlertDescription>
-        </Alert>
-      ) : report.error || !report.data || report.isLoading ? (
-        <div className="mt-9">
+      {/*
+       * The report-type switch is part of the page, not of a successful result: it decides which
+       * register is on screen and which export the masthead offers. A rejected date range or a
+       * failed refresh replaces the panels only — losing the tablist as well would strand a
+       * reader on one export with no way back while they correct the dates.
+       */}
+      <Tabs
+        className="mt-12"
+        value={reportTab}
+        onValueChange={(value) => {
+          if (value === "sales" || value === "financial") setReportTab(value);
+        }}
+      >
+        <TabsList aria-label="Report type">
+          <TabsTrigger value="sales">Sales report</TabsTrigger>
+          <TabsTrigger value="financial">Financial report</TabsTrigger>
+        </TabsList>
+        {invalid ? (
+          <Alert variant="destructive">
+            <AlertDescription>Start date must be before the end date.</AlertDescription>
+          </Alert>
+        ) : report.error || !report.data || report.isLoading ? (
           <WorkspaceState error={report.error} retry={() => void report.mutate()} />
-        </div>
-      ) : (
-        <Tabs
-          className="mt-12"
-          value={reportTab}
-          onValueChange={(value) => {
-            if (value === "sales" || value === "financial") setReportTab(value);
-          }}
-        >
-          <TabsList aria-label="Report type">
-            <TabsTrigger value="sales">Sales report</TabsTrigger>
-            <TabsTrigger value="financial">Financial report</TabsTrigger>
-          </TabsList>
-          <TabsContent value="sales">
-            <dl className="grid grid-cols-2 gap-x-10 sm:grid-cols-4 sm:gap-x-0 sm:divide-x sm:divide-border">
-              <Figure
-                accent
-                label="Quotes created"
-                value={String(report.data.sales.metrics.quotesCreated)}
-              />
-              <Figure
-                label="Orders confirmed"
-                value={String(report.data.sales.metrics.ordersConfirmed)}
-              />
-              <Figure
-                scale="text"
-                label="Average approval time"
-                value={
-                  report.data.sales.metrics.averageApprovalHours === null
-                    ? "No completed cycles"
-                    : `${report.data.sales.metrics.averageApprovalHours.toFixed(2)} hours`
-                }
-              />
-              <Figure
-                scale="text"
-                label="Top upsold product"
-                value={
-                  report.data.sales.metrics.topUpsoldProduct
-                    ? `${report.data.sales.metrics.topUpsoldProduct.name} · ${report.data.sales.metrics.topUpsoldProduct.quantity} units`
-                    : "No confirmed upsells"
-                }
-              />
-            </dl>
-            <div className="mt-7">
-              <DataTable
-                title="Quotations and confirmed orders"
-                description={`Ordered value ${money(report.data.sales.metrics.orderedCents)}.`}
-                classNames={billingTableStyles}
-                columns={salesColumns}
-                data={[...report.data.sales.quotes, ...report.data.sales.orders]}
-                enableColumnResizing={false}
-                getRowId={(row) => `${row.kind}:${row.id}`}
-                emptyMessage="No sales records match these filters."
-              />
-            </div>
-          </TabsContent>
-          <TabsContent value="financial">
-            <dl className="grid grid-cols-2 gap-x-10 sm:grid-cols-3 sm:gap-x-0 sm:divide-x sm:divide-border">
-              <Figure accent label="Net billed" value={money(report.data.totals.billedCents)} />
-              <Figure label="Payments collected" value={money(report.data.totals.paidCents)} />
-              <Figure label="Outstanding" value={money(report.data.totals.outstandingCents)} />
-            </dl>
-            <div className="mt-7">
-              <DataTable
-                title={`${report.data.rows.length} financial records`}
-                classNames={billingTableStyles}
-                columns={reportColumns}
-                data={report.data.rows}
-                enableColumnResizing={false}
-                getRowId={(row) => row.number}
-                emptyMessage="No records match these filters."
-              />
-            </div>
-          </TabsContent>
-        </Tabs>
-      )}
+        ) : (
+          <>
+            <TabsContent value="sales">
+              <dl className="grid grid-cols-2 gap-x-10 sm:grid-cols-4 sm:gap-x-0 sm:divide-x sm:divide-border">
+                <Figure
+                  accent
+                  label="Quotes created"
+                  value={<CountValue value={report.data.sales.metrics.quotesCreated} />}
+                />
+                <Figure
+                  label="Orders confirmed"
+                  value={<CountValue value={report.data.sales.metrics.ordersConfirmed} />}
+                />
+                <Figure
+                  scale="text"
+                  label="Average approval time"
+                  value={
+                    report.data.sales.metrics.averageApprovalHours === null
+                      ? "No completed cycles"
+                      : `${report.data.sales.metrics.averageApprovalHours.toFixed(2)} hours`
+                  }
+                />
+                <Figure
+                  scale="text"
+                  label="Top upsold product"
+                  value={
+                    report.data.sales.metrics.topUpsoldProduct
+                      ? `${report.data.sales.metrics.topUpsoldProduct.name} · ${report.data.sales.metrics.topUpsoldProduct.quantity} units`
+                      : "No confirmed upsells"
+                  }
+                />
+              </dl>
+              <div className="mt-7">
+                <DataTable
+                  title="Quotations and confirmed orders"
+                  description={`Ordered value ${money(report.data.sales.metrics.orderedCents)}.`}
+                  classNames={billingTableStyles}
+                  columns={salesColumns}
+                  data={[...report.data.sales.quotes, ...report.data.sales.orders]}
+                  enableColumnResizing={false}
+                  getRowId={(row) => `${row.kind}:${row.id}`}
+                  emptyMessage="No sales records match these filters."
+                />
+              </div>
+            </TabsContent>
+            <TabsContent value="financial">
+              <dl className="grid grid-cols-2 gap-x-10 sm:grid-cols-3 sm:gap-x-0 sm:divide-x sm:divide-border">
+                <Figure
+                  accent
+                  label="Net billed"
+                  value={<CountValue currency value={report.data.totals.billedCents} />}
+                />
+                <Figure
+                  label="Payments collected"
+                  value={<CountValue currency value={report.data.totals.paidCents} />}
+                />
+                <Figure
+                  label="Outstanding"
+                  value={<CountValue currency value={report.data.totals.outstandingCents} />}
+                />
+              </dl>
+              <div className="mt-7">
+                <DataTable
+                  title={`${report.data.rows.length} financial records`}
+                  classNames={billingTableStyles}
+                  columns={reportColumns}
+                  data={report.data.rows}
+                  enableColumnResizing={false}
+                  getRowId={(row) => row.number}
+                  emptyMessage="No records match these filters."
+                />
+              </div>
+            </TabsContent>
+          </>
+        )}
+      </Tabs>
     </div>
   );
 }

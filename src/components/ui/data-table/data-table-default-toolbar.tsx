@@ -44,10 +44,15 @@ interface DataTableDefaultToolbarProps<TData extends RowData> {
   filters?: React.ReactNode;
   /**
    * Slot for right-side action elements (e.g. an "Add" button).
-   * Rendered to the left of the view-options toggle.
+   * Rendered at the end of the masthead row, opposite the title.
    */
   actions?: React.ReactNode;
-  /** Card title shown on the same row as View. */
+  /**
+   * Page navigation supplied by DataTable (`extras.pageNav`). Rendered at the right end of
+   * the control row, after the View toggle, so search, View and paging share one line.
+   */
+  pageNav?: React.ReactNode;
+  /** Masthead title, on its own row above the controls. */
   title?: React.ReactNode;
   /** Supporting text under the title. */
   description?: React.ReactNode;
@@ -63,6 +68,7 @@ export function DataTableDefaultToolbar<TData extends RowData>({
   showViewOptions = true,
   filters,
   actions,
+  pageNav,
   title,
   description,
 }: DataTableDefaultToolbarProps<TData>) {
@@ -78,9 +84,12 @@ export function DataTableDefaultToolbar<TData extends RowData>({
         : "";
 
   const hasMasthead = Boolean(title || description);
-  const hasActions = Boolean(actions) || showViewOptions;
+  const hasActions = Boolean(actions);
   const hasSearch = Boolean(columnSearchId || onSearchValueChange);
-  const hasControls = hasSearch || Boolean(filters) || isFiltered;
+  // View and paging share the right end of the control row. The row renders whenever either
+  // is present — even with nothing on the left — so pagination never becomes unreachable.
+  const hasTrailing = showViewOptions || Boolean(pageNav);
+  const hasControls = hasSearch || Boolean(filters) || isFiltered || hasTrailing;
 
   return (
     <div className="flex flex-col gap-4">
@@ -101,10 +110,7 @@ export function DataTableDefaultToolbar<TData extends RowData>({
             </div>
           ) : null}
           {hasActions ? (
-            <div className="ml-auto flex shrink-0 items-center gap-3">
-              {actions}
-              {showViewOptions && <DataTableViewOptions table={table} />}
-            </div>
+            <div className="ml-auto flex shrink-0 items-center gap-3">{actions}</div>
           ) : null}
         </div>
       )}
@@ -184,6 +190,12 @@ export function DataTableDefaultToolbar<TData extends RowData>({
               Reset
             </Button>
           )}
+          {hasTrailing ? (
+            <div className="ml-auto flex shrink-0 items-center gap-3">
+              {showViewOptions && <DataTableViewOptions table={table} />}
+              {pageNav}
+            </div>
+          ) : null}
         </div>
       )}
     </div>

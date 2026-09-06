@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, type Page, test } from "@playwright/test";
 
 import type { FulfillmentDetail, InventorySnapshot } from "@/features/inventory/_types/ui";
 
@@ -11,7 +11,27 @@ function password() {
   return value;
 }
 
+/**
+ * The fulfillment list is server-paginated at 20 and ordered newest first, so a seeded order is
+ * pushed off the first page once earlier specs in the run have created enough orders. Page
+ * forward to it rather than assuming it is on page one.
+ */
+async function fulfillmentRow(page: Page, order: string) {
+  const row = () => page.getByRole("row").filter({ hasText: order });
+  for (let attempt = 0; attempt < 12; attempt += 1) {
+    if ((await row().count()) > 0) return row();
+    const next = page.getByRole("button", { name: "Go to next page" });
+    if (!(await next.isEnabled().catch(() => false))) break;
+    await next.click();
+    await expect(next)
+      .toBeEnabled({ timeout: 5000 })
+      .catch(() => {});
+  }
+  return row();
+}
+
 test("Admin restock reaches another live tab, then Ops consolidates and ships Northwind once @regression", async ({
+  baseURL,
   page,
   context,
 }) => {
@@ -89,12 +109,14 @@ test("Admin restock reaches another live tab, then Ops consolidates and ships No
     .toBe(true);
   // This tab did not perform the mutation; a committed WebSocket frame proves the live feed.
 
+  // The context now holds the admin session cookie, so Better Auth enforces the request origin.
   const opsLogin = await page.request.post("/api/auth/sign-in/email", {
+    headers: { origin: new URL(baseURL!).origin },
     data: { email: "ops@dealflow360.demo", password: password() },
   });
   expect(opsLogin.ok()).toBe(true);
   await page.goto("/fulfillment");
-  await page.getByRole("row").filter({ hasText: "SO-1022" }).click();
+  await (await fulfillmentRow(page, "SO-1022")).click();
   const fulfillmentDialog = page.getByRole("dialog", { name: "SO-1022", exact: true });
   await expect(fulfillmentDialog).toBeVisible();
   await expect(fulfillmentDialog.locator("[data-slot='dialog-footer']")).toBeVisible();
@@ -126,7 +148,7 @@ test("Admin restock reaches another live tab, then Ops consolidates and ships No
   expect(after.movements.filter((m) => m.kind === "SHIP")).toHaveLength(1);
   await fulfillmentDialog.getByRole("button", { name: "Close", exact: true }).click();
   await expect(fulfillmentDialog).toHaveCount(0);
-  await expect(page.getByRole("row").filter({ hasText: "SO-1022" })).toContainText("Fulfilled");
+  await expect(await fulfillmentRow(page, "SO-1022")).toContainText("Fulfilled");
   await observer.close();
 });
 

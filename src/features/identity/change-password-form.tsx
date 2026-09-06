@@ -52,7 +52,7 @@ export function ChangePasswordForm() {
   return (
     <main className="flex min-h-svh flex-col bg-background px-6 py-6 md:px-10 md:py-8">
       <div className="mx-auto w-full max-w-md">
-        <BrandLogo priority />
+        <BrandLogo priority className="text-3xl" />
       </div>
       <div className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center py-12">
         <div className="border-t-2 border-foreground pt-7">

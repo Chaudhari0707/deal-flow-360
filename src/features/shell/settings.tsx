@@ -7,6 +7,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { NumberInput } from "@/components/ui/number-input";
+import { StockSetup } from "@/features/inventory/stock-setup";
 import { displayStatus } from "@/features/shell/format";
 import { PageHeader } from "@/features/shell/page-header";
 import { useWorkspace } from "@/features/shell/use-workspace";
@@ -173,6 +174,24 @@ export function Settings() {
           />
         ))}
       </div>
+      {data.actor.role === "admin" && (
+        <section className="mt-6">
+          <div className="flex flex-wrap items-baseline justify-between gap-x-8 gap-y-3 border-b border-border-strong pb-3">
+            <h2 className={cn(eyebrowType, "text-foreground")}>Stock locations</h2>
+            <StockSetup
+              workspace={data}
+              refresh={() => {
+                void mutate();
+              }}
+            />
+          </div>
+          <p className="mt-4 max-w-[68ch] text-sm leading-relaxed text-muted-foreground">
+            Enable a stockable product at a warehouse before Operations records its first delivery.
+            Configuring a location creates a zero balance; it never changes stock that is already on
+            hand.
+          </p>
+        </section>
+      )}
       {!data.settings.length && (
         <Alert>
           <AlertDescription>

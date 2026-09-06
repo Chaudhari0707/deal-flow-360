@@ -1,13 +1,14 @@
 "use client";
 import { useState } from "react";
 
+import { CountValue } from "@/components/editorial/count-value";
 import type { InvoiceRegisterRow } from "@/features/billing/_types/tables";
 import { InvoiceDocument } from "@/features/billing/invoice-document";
 import { Eyebrow, Figure, Meta, Note } from "@/features/billing/invoice-editorial";
 import { InvoiceRegister } from "@/features/billing/invoice-register";
 import { invoiceOutstanding } from "@/features/billing/rules";
 import { useBillingAction } from "@/features/billing/use-billing-action";
-import { displayDate, money } from "@/features/shell/format";
+import { displayDate } from "@/features/shell/format";
 import { useWorkspace } from "@/features/shell/use-workspace";
 import { WorkspaceState } from "@/features/shell/workspace-state";
 import { apiClient, apiData } from "@/lib/api/client";
@@ -91,12 +92,12 @@ export function InvoiceWorkspace({ initialId }: { initialId?: string }) {
           <Figure
             accent
             label="Outstanding"
-            value={money(outstandingTotal)}
+            value={<CountValue currency value={outstandingTotal} />}
             note={`Across ${plural(openRows.length, "open document")}`}
           />
           <Figure
             label="Past due"
-            value={money(overdueTotal)}
+            value={<CountValue currency value={overdueTotal} />}
             note={
               overdueRows.length
                 ? `${plural(overdueRows.length, "document")} · oldest ${oldest} days`
@@ -105,12 +106,12 @@ export function InvoiceWorkspace({ initialId }: { initialId?: string }) {
           />
           <Figure
             label="Collected"
-            value={money(collected)}
+            value={<CountValue currency value={collected} />}
             note={`${plural(data.payments.length, "payment")} recorded`}
           />
           <Figure
             label="Credit on file"
-            value={money(creditAvailable)}
+            value={<CountValue currency value={creditAvailable} />}
             note={`${plural(data.credits.length, "credit note")} issued`}
           />
         </dl>

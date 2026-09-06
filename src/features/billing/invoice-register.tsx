@@ -63,42 +63,6 @@ export function InvoiceRegister({
         <span aria-hidden>·</span>
         <span className="tabular-nums">{money(outstanding)} outstanding in view</span>
       </SectionHead>
-      <div className="flex flex-col gap-5 py-6 md:flex-row md:items-end md:justify-between md:gap-10">
-        <Input
-          type="search"
-          aria-label="Search invoice or customer"
-          placeholder="Search invoice or customer"
-          value={search}
-          onChange={(event) => setSearch(event.target.value)}
-          className="h-9 w-full max-w-sm rounded-none border-0 border-b-2 border-border-strong bg-transparent px-0 text-sm placeholder:text-muted-foreground focus-visible:border-ink-accent focus-visible:ring-0 dark:bg-transparent"
-        />
-        <div className="flex flex-wrap items-center gap-x-7 gap-y-2">
-          {lenses.map((entry) => (
-            <Button
-              key={entry.id}
-              type="button"
-              variant="ghost"
-              aria-pressed={lens === entry.id}
-              onClick={() => setLens(entry.id)}
-              className={cn(
-                "relative h-auto rounded-none px-0 pb-2.5 text-[0.6875rem] font-medium tracking-[0.16em] uppercase hover:bg-transparent",
-                lens === entry.id
-                  ? "text-foreground"
-                  : "text-muted-foreground hover:text-muted-foreground",
-              )}
-            >
-              {entry.label}
-              <span
-                aria-hidden
-                className={cn(
-                  "absolute inset-x-0 bottom-0 h-0.5 transition-colors",
-                  lens === entry.id ? "bg-ink-accent" : "bg-transparent",
-                )}
-              />
-            </Button>
-          ))}
-        </div>
-      </div>
       <DataTable
         classNames={registerStyles}
         columns={invoiceRegisterColumns}
@@ -109,7 +73,47 @@ export function InvoiceRegister({
         initialSorting={[{ id: "createdAt", desc: true }]}
         onRowClick={(row) => onSelect(row.id)}
         pageSize={20}
-        toolbar={() => null}
+        /* Search, lenses and paging share one control line: the register's own chrome, with
+           the table's page navigation set at the right end of it. */
+        toolbar={(_table, extras) => (
+          <div className="flex flex-col gap-5 pt-6 pb-2 md:flex-row md:items-end md:justify-between md:gap-10">
+            <Input
+              type="search"
+              aria-label="Search invoice or customer"
+              placeholder="Search invoice or customer"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              className="h-9 w-full max-w-sm rounded-none border-0 border-b-2 border-border-strong bg-transparent px-0 text-sm placeholder:text-muted-foreground focus-visible:border-ink-accent focus-visible:ring-0 dark:bg-transparent"
+            />
+            <div className="flex flex-wrap items-center gap-x-7 gap-y-2">
+              {lenses.map((entry) => (
+                <Button
+                  key={entry.id}
+                  type="button"
+                  variant="ghost"
+                  aria-pressed={lens === entry.id}
+                  onClick={() => setLens(entry.id)}
+                  className={cn(
+                    "relative h-auto rounded-none px-0 pb-2.5 text-[0.6875rem] font-medium tracking-[0.16em] uppercase hover:bg-transparent",
+                    lens === entry.id
+                      ? "text-foreground"
+                      : "text-muted-foreground hover:text-muted-foreground",
+                  )}
+                >
+                  {entry.label}
+                  <span
+                    aria-hidden
+                    className={cn(
+                      "absolute inset-x-0 bottom-0 h-0.5 transition-colors",
+                      lens === entry.id ? "bg-ink-accent" : "bg-transparent",
+                    )}
+                  />
+                </Button>
+              ))}
+              {extras.pageNav}
+            </div>
+          </div>
+        )}
       />
     </section>
   );

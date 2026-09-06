@@ -32,6 +32,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { CustomerInvitationStatus } from "@/features/catalog/customer-invitation-status";
 import { CustomerDelete } from "@/features/shell/customer-delete";
 import { useWorkspace } from "@/features/shell/use-workspace";
 import { apiClient, apiData, HttpResponseError } from "@/lib/api/client";
@@ -71,14 +72,14 @@ function priceFields(product?: Workspace["products"][number]) {
   return [
     {
       name: "price",
-      label: "Unit price ($)",
+      label: "Unit price (₹)",
       value: (product?.priceCents ?? 0) / 100,
       step: "0.01",
       max: 100000,
     },
     {
       name: "cost",
-      label: "Unit cost ($)",
+      label: "Unit cost (₹)",
       value: (product?.costCents ?? 0) / 100,
       step: "0.01",
       max: 100000,
@@ -109,6 +110,9 @@ export function CatalogEditor({
 }) {
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
+  // Held after a customer is created whose invitation did not send, so the retry surface can
+  // stay open on that customer instead of the dialog closing on a half-finished onboarding.
+  const [createdCustomerId, setCreatedCustomerId] = useState<string>();
   const [stockable, setStockable] = useState(product?.stockable ?? false);
   const [active, setActive] = useState(product?.active ?? true);
   const [promoted, setPromoted] = useState(product?.promoted ?? false);
@@ -118,6 +122,7 @@ export function CatalogEditor({
   const { data } = useWorkspace();
   const pairingChoices = data?.products.filter((candidate) => candidate.id !== product?.id) ?? [];
   const existing = kind === "product" ? product : customer;
+  const invitedCustomerId = kind === "customer" ? (customer?.id ?? createdCustomerId) : undefined;
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
@@ -159,7 +164,14 @@ export function CatalogEditor({
         };
         const customers = apiClient.api.v1.customers;
         if (customer) apiData(await customers({ id: customer.id }).patch(body));
-        else apiData(await customers.post(body));
+        else {
+          const result = apiData(await customers.post(body));
+          if (result.invitation.status !== "SENT") {
+            setCreatedCustomerId(result.id);
+            await saved();
+            return;
+          }
+        }
       }
       await saved();
       close();
@@ -448,6 +460,7 @@ export function CatalogEditor({
                   </div>
                 </>
               )}
+              {invitedCustomerId && <CustomerInvitationStatus id={invitedCustomerId} />}
               {error && (
                 <Alert variant="destructive">
                   <AlertDescription>{error}</AlertDescription>
@@ -457,20 +470,22 @@ export function CatalogEditor({
           </DialogBody>
           <DialogFooter>
             {kind === "customer" && customer && data && can(data.actor.role, "customerEdit") && (
-              <CustomerDelete
-                id={customer.id}
-                name={customer.name}
-                disabled={pending}
-                deleted={async () => {
-                  await saved();
-                  close();
-                }}
-              />
+              <div className="flex flex-col sm:mr-auto">
+                <CustomerDelete
+                  id={customer.id}
+                  name={customer.name}
+                  disabled={pending}
+                  deleted={async () => {
+                    await saved();
+                    close();
+                  }}
+                />
+              </div>
             )}
             <Button type="button" variant="outline" onClick={close} disabled={pending}>
               Cancel
             </Button>
-            <Button type="submit" disabled={pending}>
+            <Button type="submit" disabled={pending || Boolean(createdCustomerId)}>
               {pending ? "Saving…" : `Save ${kind}`}
             </Button>
           </DialogFooter>

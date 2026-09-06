@@ -47,7 +47,7 @@ export function Figure({
   accent?: boolean;
   label: string;
   note: string;
-  value: string;
+  value: ReactNode;
 }) {
   return (
     <div className="py-7 sm:px-8 sm:first:pl-0 sm:last:pr-0">

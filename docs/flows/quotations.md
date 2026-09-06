@@ -296,9 +296,13 @@ See [portal breakdown](../../src/features/portal/portal-quote-totals.tsx),
 **Confirm order** opens a confirmation dialog showing the current revision and separate one-time
 and recurring charges. Customer confirmation locks the quote, verifies that exact revision is
 approved, creates the order, reserves stock, creates billing, marks the quote Confirmed, and writes
-an audit event in one database transaction. Failure rolls the transaction back. A repeated valid
-confirmation returns the existing order (and idempotently heals any missing invoice/subscription
-identities), preventing duplicate orders.
+an audit event plus a durable invoice-email intent in one database transaction. Failure rolls the
+transaction back. After commit, the portal renders the confirmed order's initial invoice PDFs with
+the same renderer as **Download PDF** and sends them to the customer email captured at confirmation.
+Mixed one-time/recurring orders send one email with each initial invoice attached; later renewals,
+adjustments, and credits are not added to that confirmation email. A repeated valid confirmation
+returns the existing order (and idempotently heals any missing invoice/subscription identities) and
+reuses the same delivery identity, preventing duplicate orders or accepted provider mail.
 
 After confirmation, staff see the new work **newest-first**:
 
@@ -309,7 +313,7 @@ After confirmation, staff see the new work **newest-first**:
 | Hybrid | Separate one-time and recurring invoices | Subscriptions for recurring lines only | Same order drives shipment for stockable demand |
 
 All payments settle on invoices only. Fulfillment may still require stock/backorder handling;
-confirmation is not proof of shipment or payment.
+confirmation is not proof of shipment, payment, or inbox delivery.
 
 ```mermaid
 flowchart TD

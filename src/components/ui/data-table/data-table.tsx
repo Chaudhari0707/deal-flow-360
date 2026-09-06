@@ -116,6 +116,10 @@ interface DataTableProps<TData extends RowData, TValue> {
   pagination?: PaginationState;
   /** Initial rows per page in client-side mode (default 25). Ignored when `manualPagination` is true. */
   pageSize?: number;
+  /** Accessible name for the built-in search. Defaults to `searchPlaceholder`. */
+  searchLabel?: string;
+  /** Placeholder for the built-in search. */
+  searchPlaceholder?: string;
   /** Hide pagination chrome (useful for compact/form-embedded tables). Default true. */
   showPagination?: boolean;
   /** Initial column sort; empty keeps the incoming `data` order. */
@@ -124,7 +128,7 @@ interface DataTableProps<TData extends RowData, TValue> {
     table: Table<DataTableFeatures, TData>,
     extras: DataTableToolbarExtras,
   ) => React.ReactNode;
-  /** Shown on the same row as the View control when using the default toolbar. */
+  /** Masthead title shown above the control row when using the default toolbar. */
   title?: React.ReactNode;
   description?: React.ReactNode;
 }
@@ -152,6 +156,8 @@ export function DataTable<TData extends RowData, TValue>({
   pageCount,
   pagination,
   pageSize = 25,
+  searchLabel,
+  searchPlaceholder = "Search…",
   showPagination = true,
   initialSorting = [],
 }: DataTableProps<TData, TValue>) {
@@ -160,6 +166,10 @@ export function DataTable<TData extends RowData, TValue>({
   const [columnVisibility, setColumnVisibility] = React.useState<ColumnVisibilityState>({});
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
   const [sorting, setSorting] = React.useState<SortingState>(initialSorting);
+  // Client-side global filtering only ever sees the rows currently loaded, so it is offered on
+  // client-paginated tables only. On a server-backed table it would silently search one page and
+  // present the result as if it had searched the whole set.
+  const [globalFilter, setGlobalFilter] = React.useState("");
   const resolvedColumns =
     enableSelection && !hasSelectionColumn(columns)
       ? ([getSelectionColumn<TData>(), ...columns] as ColumnDef<DataTableFeatures, TData, TValue>[])
@@ -190,6 +200,7 @@ export function DataTable<TData extends RowData, TValue>({
       rowSelection,
       columnFilters,
       columnPinning,
+      globalFilter,
       ...(manualPagination ? { pagination } : {}),
     },
     initialState: manualPagination
@@ -215,6 +226,7 @@ export function DataTable<TData extends RowData, TValue>({
     onColumnFiltersChange: setColumnFilters,
     onColumnVisibilityChange: setColumnVisibility,
     onColumnPinningChange: setColumnPinning,
+    onGlobalFilterChange: setGlobalFilter,
     // Spread these in only for manual mode. Passing them as explicit `undefined` is NOT
     // equivalent to omitting them: TanStack merges options with `{...prev, ...next}`, so an
     // explicit `undefined` overwrites `rowPaginationFeature`'s default `onPaginationChange`
@@ -243,7 +255,11 @@ export function DataTable<TData extends RowData, TValue>({
       />
     ) : null;
 
-  const toolbarExtras: DataTableToolbarExtras = { bulkRemove: bulkRemoveAction };
+  // Built once here so the default toolbar and every custom toolbar place the same node on
+  // their own control row. DataTable no longer renders a pagination row of its own.
+  const pageNav = showPagination ? <DataTablePageNav table={table} /> : null;
+
+  const toolbarExtras: DataTableToolbarExtras = { bulkRemove: bulkRemoveAction, pageNav };
 
   return (
     <div className="flex flex-col gap-4">
@@ -253,22 +269,26 @@ export function DataTable<TData extends RowData, TValue>({
         <DataTableDefaultToolbar
           table={table}
           actions={bulkRemoveAction}
+          pageNav={pageNav}
+          {...(manualPagination
+            ? {}
+            : {
+                searchValue: globalFilter,
+                onSearchValueChange: setGlobalFilter,
+                searchLabel,
+                searchPlaceholder,
+              })}
           title={title}
           description={description}
         />
       )}
-      {showPagination ? (
-        <div className="flex items-center justify-end">
-          <DataTablePageNav table={table} />
-        </div>
-      ) : null}
       <div className={cn(classNames?.container)}>
         <UITable
           className={classNames?.table}
           containerClassName={cn(
             hasPinnedColumns
               ? "overflow-visible"
-              : "max-h-[68svh] overflow-auto overscroll-contain",
+              : "max-h-[68svh] [scrollbar-gutter:stable] overflow-auto overscroll-contain",
             classNames?.scroller,
           )}
           style={{
