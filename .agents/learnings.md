@@ -51,3 +51,9 @@ retry 200. | `test/unit/inventory-movement-response.test.ts`
 2026-09-06 | Elysia Intersect | Next's compiled adapter can 400 `t.Intersect` response rows that
 `api.handle` accepts. Flatten snapshot objects instead of intersecting `stockModel`. |
 `src/features/inventory/model.ts` inventory snapshot stocks.
+
+2026-09-06 | Report PDF | A merge from a stale branch reinstated an older `report-pdf.ts`, dropping
+the charted report that had already landed and leaving its tests and `docs/flows` describing
+behaviour no code produced; the older file also carried a local USD `Intl` formatter beside
+`@/lib/money`. Check for a merge-dropped implementation before editing a failing document test, and
+let PDF amounts come only from `documentMoney`. | `test/unit/billing-documents.test.ts`
