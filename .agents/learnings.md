@@ -10,6 +10,10 @@ Do not add task status, speculation, private issue content, customer data, crede
 conversation history. Promote a lesson only after the same rule has independent evidence twice;
 move it into the canonical routed playbook and remove the duplicate entry here.
 
+2026-09-06 | Quotation summaries | One-time totals exclude subscriptions. Show recurring subtotals,
+discount savings and tax by billing interval; never present an unavailable calculation as zero or
+combine monthly and annual charges as a payable total. | `test/unit/quote-summary.regression.test.tsx`
+
 2026-09-05 | Subscription amounts | Preserve the original rational price/quantity basis when changing
 quantities; repeatedly scaling rounded totals can gain or lose a cent. |
 `test/integration/billing.regression.test.ts` quantity round-trip regression.
@@ -28,6 +32,10 @@ retry 200. | `test/unit/inventory-movement-response.test.ts`
 2026-09-06 | Elysia Intersect | Next's compiled adapter can 400 `t.Intersect` response rows that
 `api.handle` accepts. Flatten snapshot objects instead of intersecting `stockModel`. |
 `src/features/inventory/model.ts` inventory snapshot stocks.
+
+2026-09-06 | Editor actions | When redesigning a record dialog, preserve existing lifecycle
+actions, not just fields and Save. Test delete visibility, confirmation cancellation, and linked-record
+rejection through the actual editor. | `playwright/e2e/customer-create-access.spec.ts`
 2026-09-06 | Quotation recommendations | Validate transient form values before calculating dependent
 recommendation prices; an empty or out-of-range discount must not throw out of render and replace
 the editor with a workspace error. | `playwright/e2e/number-input.spec.ts`

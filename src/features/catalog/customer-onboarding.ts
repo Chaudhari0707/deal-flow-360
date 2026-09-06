@@ -105,7 +105,7 @@ export async function sendCustomerInvitation(customerId: string, actor: Actor) {
 }
 
 export async function createCustomerWithLogin(input: CatalogCustomerInput, actor: Actor) {
-  if (!can(actor.role, "customers"))
+  if (!can(actor.role, "customerCreate"))
     throw new DomainError("Your role cannot create customers", 403);
   input = { ...input, name: input.name.trim(), email: input.email.trim().toLowerCase() };
   const password = crypto.randomUUID() + crypto.randomUUID();

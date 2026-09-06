@@ -23,16 +23,16 @@ initial reservation by confirming an eligible quotation through the customer wor
 The fulfillment queue is `/fulfillment`; select an order to open its detail dialog. A direct detail
 route also exists at `/fulfillment/[id]`. Representatives, managers, and Operations see stock balances
 below the queue; only Operations can select a stock row to receive a delivery. Administrators use
-the stock section of `/settings` to configure warehouses and stock locations. The same
-[inventory screen](../../src/features/inventory/inventory-screen.tsx) supplies both sections.
+the dedicated **Inventory** page at `/inventory` to configure warehouses and stock locations.
+Settings contains business policies only and does not embed inventory.
 
-There is no separate Inventory navigation item. The legacy `/inventory` URL redirects an
-Administrator to `/settings` and other authorized stock readers to `/fulfillment`. An unauthenticated
+The Inventory navigation item opens the
+[inventory screen](../../src/features/inventory/inventory-screen.tsx) at `/inventory`. An unauthenticated
 visitor goes to `/login`; an account requiring a password change goes to `/change-password`;
 Finance is denied. These checks run on the server, as do the stock API permissions.
 Sources: [fulfillment composition](../../src/features/inventory/fulfillment-screen.tsx),
 [settings composition](../../src/features/shell/settings.tsx),
-[legacy route guard](../../src/app/(workspace)/inventory/page.tsx).
+[inventory page](../../src/app/(workspace)/inventory/page.tsx).
 
 ## Configure a warehouse and a stock location
 
@@ -244,9 +244,8 @@ Use the root task's verification report for actual results and environment.
 | Two browser tabs observe receipt; consolidate, accept, ship; rep denial | [Inventory browser journey](../../playwright/e2e/inventory.spec.ts) |
 | Role-specific navigation and direct URL denial | [Role access browser journey](../../playwright/e2e/role-access.spec.ts) |
 
-The inventory browser journey opens `/inventory` and follows its redirect into Fulfillment, where
-the stock section remains available. Administrator setup belongs to Settings; Finance must be denied
-both the legacy stock URL and stock APIs. Coverage references do not establish that every setup
+The inventory browser journey opens `/inventory`. Administrator warehouse setup is on that page;
+Finance must be denied stock APIs. Coverage references do not establish that every setup
 dialog or deployment environment has been exercised.
 There is no carrier tracking, delivery-proof upload, return-to-stock, manual stock write-off, or
 automatic purchase-order replenishment in these inventory routes. Shipment recording means warehouse

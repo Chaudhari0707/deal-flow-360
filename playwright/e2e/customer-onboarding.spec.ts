@@ -6,17 +6,17 @@ test("customer creation emails a temporary login, requires password replacement 
 }) => {
   const demoPassword = Bun.env.DEMO_PASSWORD ?? Bun.env.PLAYWRIGHT_USER_PASSWORD;
   if (!demoPassword) throw new Error("Seeded password required");
-  const rep = await browser.newContext({ baseURL });
+  const manager = await browser.newContext({ baseURL });
   const customer = await browser.newContext({ baseURL });
   try {
     expect(
       (
-        await rep.request.post("/api/auth/sign-in/email", {
-          data: { email: "rep@dealflow360.demo", password: demoPassword },
+        await manager.request.post("/api/auth/sign-in/email", {
+          data: { email: "manager@dealflow360.demo", password: demoPassword },
         })
       ).ok(),
     ).toBe(true);
-    const page = await rep.newPage();
+    const page = await manager.newPage();
     await page.goto("/customers");
     await page.getByRole("button", { name: "Add customer", exact: true }).click();
     const email = `onboarding-${crypto.randomUUID()}@example.com`;
@@ -24,7 +24,7 @@ test("customer creation emails a temporary login, requires password replacement 
     await page.getByLabel("Customer email", { exact: true }).fill(email);
     await page.getByRole("button", { name: "Save customer", exact: true }).click();
     await expect(page.getByRole("dialog")).toHaveCount(0);
-    const response = await rep.request.get(
+    const response = await manager.request.get(
       `http://127.0.0.1:3103/messages?to=${encodeURIComponent(email)}`,
     );
     const messages = (await response.json()) as { to: string; subject: string; text: string }[];
@@ -32,8 +32,8 @@ test("customer creation emails a temporary login, requires password replacement 
     expect(messages[0]!.subject).toBe("Your DealFlow360 customer portal login");
     const temporaryPassword = messages[0]!.text.match(/Temporary password: (\S+)/)?.[1];
     if (!temporaryPassword) throw new Error("Provider did not receive a temporary password");
-    const staffIdentity = await (await rep.request.get("/api/v1/me")).json();
-    expect(staffIdentity.actor.role).toBe("rep");
+    const staffIdentity = await (await manager.request.get("/api/v1/me")).json();
+    expect(staffIdentity.actor.role).toBe("manager");
     const portal = await customer.newPage();
     await portal.goto("/login");
     await portal.getByLabel("Email address").fill(email);
@@ -65,7 +65,7 @@ test("customer creation emails a temporary login, requires password replacement 
     await portal.getByRole("button", { name: "Sign in", exact: true }).click();
     await expect(portal).toHaveURL(/\/portal$/);
   } finally {
-    await rep.close();
+    await manager.close();
     await customer.close();
   }
 });
@@ -78,7 +78,7 @@ test("welcome email failure keeps the saved customer and retries the same invita
   expect(
     (
       await page.request.post("/api/auth/sign-in/email", {
-        data: { email: "rep@dealflow360.demo", password },
+        data: { email: "manager@dealflow360.demo", password },
       })
     ).ok(),
   ).toBe(true);
@@ -112,7 +112,7 @@ test("provider test-domain rejection shows configuration guidance without losing
   expect(
     (
       await page.request.post("/api/auth/sign-in/email", {
-        data: { email: "rep@dealflow360.demo", password },
+        data: { email: "manager@dealflow360.demo", password },
       })
     ).ok(),
   ).toBe(true);

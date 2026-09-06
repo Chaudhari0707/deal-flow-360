@@ -17,6 +17,11 @@ does not receive invoices, subscriptions, payments or credits. Manager/Admin rep
 financial visibility. Invoice PDF access is Rep-owned, Manager/Finance, or matching customer;
 Admin uses reporting exports. Catalog is Admin-only; customer directory access is independent.
 
+Customer directory read access includes Rep, Manager and Admin. Customer creation uses the separate
+`customerCreate` permission (Manager/Admin only), enforced by both the API route and provisioning
+service. Customer editing and deletion remain Manager/Admin only. Creation restrictions do not
+remove representatives' ability to select existing customers when building quotations.
+
 Stock UI lives within Fulfillment for Rep/Manager/Ops and within Settings for Admin. The legacy
 `/inventory` path redirects accordingly; it is not added to navigation. Deep links use Next's
 `forbidden()` under a dynamic Suspense leaf. With Cache Components the page shell can already be a

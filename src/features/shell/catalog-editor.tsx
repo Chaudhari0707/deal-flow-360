@@ -36,6 +36,7 @@ import { CustomerDelete } from "@/features/shell/customer-delete";
 import { useWorkspace } from "@/features/shell/use-workspace";
 import { apiClient, apiData, HttpResponseError } from "@/lib/api/client";
 import type { Workspace } from "@/lib/domain/_types/workspace";
+import { can } from "@/lib/domain/permissions";
 
 /**
  * Editorial record editor. Grouping comes from hairline rules and column rhythm rather than
@@ -463,6 +464,17 @@ export function CatalogEditor({
             </FieldGroup>
           </DialogBody>
           <DialogFooter>
+            {kind === "customer" && customer && data && can(data.actor.role, "customerEdit") && (
+              <CustomerDelete
+                id={customer.id}
+                name={customer.name}
+                disabled={pending}
+                deleted={async () => {
+                  await saved();
+                  close();
+                }}
+              />
+            )}
             <Button type="button" variant="outline" onClick={close} disabled={pending}>
               Cancel
             </Button>

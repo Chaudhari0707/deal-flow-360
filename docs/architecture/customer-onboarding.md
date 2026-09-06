@@ -1,6 +1,10 @@
 # Customer credential onboarding
 
 DF-21 requires a customer created by staff to receive a usable portal password. The implementation
+restricts creation to managers and admins through the shared `customerCreate` permission in the UI,
+Elysia route, and provisioning service. Representatives retain directory access but cannot create
+customers; denied requests make no writes or email sends. This role restriction follows the
+maintainer's updated scope. The implementation
 uses Better Auth credential provisioning inside the customer transaction, with automatic sign-in
 disabled on that provisioning instance. The creating employee keeps their session. A profile bound
 to the new customer is created before commit, so the account cannot briefly inherit the default Rep

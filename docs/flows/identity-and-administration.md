@@ -49,7 +49,10 @@ Sources: [authentication form](../../src/features/identity/auth-form.tsx),
 
 ## Create a customer and portal login
 
-Representatives, managers, and administrators can open Customers and add a customer.
+Representatives, managers, and administrators can open Customers. Only managers and administrators
+can add a customer; representatives can view and search the directory and select customers in quotes.
+The Add customer button is hidden for representatives, and `POST /api/v1/customers` returns 403
+for their sessions without creating records or sending an invitation.
 Enter the customer's name, email, tier (Bronze/Silver/Gold), and optional team. The server
 normalizes email to lowercase and trims contact details. The new HTTP creation flow
 creates both a customer and a linked customer-role credential account, rather than just
@@ -79,7 +82,7 @@ sequenceDiagram
   end
 ```
 
-Example: a representative adds “Example Labs”, `contact@example.test`, Gold tier, West
+Example: a manager adds “Example Labs”, `contact@example.test`, Gold tier, West
 team. The customer account is linked only to Example Labs. A generated temporary password
 is included in the welcome email alongside the login URL. The normal customer-creation
 response exposes delivery status, not the password. Better Auth stores the credential
@@ -171,7 +174,13 @@ Sources: [portal identity and serialization](../../src/features/quotes/portal-ac
 
 ## Edit and delete customers
 
-Representatives create customers; manager/admin roles edit and delete them. A manager can
+In Customers, managers and administrators select **Edit customer** on an existing row.
+The dialog footer includes **Delete customer**, followed by a separate confirmation dialog.
+Cancel preserves the customer; a blocked deletion explains the linked-record restriction without
+closing the editor. The Add customer dialog has no delete action, and representatives do not
+receive customer edit/delete controls.
+
+Manager/admin roles create, edit and delete customers. Representatives have read-only directory access. A manager can
 change name, contact email, tier, and team. Tier changes affect new quote pricing and policy
 evaluation; already-stored quote snapshots are not silently rewritten by editing a contact.
 
@@ -256,6 +265,9 @@ approvalChain. Unsupported names/keys and out-of-range values are rejected and s
 changes are audited. New submissions use policy values; do not describe an old approval as
 automatically granted for later edited terms.
 
+Inventory and warehouse setup are available through the dedicated **Inventory** navigation item
+at `/inventory`. Settings contains business policies only; it does not embed the inventory screen.
+
 | Policy | Meaning |
 | --- | --- |
 | Pricelists | Hardware tier factors. At 9,000 bps a ₹10,000 catalog price becomes ₹9,000 for that tier before discounts/tax. Services/subscriptions do not use this hardware factor. |
@@ -311,7 +323,7 @@ Existing executable coverage includes [customer lifecycle integration](../../tes
 These are coverage references, not claims that this documentation agent executed them or
 that an actual inbox received an email. The implementation handoff records final run results.
 
-A reviewer can create a new customer as a rep, inspect the saved invitation status, sign in
+A reviewer can create a new customer as a manager or admin, inspect the saved invitation status, sign in
 with controlled test credentials, complete the required change, and verify customer-only
 portal access. Retry a failed invitation using a controlled provider fixture; verify existing
 identity conflict and linked-account deletion rejection. As admin, add a ₹1,250 product,

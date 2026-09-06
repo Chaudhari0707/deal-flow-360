@@ -43,7 +43,7 @@ export const catalogRoutes = new Elysia({ name: "catalog", tags: ["Catalog"] })
     },
   )
   .post("/customers", async ({ actor, body }) => createCustomerWithLogin(body, actor), {
-    authorize: permissions.customers,
+    authorize: permissions.customerCreate,
     body: customerBodyModel,
     response: { 200: customerCreatedModel, ...apiErrorResponses },
   })

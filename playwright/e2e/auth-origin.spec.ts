@@ -4,7 +4,7 @@ test("the alternate loopback hostname supports real login and authenticated cust
   page,
   baseURL,
 }) => {
-  const email = Bun.env.PLAYWRIGHT_USER_EMAIL;
+  const email = "manager@dealflow360.demo";
   const password = Bun.env.PLAYWRIGHT_USER_PASSWORD;
   if (!baseURL || !email || !password)
     throw new Error("Alias browser regression requires the local base URL and seeded credentials");

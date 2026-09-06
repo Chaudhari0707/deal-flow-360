@@ -128,7 +128,7 @@ export function QuoteLines({
                 </span>
               </TableCell>
               <TableCell className={cn(numericCell, "pt-5 font-medium text-foreground")}>
-                {money(priced?.[index]?.totalCents ?? 0)}
+                {priced?.[index] ? money(priced[index].totalCents) : "—"}
               </TableCell>
               <TableCell className={cn(documentCell, "pt-3.5 text-right")}>
                 <Button

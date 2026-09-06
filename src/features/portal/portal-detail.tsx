@@ -29,6 +29,7 @@ import type { PortalDetail as PortalDetailData } from "@/features/portal/_types/
 import { PortalConversation } from "@/features/portal/portal-conversation";
 import { PortalCounter } from "@/features/portal/portal-counter";
 import { PortalForbidden } from "@/features/portal/portal-forbidden";
+import { PortalQuoteTotals } from "@/features/portal/portal-quote-totals";
 import { displayDate, displayStatus, money } from "@/features/shell/format";
 import { PageHeader } from "@/features/shell/page-header";
 import { WorkspaceState } from "@/features/shell/workspace-state";
@@ -67,38 +68,6 @@ function NumericHeader({ children }: { children: ReactNode }) {
   return <span className="block text-right">{children}</span>;
 }
 
-/** One row of the totals block. The closing figure sits above a firm rule, not inside a box. */
-function TotalLine({
-  label,
-  strong = false,
-  value,
-}: {
-  label: string;
-  strong?: boolean;
-  value: string;
-}) {
-  return (
-    <div
-      className={cn(
-        "flex items-baseline justify-between gap-8",
-        strong ? "mt-1 border-t-2 border-foreground pt-3.5" : "border-b border-border py-2.5",
-      )}
-    >
-      <dt className={strong ? cn(eyebrowType, "text-muted-foreground") : "text-muted-foreground"}>
-        {label}
-      </dt>
-      <dd
-        className={cn(
-          "tabular-nums",
-          strong ? "text-lg font-semibold text-foreground" : "text-foreground",
-        )}
-      >
-        {value}
-      </dd>
-    </div>
-  );
-}
-
 const columns: ColumnDef<DataTableFeatures, PortalDetailData["quote"]["lines"][number]>[] = [
   {
     accessorKey: "name",
@@ -127,8 +96,27 @@ const columns: ColumnDef<DataTableFeatures, PortalDetailData["quote"]["lines"][n
   },
   {
     accessorKey: "discountBps",
-    header: () => <NumericHeader>Discount</NumericHeader>,
+    header: () => <NumericHeader>Line discount</NumericHeader>,
     cell: ({ row }) => <Numeric quiet>{`${row.original.discountBps / 100}%`}</Numeric>,
+  },
+  {
+    id: "discountSavings",
+    header: () => <NumericHeader>Discount savings</NumericHeader>,
+    cell: ({ row }) => (
+      <Numeric quiet>
+        {money(row.original.priceCents * row.original.quantity - row.original.netCents)}
+      </Numeric>
+    ),
+  },
+  {
+    accessorKey: "netCents",
+    header: () => <NumericHeader>Subtotal after discounts</NumericHeader>,
+    cell: ({ row }) => <Numeric quiet>{money(row.original.netCents)}</Numeric>,
+  },
+  {
+    accessorKey: "taxCents",
+    header: () => <NumericHeader>Tax</NumericHeader>,
+    cell: ({ row }) => <Numeric quiet>{money(row.original.taxCents)}</Numeric>,
   },
   {
     accessorKey: "totalCents",
@@ -157,24 +145,6 @@ export function PortalDetail({ id }: { id: string }) {
       />
     );
   const quote = data.quote;
-  const recurring = [
-    ...new Set(quote.lines.map((line) => line.intervalMonths).filter((months) => months > 0)),
-  ]
-    .sort((a, b) => a - b)
-    .map((months) => ({
-      label:
-        months === 1
-          ? "Monthly"
-          : months === 3
-            ? "Quarterly"
-            : months === 12
-              ? "Yearly"
-              : `Every ${months} months`,
-      cents: quote.lines
-        .filter((line) => line.intervalMonths === months)
-        .reduce((sum, line) => sum + line.totalCents, 0),
-    }))
-    .filter((cycle) => cycle.cents > 0);
   const canTransact = data.actor.role === "customer";
   const confirmable =
     canTransact &&
@@ -268,30 +238,7 @@ export function PortalDetail({ id }: { id: string }) {
             </p>
           </div>
           <div className="w-full shrink-0 text-sm sm:w-80">
-            <dl>
-              <TotalLine label="One-time subtotal" value={money(quote.subtotalCents)} />
-              <TotalLine label="One-time tax" value={money(quote.taxCents)} />
-              <TotalLine strong label="One-time total" value={money(quote.totalCents)} />
-            </dl>
-            {recurring.length > 0 && (
-              <div className="mt-8">
-                <p
-                  className={cn(eyebrowType, "border-b border-border pb-2.5 text-muted-foreground")}
-                >
-                  Recurring plans (including tax)
-                </p>
-                <dl>
-                  {recurring.map((cycle) => (
-                    <TotalLine key={cycle.label} label={cycle.label} value={money(cycle.cents)} />
-                  ))}
-                </dl>
-              </div>
-            )}
-            {quote.orderDiscountBps > 0 && (
-              <p className="mt-4 text-xs text-muted-foreground">
-                Includes {quote.orderDiscountBps / 100}% order discount.
-              </p>
-            )}
+            <PortalQuoteTotals lines={quote.lines} orderDiscountBps={quote.orderDiscountBps} />
           </div>
         </div>
         <div className="mt-12 flex flex-wrap items-center justify-between gap-x-10 gap-y-5 border-t border-border-strong pt-6">
@@ -307,19 +254,21 @@ export function PortalDetail({ id }: { id: string }) {
               <AlertDialogTrigger render={<Button size="lg" disabled={pending} />}>
                 Confirm order
               </AlertDialogTrigger>
-              <AlertDialogContent>
+              <AlertDialogContent className="data-[size=default]:sm:max-w-xl">
                 <AlertDialogHeader>
                   <AlertDialogTitle>Confirm {quote.number}?</AlertDialogTitle>
                 </AlertDialogHeader>
-                <AlertDialogBody className="max-h-[45svh]">
+                <AlertDialogBody className="max-h-[60svh]">
                   <AlertDialogDescription className="leading-relaxed">
-                    You are accepting version {quote.revision} with {money(quote.totalCents)} in
-                    one-time charges
-                    {recurring.length
-                      ? ` plus ${recurring.map((cycle) => `${money(cycle.cents)} ${cycle.label.toLowerCase()}`).join(" and ")}`
-                      : ""}
-                    . This creates your order and starts fulfillment and billing.
+                    You are accepting version {quote.revision} at the prices below. This creates
+                    your order and starts fulfillment and billing.
                   </AlertDialogDescription>
+                  <div className="mt-5">
+                    <PortalQuoteTotals
+                      lines={quote.lines}
+                      orderDiscountBps={quote.orderDiscountBps}
+                    />
+                  </div>
                 </AlertDialogBody>
                 <AlertDialogFooter>
                   <AlertDialogCancel>Review again</AlertDialogCancel>

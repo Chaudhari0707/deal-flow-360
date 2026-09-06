@@ -59,9 +59,9 @@ beforeAll(async () => {
 
 test("customer CRUD roles, invalid data, and unused deletion audit", async () => {
   expect((await request("POST", "/customers", undefined, input())).status).toBe(401);
-  for (const role of ["finance", "ops", "customer"] as Role[])
+  for (const role of ["rep", "finance", "ops", "customer"] as Role[])
     expect((await request("POST", "/customers", role, input())).status).toBe(403);
-  for (const role of ["rep", "manager", "admin"] as Role[]) {
+  for (const role of ["manager", "admin"] as Role[]) {
     const response = await request("POST", "/customers", role, input());
     expect(response.status).toBe(200);
     const customer = await response.json();
@@ -102,7 +102,7 @@ test("customer CRUD roles, invalid data, and unused deletion audit", async () =>
 
 test("tier changes affect new quotes, preserve old quotes and prevent customer deletion", async () => {
   const body = input();
-  const customer = await (await request("POST", "/customers", "rep", body)).json();
+  const customer = await (await request("POST", "/customers", "manager", body)).json();
   const quoteBody = {
     customerId: customer.id,
     lines: [{ productId, quantity: 1, discountBps: 1200 }],

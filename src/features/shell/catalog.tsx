@@ -15,6 +15,7 @@ import { useWorkspace } from "@/features/shell/use-workspace";
 import { WorkspaceState } from "@/features/shell/workspace-state";
 import { HttpResponseError } from "@/lib/api/client";
 import type { Workspace } from "@/lib/domain/_types/workspace";
+import { can } from "@/lib/domain/permissions";
 import { cn } from "@/lib/utils";
 
 type Product = Workspace["products"][number];
@@ -223,7 +224,7 @@ export function Catalog({ customersOnly = false }: { customersOnly?: boolean }) 
                 actions={
                   <>
                     {extras.bulkRemove}
-                    {["admin", "manager", "rep"].includes(data.actor.role) ? (
+                    {can(data.actor.role, "customerCreate") ? (
                       <Button onClick={() => setEditor({ kind: "customer" })}>
                         <Plus />
                         Add customer

@@ -4,7 +4,7 @@ import { eq } from "drizzle-orm";
 
 import { createAuth } from "@/lib/auth/create-auth";
 import { db } from "@/lib/db/connection";
-import { customers } from "@/lib/db/schema";
+import { customers, profiles } from "@/lib/db/schema";
 mock.module("resend", () => ({
   Resend: class {
     emails = { send: async () => ({ data: { id: crypto.randomUUID() }, error: null }) };
@@ -40,7 +40,10 @@ beforeAll(async () => {
     throw new Error("Origin tests require a dedicated _test database");
   if (!["localhost", "127.0.0.1"].includes(configured.hostname))
     throw new Error("Origin integration tests require a configured loopback host");
-  await auth.api.signUpEmail({ body: { email, name: "Origin compatibility fixture", password } });
+  const created = await auth.api.signUpEmail({
+    body: { email, name: "Origin compatibility fixture", password },
+  });
+  await db.insert(profiles).values({ userId: created.user.id, role: "manager" });
   const response = await signIn(canonicalOrigin);
   expect(response.status).toBe(200);
   cookie = response.headers

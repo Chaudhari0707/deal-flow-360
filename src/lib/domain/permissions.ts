@@ -10,6 +10,7 @@ export const permissions = {
   quoteSend: ["rep", "manager", "finance"],
   approvals: ["manager", "finance"],
   customers: ["rep", "manager", "admin"],
+  customerCreate: ["manager", "admin"],
   customerEdit: ["manager", "admin"],
   fulfillment: ["rep", "manager", "ops"],
   stockRead: ["rep", "manager", "ops", "admin"],

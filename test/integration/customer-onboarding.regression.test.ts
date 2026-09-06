@@ -106,7 +106,7 @@ afterAll(() => {
 test("provisions a customer login, preserves staff session, and enforces first password change", async () => {
   const body = input();
   const before = calls.length;
-  const response = await request("POST", "/customers", staff.rep!.cookie, body);
+  const response = await request("POST", "/customers", staff.manager!.cookie, body);
   expect(response.status).toBe(200);
   expect(response.headers.getSetCookie()).toEqual([]);
   const created = await response.json();
@@ -135,11 +135,11 @@ test("provisions a customer login, preserves staff session, and enforces first p
     mustChangePassword: true,
   });
   const staffSession = await auth.api.getSession({
-    headers: new Headers({ cookie: staff.rep!.cookie }),
+    headers: new Headers({ cookie: staff.manager!.cookie }),
   });
-  expect(staffSession!.user.id).toBe(staff.rep!.actor.id);
+  expect(staffSession!.user.id).toBe(staff.manager!.actor.id);
 
-  const workspace = await request("GET", "/workspace", staff.rep!.cookie);
+  const workspace = await request("GET", "/workspace", staff.manager!.cookie);
   expect(workspace.status).toBe(200);
   const audit = await db.select().from(auditEntries).where(eq(auditEntries.entityId, created.id));
   for (const publicValue of [created, await workspace.json(), audit]) {
@@ -193,7 +193,7 @@ test("provisions a customer login, preserves staff session, and enforces first p
 
 test("existing staff email cannot be attached and concurrent customer creation has one winner", async () => {
   const before = calls.length;
-  const conflict = await request("POST", "/customers", staff.rep!.cookie, {
+  const conflict = await request("POST", "/customers", staff.manager!.cookie, {
     ...input(),
     email: staff.admin!.actor.email,
   });
@@ -207,13 +207,32 @@ test("existing staff email cannot be attached and concurrent customer creation h
   expect(calls).toHaveLength(before);
   const body = input();
   const results = await Promise.all([
-    request("POST", "/customers", staff.rep!.cookie, body),
     request("POST", "/customers", staff.manager!.cookie, body),
+    request("POST", "/customers", staff.admin!.cookie, body),
   ]);
   expect(results.map((result) => result.status).sort()).toEqual([200, 409]);
   expect(await db.select().from(customers).where(eq(customers.email, body.email))).toHaveLength(1);
   expect(await db.select().from(user).where(eq(user.email, body.email))).toHaveLength(1);
   expect(calls).toHaveLength(before + 1);
+});
+
+test("representatives cannot create customers through the API or service and produce no side effects", async () => {
+  const body = input();
+  const before = calls.length;
+  expect((await request("POST", "/customers", staff.rep!.cookie, body)).status).toBe(403);
+  await expect(createCustomerWithLogin(body, staff.rep!.actor)).rejects.toThrow(
+    "Your role cannot create customers",
+  );
+  expect(await db.select().from(customers).where(eq(customers.email, body.email))).toHaveLength(0);
+  expect(await db.select().from(user).where(eq(user.email, body.email))).toHaveLength(0);
+  expect(
+    await db
+      .select()
+      .from(customerInvitations)
+      .where(eq(customerInvitations.recipient, body.email)),
+  ).toHaveLength(0);
+  expect(calls).toHaveLength(before);
+  expect((await request("GET", "/workspace", staff.rep!.cookie)).status).toBe(200);
 });
 
 test("failed invitation persists; retry reuses its envelope and key; tier edits never send email", async () => {
@@ -222,7 +241,7 @@ test("failed invitation persists; retry reuses its envelope and key; tier edits 
   failDelivery = true;
   let created;
   try {
-    const response = await request("POST", "/customers", staff.rep!.cookie, body);
+    const response = await request("POST", "/customers", staff.manager!.cookie, body);
     expect(response.status).toBe(200);
     created = await response.json();
     expect(created.invitation.status).toBe("FAILED");
@@ -237,7 +256,7 @@ test("failed invitation persists; retry reuses its envelope and key; tier edits 
   expect(intent!.status).toBe("FAILED");
   expect(intent!.encryptedPayload.length).toBeGreaterThan(0);
   expect(intent!.encryptedPayload.includes(passwordFrom(calls[before]!.message))).toBe(false);
-  const status = await request("GET", `/customers/${created.id}/invitation`, staff.rep!.cookie);
+  const status = await request("GET", `/customers/${created.id}/invitation`, staff.manager!.cookie);
   expect(await status.json()).toEqual(created.invitation);
   const retry = await request(
     "POST",
@@ -251,7 +270,7 @@ test("failed invitation persists; retry reuses its envelope and key; tier edits 
   const repeat = await request(
     "POST",
     `/customers/${created.id}/invitation/retry`,
-    staff.rep!.cookie,
+    staff.manager!.cookie,
   );
   expect(repeat.status).toBe(200);
   expect(calls).toHaveLength(before + 2);
@@ -274,7 +293,7 @@ test("failed provisioning transaction rolls back login, customer and invitation 
   const before = calls.length;
   await expect(
     createCustomerWithLogin(body, {
-      ...staff.rep!.actor,
+      ...staff.manager!.actor,
       id: crypto.randomUUID(),
     }),
   ).rejects.toThrow();
@@ -292,7 +311,7 @@ test("failed provisioning transaction rolls back login, customer and invitation 
 test("test-domain rejection is actionable and private provider details never reach customer or audit responses", async () => {
   rejectedSender = true;
   try {
-    const response = await request("POST", "/customers", staff.rep!.cookie, input());
+    const response = await request("POST", "/customers", staff.manager!.cookie, input());
     expect(response.status).toBe(200);
     const created = await response.json();
     expect(created.invitation.status).toBe("FAILED");
@@ -300,7 +319,11 @@ test("test-domain rejection is actionable and private provider details never rea
     expect(created.invitation.message).not.toContain("private@example.test");
     const audit = await db.select().from(auditEntries).where(eq(auditEntries.entityId, created.id));
     expect(JSON.stringify(audit)).not.toContain("private@example.test");
-    const status = await request("GET", `/customers/${created.id}/invitation`, staff.rep!.cookie);
+    const status = await request(
+      "GET",
+      `/customers/${created.id}/invitation`,
+      staff.manager!.cookie,
+    );
     expect(await status.json()).toEqual(created.invitation);
   } finally {
     rejectedSender = false;

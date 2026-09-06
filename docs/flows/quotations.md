@@ -131,6 +131,20 @@ flowchart LR
 is ₹1,180. Add a ₹2,000 one-time setup service at 18% tax and the one-time total becomes ₹2,360;
 the monthly total remains ₹1,180. Monthly and yearly charges must not be read as the same cadence.
 
+The quotation editor shows a separate breakdown for each billing interval: tier-adjusted value
+before discounts, combined line/order discount savings, subtotal after discounts, tax, total and
+margin before tax. Products with the same interval are summed together. Subscription-only quotes
+show “No one-time charges” instead of a prominent zero total. For example, a ₹400 annual plan with
+2% line discount and 2% order discount (no tax) shows ₹15.84 savings and ₹384.16 annual total.
+Changing quantity, discounts or customer recalculates this preview; removing a line updates its
+group. Invalid input hides unavailable totals and approval claims until corrected; it does not
+replace them with zero. This is a billing-period estimate, not an invoice or an amount due today:
+subscription start dates and proration are applied during billing.
+
+Sources: [editor summary](../../src/features/quotes/quote-summary.tsx),
+[summary regression tests](../../test/unit/quote-summary.regression.test.tsx),
+[browser totals test](../../playwright/e2e/quotation-totals.spec.ts).
+
 The combined `recurringCents` field sums recurring line totals without normalizing their periods;
 the portal instead groups visible totals by interval. It is not monthly recurring revenue.
 Source: [pricing rules](../../src/features/quotes/rules.ts),
@@ -259,6 +273,20 @@ when risk is NONE.
 Example: Bronze hardware countered from 5% to 10% discount is high risk with default settings.
 Manager and Finance approve sequentially before the customer can accept that new revision.
 Attempting acceptance with the previous revision returns 409.
+
+The customer quotation table shows each product's quantity, unit price, line discount percentage,
+combined line/order discount savings, subtotal after discounts, tax and total including tax.
+The page and confirmation dialog reuse the same public price breakdown: before-discount amounts,
+savings, subtotal, tax and total are summed from saved lines separately for one-time, monthly,
+annual and other billing periods. No catalog repricing or internal margin/cost data is used.
+For example, an annual ₹400 plan with 2% line and 2% order discounts shows ₹15.84 saved and
+₹384.16 net/total with zero tax. Fully discounted subscriptions remain visible with a zero total;
+subscription-only quotes state that there are no one-time charges. Negotiation refreshes the saved
+revision and its displayed amounts before confirmation. Subscription billing-period totals are not
+amounts due immediately; first-invoice proration depends on the billing start date.
+See [portal breakdown](../../src/features/portal/portal-quote-totals.tsx),
+[snapshot tests](../../test/unit/portal-totals.regression.test.tsx), and
+[confirmation browser test](../../playwright/e2e/portal-totals.spec.ts).
 
 **Confirm order** opens a confirmation dialog showing the current revision and separate one-time
 and recurring charges. Customer confirmation locks the quote, verifies that exact revision is

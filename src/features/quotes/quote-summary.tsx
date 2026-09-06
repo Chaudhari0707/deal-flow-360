@@ -8,46 +8,85 @@ import { money } from "@/features/quotes/rules";
 import type { Workspace } from "@/lib/domain/_types/workspace";
 import { cn } from "@/lib/utils";
 
-/**
- * The closing figures of the working quotation. Numbers are the primary visual element: the
- * one-time total is set large and tabular, the ledger under it is ruled line by line, and the
- * approval route reads as quiet text with the risk ink reserved for a real escalation.
- */
+/** Present calculated lines by billing period; do not mix annual and monthly charges. */
 export function QuoteTotals({ totals }: { totals?: ReturnType<typeof calculateQuote> }) {
-  const recurring = totals?.lines.filter((line) => line.intervalMonths > 0) ?? [];
+  if (!totals)
+    return (
+      <section aria-label="Quotation totals" className="border-t-2 border-foreground pt-6">
+        <Eyebrow>Quotation totals</Eyebrow>
+        <p className="mt-3 text-sm text-muted-foreground">
+          Add valid quotation lines to see totals and approval requirements.
+        </p>
+      </section>
+    );
+  const intervals = [...new Set(totals.lines.map((line) => line.intervalMonths))].sort(
+    (a, b) => a - b,
+  );
   return (
-    <section className="border-t-2 border-foreground pt-6">
-      <Eyebrow>One-time total</Eyebrow>
-      <p className="mt-3 text-[1.75rem] leading-none font-medium tracking-tight text-foreground tabular-nums">
-        {money(totals?.totalCents ?? 0)}
+    <section aria-label="Quotation totals" className="border-t-2 border-foreground pt-6">
+      <Eyebrow>Quotation totals</Eyebrow>
+      <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
+        Charges are grouped by billing period. Discount savings include line and order discounts
+        after tier pricing. Subscription invoices may be prorated when billing starts.
       </p>
-      <dl className="mt-7 text-sm">
-        <TotalLine label="Subtotal" value={money(totals?.subtotalCents ?? 0)} />
-        <TotalLine label="Tax" value={money(totals?.taxCents ?? 0)} />
-        <TotalLine label="One-time margin" value={money(totals?.marginCents ?? 0)} />
-        {recurring.map((line) => (
-          <TotalLine
-            key={line.id}
-            label={line.name}
-            value={`${money(line.totalCents)} / ${line.intervalMonths}mo`}
-          />
-        ))}
-      </dl>
+      {!intervals.includes(0) && (
+        <p className="mt-3 text-sm text-muted-foreground">
+          No one-time charges — all products are subscriptions.
+        </p>
+      )}
+      {intervals.map((interval) => {
+        const lines = totals.lines.filter((line) => line.intervalMonths === interval);
+        const beforeDiscounts = lines.reduce(
+          (sum, line) => sum + line.priceCents * line.quantity,
+          0,
+        );
+        const subtotal = lines.reduce((sum, line) => sum + line.netCents, 0);
+        const tax = lines.reduce((sum, line) => sum + line.taxCents, 0);
+        const margin = lines.reduce(
+          (sum, line) => sum + line.netCents - line.costCents * line.quantity,
+          0,
+        );
+        const title =
+          interval === 0
+            ? "One-time charges"
+            : interval === 1
+              ? "Monthly charges"
+              : interval === 12
+                ? "Annual charges"
+                : `Charges every ${interval} months`;
+        return (
+          <section
+            key={interval}
+            aria-label={title}
+            className="mt-6 border-t border-border-strong pt-4"
+          >
+            <h3 className="text-sm font-medium">{title}</h3>
+            <dl className="mt-2 text-sm">
+              <TotalLine label="Before discounts" value={money(beforeDiscounts)} />
+              <TotalLine label="Discount savings" value={money(beforeDiscounts - subtotal)} />
+              <TotalLine label="Subtotal after discounts" value={money(subtotal)} />
+              <TotalLine label="Tax" value={money(tax)} />
+              <TotalLine label="Total incl. tax" value={money(subtotal + tax)} strong />
+              <TotalLine label="Margin before tax" value={money(margin)} />
+            </dl>
+          </section>
+        );
+      })}
       <div className="mt-7 flex items-baseline justify-between gap-6 border-t border-border-strong pt-4">
         <Eyebrow>Approval route</Eyebrow>
         <span
           className={cn(
             "text-sm font-medium",
-            totals?.risk === "HIGH" ? "text-ink-risk" : "text-foreground",
+            totals.risk === "HIGH" ? "text-ink-risk" : "text-foreground",
           )}
         >
-          {totals?.risk ?? "—"}
+          {totals.risk}
         </span>
       </div>
       <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
-        {totals?.risk === "HIGH"
+        {totals.risk === "HIGH"
           ? "Manager → Finance"
-          : totals?.risk === "MEDIUM"
+          : totals.risk === "MEDIUM"
             ? "Sales Manager"
             : "Within policy · automatic approval"}
       </p>

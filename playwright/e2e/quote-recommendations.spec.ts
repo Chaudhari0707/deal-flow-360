@@ -10,7 +10,7 @@ test("purchase recommendations: best sellers, customer switch and add @regressio
   const password = Bun.env.DEMO_PASSWORD ?? Bun.env.PLAYWRIGHT_USER_PASSWORD;
   if (!password) throw new Error("Seeded demo credentials required");
   const login = await page.request.post("/api/auth/sign-in/email", {
-    data: { email: "rep@dealflow360.demo", password },
+    data: { email: "manager@dealflow360.demo", password },
   });
   expect(login.ok()).toBe(true);
   const created = await page.request.post("/api/v1/customers", {
@@ -23,6 +23,14 @@ test("purchase recommendations: best sellers, customer switch and add @regressio
   });
   expect(created.ok(), await created.text()).toBe(true);
   const fresh = (await created.json()) as Workspace["customers"][number];
+  expect(
+    (
+      await page.request.post("/api/auth/sign-in/email", {
+        data: { email: "rep@dealflow360.demo", password },
+        headers: { origin: new URL(baseURL!).origin },
+      })
+    ).ok(),
+  ).toBe(true);
   const workspace = await page.request.get("/api/v1/workspace");
   expect(workspace.ok()).toBe(true);
   const data = (await workspace.json()) as Workspace;
