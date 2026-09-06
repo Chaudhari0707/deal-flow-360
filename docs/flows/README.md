@@ -131,6 +131,7 @@ implementation handoff; a test file's existence is not proof that a run passed.
 | Customer tiers, contact edits and protected deletion | Identity | [Customer browser](../../playwright/e2e/customers.spec.ts), [lifecycle integration](../../test/integration/customer-lifecycle.regression.test.ts) |
 | Catalog products, variants and five-item upsell configuration | Identity | [Catalog browser](../../playwright/e2e/catalog.spec.ts), [upsell integration](../../test/integration/catalog-upsells.regression.test.ts) |
 | Quotation builder, tier prices, discounts and totals | Quotations | [Quotation journey](../../playwright/e2e/quotation-journey.spec.ts), [pricing regression](../../test/unit/quote-rules.regression.test.ts) |
+| Promised and requested delivery-date validation | Quotations | [Delivery-date browser](../../playwright/e2e/delivery-date-validation.spec.ts), [quote integration](../../test/integration/quote-board.regression.test.ts), [portal integration](../../test/integration/portal.regression.test.ts) |
 | Raw numeric editing and invalid discount handling | Quotations | [Number-input browser](../../playwright/e2e/number-input.spec.ts) |
 | Catalog-configured upsell recommendations and add-to-quote | Quotations | [Recommendation browser](../../playwright/e2e/quote-recommendations.spec.ts), [allocator unit test](../../test/unit/upsell-recommendations.test.ts) |
 | Board transitions and revision conflicts | Quotations | [Board integration](../../test/integration/quote-board.regression.test.ts) |

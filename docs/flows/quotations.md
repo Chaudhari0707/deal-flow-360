@@ -63,6 +63,8 @@ commercial terms or invalidate approval.
 
 1. The representative chooses **Create quotation** from the dashboard or quotation list and reaches
    the new quotation form. Select a customer by name/tier and optionally a promised delivery date.
+   The date must be today or later; the picker blocks earlier dates and the server independently
+   rejects a past or invalid calendar date.
 2. Select an active product and add it. Set quantity and line discount; add or remove other lines.
    Products provide price, cost, tax, variant, category, and billing interval. The server obtains
    these values from the catalog rather than accepting a client-calculated total.
@@ -269,8 +271,9 @@ To negotiate, the customer changes line discounts and optionally a delivery date
 The server recalculates current policy, saves a revision/risk snapshot, and routes it to automatic
 approval or the configured approver. While pending, acceptance is unavailable. A date-only counter
 also creates a revision, but risk is still discount-based; it does not independently require a
-delivery-capacity review. The UI's general “sent for review” notice does not imply manual review
-when risk is NONE.
+delivery-capacity review. Requested delivery dates must be today or later, whether submitted from
+the browser or directly to the portal API. The UI's general “sent for review” notice does not imply
+manual review when risk is NONE.
 
 Example: Bronze hardware countered from 5% to 10% discount is high risk with default settings.
 Manager and Finance approve sequentially before the customer can accept that new revision.

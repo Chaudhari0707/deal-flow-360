@@ -5,6 +5,7 @@ import { queueOrderInvoiceEmail } from "@/features/billing/invoice-email";
 import { reserveOrderStock } from "@/features/inventory/stock";
 import type { QuoteInput } from "@/features/quotes/_types/quotes";
 import { requiredApprovalChain } from "@/features/quotes/approval-policy";
+import { isCurrentOrFutureCalendarDate } from "@/features/quotes/delivery-date";
 import { calculateQuote, defaultDiscounts, priceLines } from "@/features/quotes/rules";
 import { db } from "@/lib/db/connection";
 import { customers, orders, products, quoteRevisions, quotes, settings } from "@/lib/db/schema";
@@ -14,6 +15,8 @@ import { DomainError } from "@/server/errors";
 
 export async function saveQuote(input: QuoteInput, actor: Actor, id?: string) {
   if (actor.role !== "rep") throw new DomainError("Your role cannot edit quotations", 403);
+  if (input.promisedDate !== undefined && !isCurrentOrFutureCalendarDate(input.promisedDate))
+    throw new DomainError("Promised delivery date must be today or later");
   return db.transaction(async (tx) => {
     const [customer] = await tx.select().from(customers).where(eq(customers.id, input.customerId));
     if (!customer) throw new DomainError("Customer not found", 404);
@@ -208,6 +211,8 @@ export async function counterQuote(
       !["APPROVED", "SENT", "UNDER_NEGOTIATION"].includes(quote.status)
     )
       throw new DomainError("Quotation is not open to negotiation", 409);
+    if (promisedDate !== undefined && !isCurrentOrFutureCalendarDate(promisedDate))
+      throw new DomainError("Requested delivery date must be today or later");
     if (changes.some((c) => !quote.lines.some((l) => l.id === c.id)))
       throw new DomainError("Unknown quotation line");
     const lines: QuoteLine[] = quote.lines.map((l) => ({

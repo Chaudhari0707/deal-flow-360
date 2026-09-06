@@ -17,6 +17,10 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import type { LineInput } from "@/features/quotes/_types/quotes";
+import {
+  currentCalendarDate,
+  isCurrentOrFutureCalendarDate,
+} from "@/features/quotes/delivery-date";
 import { PurchaseRecommendations } from "@/features/quotes/purchase-recommendations";
 import { eyebrowType, ruledControl, SectionHead } from "@/features/quotes/quote-editorial";
 import { QuoteLines } from "@/features/quotes/quote-lines";
@@ -63,6 +67,7 @@ export function QuoteEditor({
   const customer = data.customers.find((c) => c.id === customerId),
     limits = data.settings.find((s) => s.id === "discounts")?.value ?? defaultDiscounts;
   const pricelists = data.settings.find((setting) => setting.id === "pricelists")?.value;
+  const minimumDeliveryDate = currentCalendarDate();
   let totals: ReturnType<typeof calculateQuote> | undefined,
     validation = "";
   try {
@@ -75,6 +80,8 @@ export function QuoteEditor({
   } catch (e) {
     validation = e instanceof Error ? e.message : "Invalid quotation";
   }
+  if (!validation && date && !isCurrentOrFutureCalendarDate(date))
+    validation = "Promised delivery date must be today or later";
   function add(id: string, upsell = false) {
     const p = data.products.find((p) => p.id === id);
     if (!p) return;
@@ -93,6 +100,10 @@ export function QuoteEditor({
     setLines((current) => current.map((l, i) => (i === index ? { ...l, ...patch } : l)));
   }
   async function save(submit: boolean) {
+    if (date && !isCurrentOrFutureCalendarDate(date)) {
+      setError("Promised delivery date must be today or later");
+      return;
+    }
     setPending(true);
     setError("");
     try {
@@ -176,6 +187,7 @@ export function QuoteEditor({
               <Input
                 id="promise-date"
                 type="date"
+                min={minimumDeliveryDate}
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
                 className={ruledControl}
