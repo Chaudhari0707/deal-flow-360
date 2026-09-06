@@ -1,11 +1,11 @@
 "use client";
 
 import { type CSSProperties, type ReactNode, useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LogOut } from "lucide-react";
 
+import { BrandLogo } from "@/components/brand/brand-logo";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -103,14 +103,7 @@ function WorkspaceSidebar({ actor, pathname }: { actor: Actor; pathname: string 
               className="h-auto rounded-none p-0 hover:bg-transparent active:bg-transparent"
               render={<Link href="/dashboard" />}
             >
-              <Image
-                src="/logo.png"
-                alt="DealFlow360"
-                width={180}
-                height={60}
-                className="h-8 w-auto object-contain"
-                priority
-              />
+              <BrandLogo />
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>

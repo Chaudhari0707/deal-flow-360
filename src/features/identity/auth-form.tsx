@@ -79,7 +79,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
     <main className="flex min-h-svh flex-col bg-background px-6 py-6 md:px-10 md:py-8">
       <div className="mx-auto flex w-full max-w-md items-center justify-between gap-6">
         <Link href="/" className="inline-flex items-center">
-          <BrandLogo priority />
+          <BrandLogo priority className="text-3xl" />
         </Link>
         <ThemeToggle />
       </div>

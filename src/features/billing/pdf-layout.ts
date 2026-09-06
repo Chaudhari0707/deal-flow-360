@@ -16,10 +16,6 @@ export const A4_LANDSCAPE = { height: 595, width: 842 };
 export const MARGIN = 40;
 export const FOOTER_RESERVE = 48;
 
-export function money(cents: number) {
-  return new Intl.NumberFormat("en-US", { currency: "USD", style: "currency" }).format(cents / 100);
-}
-
 /** Standard PDF fonts cannot encode arbitrary Unicode; escape unsupported codepoints visibly. */
 export function printable(value: string): string {
   return value.replace(

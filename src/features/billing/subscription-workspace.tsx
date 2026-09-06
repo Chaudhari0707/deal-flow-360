@@ -112,6 +112,7 @@ export function SubscriptionWorkspace() {
               searchLabel="Search subscriptions"
               searchPlaceholder="Search plan, customer or order"
               actions={extras.bulkRemove}
+              pageNav={extras.pageNav}
             />
           )}
           classNames={billingTableStyles}

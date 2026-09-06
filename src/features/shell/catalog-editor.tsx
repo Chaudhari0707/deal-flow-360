@@ -32,6 +32,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { CustomerInvitationStatus } from "@/features/catalog/customer-invitation-status";
 import { CustomerDelete } from "@/features/shell/customer-delete";
 import { useWorkspace } from "@/features/shell/use-workspace";
 import { apiClient, apiData, HttpResponseError } from "@/lib/api/client";
@@ -118,6 +119,7 @@ export function CatalogEditor({
   const { data } = useWorkspace();
   const pairingChoices = data?.products.filter((candidate) => candidate.id !== product?.id) ?? [];
   const existing = kind === "product" ? product : customer;
+  const invitedCustomerId = kind === "customer" ? (customer?.id ?? createdCustomerId) : undefined;
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
@@ -455,6 +457,7 @@ export function CatalogEditor({
                   </div>
                 </>
               )}
+              {invitedCustomerId && <CustomerInvitationStatus id={invitedCustomerId} />}
               {error && (
                 <Alert variant="destructive">
                   <AlertDescription>{error}</AlertDescription>
@@ -463,10 +466,23 @@ export function CatalogEditor({
             </FieldGroup>
           </DialogBody>
           <DialogFooter>
+            {kind === "customer" && customer && (
+              <div className="flex flex-col sm:mr-auto">
+                <CustomerDelete
+                  id={customer.id}
+                  name={customer.name}
+                  disabled={pending}
+                  deleted={async () => {
+                    await saved();
+                    close();
+                  }}
+                />
+              </div>
+            )}
             <Button type="button" variant="outline" onClick={close} disabled={pending}>
               Cancel
             </Button>
-            <Button type="submit" disabled={pending}>
+            <Button type="submit" disabled={pending || Boolean(createdCustomerId)}>
               {pending ? "Saving…" : `Save ${kind}`}
             </Button>
           </DialogFooter>

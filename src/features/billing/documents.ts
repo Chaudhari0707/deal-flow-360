@@ -34,7 +34,7 @@ export async function reportSpreadsheet(
       total: row.totalCents / 100,
     });
   sheet.getRow(1).font = { bold: true };
-  for (const column of [7, 8, 9]) sheet.getColumn(column).numFmt = '"$"#,##0.00';
+  for (const column of [7, 8, 9]) sheet.getColumn(column).numFmt = '"INR "#,##0.00';
   sheet.autoFilter = "A1:I1";
   sheet.views = [{ state: "frozen", ySplit: 1 }];
   if (sales) {
@@ -70,7 +70,7 @@ export async function reportSpreadsheet(
           amount: row.amountCents / 100,
         })),
       );
-      salesSheet.getColumn(7).numFmt = '"$"#,##0.00';
+      salesSheet.getColumn(7).numFmt = '"INR "#,##0.00';
       salesSheet.views = [{ state: "frozen", ySplit: 1 }];
       salesSheet.getRow(1).font = { bold: true };
     }

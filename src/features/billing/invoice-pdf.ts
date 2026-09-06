@@ -15,7 +15,6 @@ import {
   GREEN,
   MARGIN,
   measureTableRow,
-  money,
   NAVY,
   openPdf,
   printable,
@@ -26,6 +25,7 @@ import {
   wrapText,
 } from "@/features/billing/pdf-layout";
 import { invoiceOutstanding } from "@/features/billing/rules";
+import { documentMoney as money } from "@/lib/money";
 
 const LINE_COLUMNS: PdfColumn[] = [
   { header: "Description", width: 255 },
@@ -79,7 +79,7 @@ export async function invoicePdf(invoice: InvoiceDocument): Promise<Uint8Array> 
   });
   stampFooters(
     doc,
-    "Currency: USD. A credit note is not a cash refund. Fulfillment is tracked separately.",
+    "Currency: INR. A credit note is not a cash refund. Fulfillment is tracked separately.",
   );
   return doc.pdf.save();
 }

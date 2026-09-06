@@ -148,6 +148,7 @@ export function PortalOverview() {
                 searchColumn="number"
                 searchPlaceholder="Search quotations…"
                 actions={extras.bulkRemove}
+                pageNav={extras.pageNav}
               />
             )}
             columns={columns}

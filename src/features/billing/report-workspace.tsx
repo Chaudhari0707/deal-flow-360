@@ -3,6 +3,7 @@ import { type ReactNode, useState } from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import useSWR from "swr";
 
+import { CountValue } from "@/components/editorial/count-value";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/ui/data-table";
@@ -67,7 +68,7 @@ function Figure({
   accent?: boolean;
   label: string;
   scale?: "figure" | "text";
-  value: string;
+  value: ReactNode;
 }) {
   return (
     <div data-slot="card" className="py-7 sm:px-8 sm:first:pl-0 sm:last:pr-0">
@@ -366,11 +367,11 @@ export function ReportWorkspace() {
               <Figure
                 accent
                 label="Quotes created"
-                value={String(report.data.sales.metrics.quotesCreated)}
+                value={<CountValue value={report.data.sales.metrics.quotesCreated} />}
               />
               <Figure
                 label="Orders confirmed"
-                value={String(report.data.sales.metrics.ordersConfirmed)}
+                value={<CountValue value={report.data.sales.metrics.ordersConfirmed} />}
               />
               <Figure
                 scale="text"
@@ -406,9 +407,19 @@ export function ReportWorkspace() {
           </TabsContent>
           <TabsContent value="financial">
             <dl className="grid grid-cols-2 gap-x-10 sm:grid-cols-3 sm:gap-x-0 sm:divide-x sm:divide-border">
-              <Figure accent label="Net billed" value={money(report.data.totals.billedCents)} />
-              <Figure label="Payments collected" value={money(report.data.totals.paidCents)} />
-              <Figure label="Outstanding" value={money(report.data.totals.outstandingCents)} />
+              <Figure
+                accent
+                label="Net billed"
+                value={<CountValue currency value={report.data.totals.billedCents} />}
+              />
+              <Figure
+                label="Payments collected"
+                value={<CountValue currency value={report.data.totals.paidCents} />}
+              />
+              <Figure
+                label="Outstanding"
+                value={<CountValue currency value={report.data.totals.outstandingCents} />}
+              />
             </dl>
             <div className="mt-7">
               <DataTable

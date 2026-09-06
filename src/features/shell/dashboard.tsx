@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { ColumnDef } from "@tanstack/react-table";
 
+import { CountValue } from "@/components/editorial/count-value";
 import { eyebrowType } from "@/components/editorial/editorial";
 import type { DataTableFeatures } from "@/components/ui/_types/data-table";
 import { Badge } from "@/components/ui/badge";
@@ -69,7 +70,7 @@ function Figure({
   href?: string;
   label: string;
   note: string;
-  value: string;
+  value: ReactNode;
 }) {
   return (
     <div className="py-7 sm:px-8 sm:first:pl-0 sm:last:pr-0">
@@ -187,25 +188,27 @@ export function Dashboard() {
   const metrics = [
     {
       label: "One-time pipeline",
-      value: money(openQuotes.reduce((sum, quote) => sum + quote.totalCents, 0)),
+      value: (
+        <CountValue currency value={openQuotes.reduce((sum, quote) => sum + quote.totalCents, 0)} />
+      ),
       detail: `${openQuotes.length} active quotations`,
       href: "/quotations",
     },
     {
       label: "Monthly recurring revenue",
-      value: money(monthlyRevenue),
+      value: <CountValue currency value={monthlyRevenue} />,
       detail: `${activeSubscriptions.length} active subscriptions · before tax`,
       href: "/subscriptions",
     },
     {
       label: "Awaiting approval",
-      value: String(pendingQuotes.length),
+      value: <CountValue value={pendingQuotes.length} />,
       detail: "Decisions that keep deals moving",
       href: "/approvals",
     },
     {
       label: "Outstanding invoices",
-      value: money(outstanding),
+      value: <CountValue currency value={outstanding} />,
       detail: `${data.invoices.filter((invoice) => invoice.status !== "PAID").length} invoices to follow up`,
       href: "/invoices",
     },
@@ -292,7 +295,14 @@ export function Dashboard() {
         <div className="mt-4">
           <DataTable
             classNames={quotationStyles}
-            toolbar={(_table, extras) => <>{extras.bulkRemove}</>}
+            toolbar={(_table, extras) => (
+              <>
+                {extras.bulkRemove}
+                {extras.pageNav ? (
+                  <div className="flex items-center justify-end">{extras.pageNav}</div>
+                ) : null}
+              </>
+            )}
             columns={quoteColumns}
             data={recentQuotes}
             getRowId={(row) => row.id}

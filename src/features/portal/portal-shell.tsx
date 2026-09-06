@@ -1,10 +1,10 @@
 "use client";
 
 import { type ReactNode, useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { LogOut } from "lucide-react";
 
+import { BrandLogo } from "@/components/brand/brand-logo";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/features/shell/theme-toggle";
@@ -36,14 +36,7 @@ export function PortalShell({ children }: { children: ReactNode }) {
       <header className="border-b border-border">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4 md:px-8">
           <Link href="/portal" className="flex items-center gap-4">
-            <Image
-              src="/logo.png"
-              alt="DealFlow360"
-              width={180}
-              height={60}
-              className="h-8 w-auto object-contain"
-              priority
-            />
+            <BrandLogo />
             <span aria-hidden className="hidden h-5 w-px bg-border sm:block" />
             <span className={cn(eyebrow, "hidden text-muted-foreground sm:inline")}>
               Customer portal
