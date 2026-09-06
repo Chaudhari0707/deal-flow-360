@@ -17,6 +17,7 @@ import {
 import type {
   DataTableApplyCellToAllRowsArgs,
   DataTableBulkRemoveCopy,
+  DataTableClassNames,
   DataTableColumnMeta,
   DataTableFeatures,
   DataTableToolbarExtras,
@@ -80,6 +81,8 @@ function hasSelectionColumn<TData extends RowData, TValue>(
 
 interface DataTableProps<TData extends RowData, TValue> {
   bulkRemovePending?: boolean;
+  /** Per-slot class overrides for screens that replace the default table chrome. */
+  classNames?: DataTableClassNames;
   columns: ColumnDef<DataTableFeatures, TData, TValue>[];
   data: TData[];
   /**
@@ -125,6 +128,7 @@ interface DataTableProps<TData extends RowData, TValue> {
 }
 
 export function DataTable<TData extends RowData, TValue>({
+  classNames,
   columns,
   data,
   toolbar,
@@ -250,8 +254,11 @@ export function DataTable<TData extends RowData, TValue>({
           description={description}
         />
       )}
-      <div className="overflow-x-auto overflow-y-hidden rounded-md border">
+      <div
+        className={cn("overflow-x-auto overflow-y-hidden rounded-md border", classNames?.container)}
+      >
         <UITable
+          className={classNames?.table}
           containerClassName={hasPinnedColumns ? "overflow-visible" : undefined}
           style={{
             width: "100%",
@@ -260,7 +267,7 @@ export function DataTable<TData extends RowData, TValue>({
         >
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id}>
+              <TableRow key={headerGroup.id} className={classNames?.headerRow}>
                 {headerGroup.headers.map((header) => {
                   const pinningStyles = getDataTablePinningStyles(header.column);
                   const isPinned = header.column.getIsPinned();
@@ -273,6 +280,7 @@ export function DataTable<TData extends RowData, TValue>({
                         enableColumnResizing && "relative",
                         isPinned &&
                           "bg-background group-hover/table-row:bg-muted/50 group-data-[state=selected]/table-row:bg-muted",
+                        classNames?.head,
                       )}
                       style={{
                         ...(enableColumnResizing
@@ -313,7 +321,7 @@ export function DataTable<TData extends RowData, TValue>({
                 <TableRow
                   key={row.id}
                   data-state={row.getIsSelected() && "selected"}
-                  className={cn(onRowClick && "cursor-pointer")}
+                  className={cn(onRowClick && "cursor-pointer", classNames?.row)}
                   onClick={onRowClick ? () => onRowClick(row.original) : undefined}
                   onKeyDown={
                     onRowClick
@@ -345,6 +353,7 @@ export function DataTable<TData extends RowData, TValue>({
                         className={cn(
                           isPinned &&
                             "bg-background group-hover/table-row:bg-muted/50 group-data-[state=selected]/table-row:bg-muted",
+                          classNames?.cell,
                         )}
                         style={{
                           ...(enableColumnResizing
@@ -392,7 +401,10 @@ export function DataTable<TData extends RowData, TValue>({
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={resolvedColumns.length} className="h-24 text-center">
+                <TableCell
+                  colSpan={resolvedColumns.length}
+                  className={cn(classNames?.cell, "h-24 text-center")}
+                >
                   {emptyMessage}
                 </TableCell>
               </TableRow>
@@ -400,7 +412,9 @@ export function DataTable<TData extends RowData, TValue>({
           </TableBody>
         </UITable>
       </div>
-      {showPagination ? <DataTablePagination table={table} /> : null}
+      {showPagination ? (
+        <DataTablePagination table={table} className={classNames?.pagination} />
+      ) : null}
     </div>
   );
 }

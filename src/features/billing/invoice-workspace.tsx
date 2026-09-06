@@ -1,261 +1,160 @@
 "use client";
 import { useState } from "react";
-import { DownloadIcon, ReceiptTextIcon } from "lucide-react";
 
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { DataTable, DataTableDefaultToolbar } from "@/components/ui/data-table";
-import {
-  Dialog,
-  DialogBody,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Field, FieldError, FieldLabel } from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import type { InvoiceRegisterRow } from "@/features/billing/_types/tables";
+import { InvoiceDocument } from "@/features/billing/invoice-document";
+import { editorialInk, Eyebrow, Figure, Meta, Note } from "@/features/billing/invoice-editorial";
+import { InvoiceRegister } from "@/features/billing/invoice-register";
 import { invoiceOutstanding } from "@/features/billing/rules";
-import { invoiceColumns } from "@/features/billing/table-columns";
 import { useBillingAction } from "@/features/billing/use-billing-action";
-import { displayDate, displayStatus, money } from "@/features/shell/format";
-import { PageHeader } from "@/features/shell/page-header";
+import { displayDate, money } from "@/features/shell/format";
 import { useWorkspace } from "@/features/shell/use-workspace";
 import { WorkspaceState } from "@/features/shell/workspace-state";
 import { apiClient, apiData } from "@/lib/api/client";
+import { cn } from "@/lib/utils";
+
+const dayMs = 86_400_000;
+
+function startOfToday() {
+  const now = new Date();
+  return Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+}
+
+function plural(count: number, singular: string) {
+  return `${count} ${singular}${count === 1 ? "" : "s"}`;
+}
 
 export function InvoiceWorkspace({ initialId }: { initialId?: string }) {
   const { data, error, mutate } = useWorkspace();
   const [selected, setSelected] = useState<string | null>(initialId ?? null);
-  const [search, setSearch] = useState("");
-  const [reference, setReference] = useState("");
   const action = useBillingAction();
   if (!data) return <WorkspaceState error={error} retry={() => void mutate()} />;
-  const invoice = data.invoices.find((entry) => entry.id === selected);
-  const canPay = data.actor.role === "finance";
-  const rows = data.invoices.filter((entry) =>
-    `${entry.number} ${data.customers.find((customer) => customer.id === entry.customerId)?.name ?? ""}`
-      .toLowerCase()
-      .includes(search.toLowerCase()),
+
+  const today = startOfToday();
+  const rows: InvoiceRegisterRow[] = data.invoices.map((entry) => {
+    const customer = data.customers.find((record) => record.id === entry.customerId);
+    const outstandingCents = invoiceOutstanding(entry);
+    const dueTime = new Date(entry.dueDate).getTime();
+    const late = outstandingCents > 0 && Number.isFinite(dueTime) && dueTime < today;
+    return {
+      ...entry,
+      customerName: customer?.name ?? "Customer",
+      customerTier: customer?.tier ?? "—",
+      orderNumber: data.orders.find((order) => order.id === entry.orderId)?.number ?? "—",
+      outstandingCents,
+      overdueDays: late ? Math.floor((today - dueTime) / dayMs) : 0,
+    };
+  });
+
+  const openRows = rows.filter((row) => row.outstandingCents > 0);
+  const overdueRows = openRows.filter((row) => row.overdueDays > 0);
+  const outstandingTotal = openRows.reduce((sum, row) => sum + row.outstandingCents, 0);
+  const overdueTotal = overdueRows.reduce((sum, row) => sum + row.outstandingCents, 0);
+  const collected = data.invoices.reduce((sum, entry) => sum + entry.paidCents, 0);
+  const creditAvailable = data.credits.reduce(
+    (sum, entry) => sum + entry.amountCents - entry.appliedCents,
+    0,
   );
+  const oldest = overdueRows.reduce((worst, row) => Math.max(worst, row.overdueDays), 0);
+
+  const invoice = rows.find((entry) => entry.id === selected);
+  const canPay = data.actor.role === "finance";
+
   return (
-    <>
-      <PageHeader
-        title="Invoices"
-        description="Reconcile every dollar. One-time, recurring and adjustment invoices stay linked to their source order."
-      />
-      <div className="grid gap-4 sm:grid-cols-3">
-        {[
-          {
-            label: "Outstanding",
-            value: money(data.invoices.reduce((sum, entry) => sum + invoiceOutstanding(entry), 0)),
-          },
-          {
-            label: "Collected",
-            value: money(data.invoices.reduce((sum, entry) => sum + entry.paidCents, 0)),
-          },
-          {
-            label: "Customer credit",
-            value: money(
-              data.credits.reduce((sum, entry) => sum + entry.amountCents - entry.appliedCents, 0),
-            ),
-          },
-        ].map((item) => (
-          <Card key={item.label}>
-            <CardHeader>
-              <CardDescription>{item.label}</CardDescription>
-              <CardTitle className="text-2xl tabular-nums">{item.value}</CardTitle>
-            </CardHeader>
-          </Card>
-        ))}
-      </div>
-      {action.error && (
-        <Alert variant="destructive">
-          <AlertTitle>Action could not complete</AlertTitle>
-          <AlertDescription>{action.error}</AlertDescription>
-        </Alert>
-      )}
-      {action.message && (
-        <Alert>
-          <AlertDescription>{action.message}</AlertDescription>
-        </Alert>
-      )}
-      <Card>
-        <CardContent>
-          <DataTable
-            toolbar={(table, extras) => (
-              <DataTableDefaultToolbar
-                table={table}
-                title="Invoice register"
-                description="Select an invoice to review its lines, record payment, or download its PDF."
-                searchValue={search}
-                onSearchValueChange={setSearch}
-                searchPlaceholder="Search invoice or customer"
-                actions={extras.bulkRemove}
-              />
-            )}
-            columns={invoiceColumns}
-            data={rows.map((entry) => ({
-              ...entry,
-              customerName:
-                data.customers.find((customer) => customer.id === entry.customerId)?.name ??
-                "Customer",
-            }))}
-            getRowId={(row) => row.id}
-            onRowClick={(row) => {
-              setSelected(row.id);
-              setReference("");
-            }}
-            emptyMessage="No invoices yet. Confirm a quote to generate its billing."
+    <div className={cn(editorialInk, "mx-auto w-full max-w-300 pb-6")}>
+      <header className="border-t-2 border-foreground pt-7">
+        <div className="grid gap-10 lg:grid-cols-12">
+          <div className="lg:col-span-7">
+            <Eyebrow>Billing ledger</Eyebrow>
+            <h1 className="mt-4 text-4xl leading-[1.05] font-semibold tracking-tight text-foreground md:text-5xl">
+              Invoices
+            </h1>
+            <p className="mt-5 max-w-[52ch] text-[0.9375rem] leading-relaxed text-foreground/65">
+              Every rupee, reconciled. One-time, recurring and adjustment invoices stay linked to
+              the order that produced them, from issue through settlement.
+            </p>
+          </div>
+          <dl className="grid grid-cols-2 gap-x-10 gap-y-6 self-end sm:grid-cols-3 lg:col-span-5">
+            <Meta align="end" label="Register as of" value={displayDate(data.asOf)} />
+            <Meta align="end" label="Currency" value="INR" />
+            <Meta
+              align="end"
+              label="Your access"
+              value={canPay ? "Settle & review" : "Review only"}
+            />
+          </dl>
+        </div>
+      </header>
+
+      <section className="mt-11 border-t border-foreground/25">
+        <h2 className="sr-only">Ledger summary</h2>
+        <dl className="grid grid-cols-2 gap-x-10 sm:grid-cols-4 sm:gap-x-0 sm:divide-x sm:divide-foreground/10">
+          <Figure
+            accent
+            label="Outstanding"
+            value={money(outstandingTotal)}
+            note={`Across ${plural(openRows.length, "open document")}`}
           />
-        </CardContent>
-      </Card>
-      {invoice && (
-        <Dialog
-          open
-          onOpenChange={(open) => {
-            if (!open) setSelected(null);
-          }}
-        >
-          <DialogContent className="sm:max-w-3xl">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <ReceiptTextIcon className="size-4" />
-                {invoice.number}
-              </DialogTitle>
-              <DialogDescription>
-                {data.customers.find((customer) => customer.id === invoice.customerId)?.name} ·{" "}
-                {data.orders.find((order) => order.id === invoice.orderId)?.number} ·{" "}
-                {displayStatus(invoice.kind)}
-              </DialogDescription>
-            </DialogHeader>
-            <DialogBody className="space-y-5">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Description</TableHead>
-                    <TableHead>Quantity</TableHead>
-                    <TableHead className="text-right">Total</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {invoice.lines.map((line) => (
-                    <TableRow key={line.id}>
-                      <TableCell>
-                        {line.name} · {line.variant}
-                      </TableCell>
-                      <TableCell>{line.quantity}</TableCell>
-                      <TableCell className="text-right">{money(line.totalCents)}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-              <div className="flex flex-wrap gap-6 text-sm">
-                <span>Subtotal {money(invoice.subtotalCents)}</span>
-                <span>Tax {money(invoice.taxCents)}</span>
-                <span>Payments {money(invoice.paidCents)}</span>
-                <span>Applied credits {money(invoice.creditedCents)}</span>
-                <strong>Outstanding {money(invoiceOutstanding(invoice))}</strong>
-              </div>
-              {canPay && invoiceOutstanding(invoice) > 0 && (
-                <form
-                  id="invoice-payment"
-                  method="post"
-                  className="max-w-sm"
-                  onSubmit={(event) => {
-                    event.preventDefault();
-                    if (reference.trim().length >= 3)
-                      void action.run(
-                        async () =>
-                          apiData(
-                            await apiClient.api.v1.invoices({ id: invoice.id }).pay.post({
-                              operationKey: crypto.randomUUID(),
-                              reference: reference.trim(),
-                            }),
-                          ),
-                        "Payment recorded and balance reconciled.",
-                      );
-                  }}
-                >
-                  <Field className="max-w-sm">
-                    <FieldLabel htmlFor="payment-reference">Payment reference</FieldLabel>
-                    <Input
-                      id="payment-reference"
-                      required
-                      minLength={3}
-                      maxLength={100}
-                      value={reference}
-                      onChange={(event) => setReference(event.target.value)}
-                      placeholder="Bank transfer or receipt reference"
-                    />
-                    {reference.length > 0 && reference.trim().length < 3 && (
-                      <FieldError>Use at least 3 characters.</FieldError>
-                    )}
-                  </Field>
-                </form>
-              )}
-              {data.payments
-                .filter((payment) => payment.invoiceId === invoice.id)
-                .map((payment) => (
-                  <Alert key={payment.id}>
-                    <AlertTitle>
-                      Payment {money(payment.amountCents)} · {displayDate(payment.createdAt)}
-                    </AlertTitle>
-                    <AlertDescription>Reference: {payment.reference}</AlertDescription>
-                  </Alert>
-                ))}
-              {data.credits
-                .filter((credit) => credit.invoiceId === invoice.id)
-                .map((credit) => (
-                  <Alert key={credit.id}>
-                    <AlertTitle>
-                      {credit.number} · Credit {money(credit.amountCents)}
-                    </AlertTitle>
-                    <AlertDescription>
-                      {credit.reason}. Applied {money(credit.appliedCents)}; available credit{" "}
-                      {money(credit.amountCents - credit.appliedCents)}. No cash refund was
-                      recorded.
-                    </AlertDescription>
-                  </Alert>
-                ))}
-            </DialogBody>
-            <DialogFooter showCloseButton>
-              <Button
-                variant="outline"
-                nativeButton={false}
-                render={
-                  <a
-                    aria-label="Download invoice PDF"
-                    href={`/api/v1/invoices/${encodeURIComponent(invoice.id)}/pdf`}
-                  />
-                }
-              >
-                <DownloadIcon />
-                Download PDF
-              </Button>
-              {canPay && invoiceOutstanding(invoice) > 0 && (
-                <Button
-                  type="submit"
-                  form="invoice-payment"
-                  disabled={action.pending || reference.trim().length < 3}
-                >
-                  Record full payment {money(invoiceOutstanding(invoice))}
-                </Button>
-              )}
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+          <Figure
+            label="Past due"
+            value={money(overdueTotal)}
+            note={
+              overdueRows.length
+                ? `${plural(overdueRows.length, "document")} · oldest ${oldest} days`
+                : "Nothing past its due date"
+            }
+          />
+          <Figure
+            label="Collected"
+            value={money(collected)}
+            note={`${plural(data.payments.length, "payment")} recorded`}
+          />
+          <Figure
+            label="Credit on file"
+            value={money(creditAvailable)}
+            note={`${plural(data.credits.length, "credit note")} issued`}
+          />
+        </dl>
+      </section>
+
+      {action.error && (
+        <Note tone="flag" title="Action could not complete">
+          {action.error}
+        </Note>
       )}
-    </>
+      {action.message && <Note>{action.message}</Note>}
+
+      <InvoiceRegister
+        rows={rows}
+        onSelect={(id) => {
+          setSelected(id);
+        }}
+      />
+
+      {invoice && (
+        <InvoiceDocument
+          canPay={canPay}
+          credits={data.credits.filter((credit) => credit.invoiceId === invoice.id)}
+          customerName={invoice.customerName}
+          invoice={invoice}
+          orderNumber={invoice.orderNumber}
+          payments={data.payments.filter((payment) => payment.invoiceId === invoice.id)}
+          pending={action.pending}
+          onClose={() => setSelected(null)}
+          onRecordPayment={(reference) => {
+            void action.run(
+              async () =>
+                apiData(
+                  await apiClient.api.v1.invoices({ id: invoice.id }).pay.post({
+                    operationKey: crypto.randomUUID(),
+                    reference,
+                  }),
+                ),
+              "Payment recorded and balance reconciled.",
+            );
+          }}
+        />
+      )}
+    </div>
   );
 }

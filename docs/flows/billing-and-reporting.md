@@ -158,9 +158,12 @@ a recorded balance, not evidence that money has been returned.
 
 ## Invoice review, payment, and PDF
 
-Users with invoice access search the register and open an invoice. Detail shows its source
-order, line amounts, subtotal, tax, recorded payments, applied credits, and outstanding
-balance. Credit entries show both applied and available portions. Finance enters a bank or
+Users with invoice access search the register, optionally narrow it to All, Open, Past due
+or Settled, and open an invoice. The register marks an unpaid invoice past due once its due
+date has passed, and reports how many days late it is. Detail shows its source order, line
+amounts net of each line's discount so they sum to the subtotal, tax, recorded payments,
+applied credits, and outstanding balance. Credit entries show both applied and available
+portions. Finance enters a bank or
 receipt reference (3–100 characters) and selects **Record full payment**.
 
 ```mermaid

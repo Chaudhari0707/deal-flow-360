@@ -11,19 +11,22 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { cn } from "@/lib/utils";
 
 interface DataTablePaginationProps<TData extends RowData> {
+  className?: string;
   table: Table<DataTableFeatures, TData>;
 }
 
 export function DataTablePagination<TData extends RowData>({
+  className,
   table,
 }: DataTablePaginationProps<TData>) {
   "use no memo";
   const showSelectionSummary = table.getAllLeafColumns().some((column) => column.id === "select");
 
   return (
-    <div className="flex items-center justify-between gap-4 px-2">
+    <div className={cn("flex items-center justify-between gap-4 px-2", className)}>
       {showSelectionSummary ? (
         <div className="flex-1 text-sm text-muted-foreground">
           {table.getFilteredSelectedRowModel().rows.length} of{" "}
