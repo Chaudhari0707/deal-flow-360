@@ -301,10 +301,11 @@ export async function confirmQuote(id: string, revision: number, actor: Actor) {
       .select({ email: customers.email })
       .from(customers)
       .where(eq(customers.id, order!.customerId));
+    if (!customer) throw new DomainError("Customer not found", 404);
     await queueOrderInvoiceEmail(
       tx,
       order!.id,
-      customer!.email,
+      customer.email,
       issuedInvoices.map((invoice) => invoice.id),
     );
     await tx

@@ -73,3 +73,9 @@ retry 200. | `test/unit/inventory-movement-response.test.ts`
 2026-09-06 | Credit apply retries | Check operation-key idempotency before rejecting a settled
 invoice; otherwise a successful apply-credit retry looks like “no outstanding balance”. |
 `test/integration/billing-credit-apply.regression.test.ts`
+2026-09-06 | Quote confirm | Customer confirm inserts `invoice_deliveries` in the same
+transaction as the order. A local `_dev` database that still lacks that table (behind
+migration `0004`) 500s and rolls back an otherwise eligible SENT/APPROVED confirm. Apply
+`bun run db:migrate` before portal confirm; readiness must check this relation, not only
+`orders`. | `src/features/quotes/service.ts`, `scripts/dev-local.ts`,
+`test/integration/confirm-billing.regression.test.ts`
