@@ -4,6 +4,7 @@ import { Resend } from "resend";
 import type { CatalogCustomerInput } from "@/features/catalog/_types/catalog";
 import { customerEmailError } from "@/features/catalog/customer-email-error";
 import { databaseErrorCode } from "@/features/catalog/customer-lifecycle";
+import { customerPassword } from "@/features/catalog/customer-password";
 import { senderAddress } from "@/features/quotes/sender-address";
 import { createAuth } from "@/lib/auth/create-auth";
 import { db } from "@/lib/db/connection";
@@ -108,7 +109,7 @@ export async function createCustomerWithLogin(input: CatalogCustomerInput, actor
   if (!can(actor.role, "customerCreate"))
     throw new DomainError("Your role cannot create customers", 403);
   input = { ...input, name: input.name.trim(), email: input.email.trim().toLowerCase() };
-  const password = crypto.randomUUID() + crypto.randomUUID();
+  const password = customerPassword();
   const envelope = {
     from: senderAddress(Bun.env.EMAIL_FROM ?? "DealFlow360 <onboarding@resend.dev>"),
     to: input.email,

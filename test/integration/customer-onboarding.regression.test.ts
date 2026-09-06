@@ -114,7 +114,9 @@ test("provisions a customer login, preserves staff session, and enforces first p
   expect(calls).toHaveLength(before + 1);
   const sent = calls[before]!;
   const temporaryPassword = passwordFrom(sent.message);
-  expect(temporaryPassword.length).toBeGreaterThanOrEqual(32);
+  // The customer retypes this from the email, so it stays short and readable rather than an
+  // opaque blob. Signing in with it below proves the emailed value is the real credential.
+  expect(temporaryPassword).toMatch(/^[a-z0-9]{8}$/);
   expect(sent.message).toEqual({
     from: "DealFlow360 <onboarding@example.test>",
     to: body.email,

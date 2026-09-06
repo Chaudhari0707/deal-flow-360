@@ -83,10 +83,16 @@ sequenceDiagram
 ```
 
 Example: a manager adds “Example Labs”, `contact@example.test`, Gold tier, West
-team. The customer account is linked only to Example Labs. A generated temporary password
+team. The customer account is linked only to Example Labs. A temporary password
 is included in the welcome email alongside the login URL. The normal customer-creation
 response exposes delivery status, not the password. Better Auth stores the credential
 hash; the separate welcome-email envelope is encrypted for bounded retry delivery.
+
+The emailed password is the plain eight-character credential the customer types at
+`/login`, never the encrypted envelope that backs invitation retry. Demo builds issue one
+shared password (`test1234`) so a presenter can sign in as any newly created customer;
+clearing `CUSTOMER_TEMP_PASSWORD` issues a random eight-character password per customer
+instead. Either way the value is temporary and the first password change replaces it.
 
 The account/customer/profile/invitation intent are created together in one transaction.
 Duplicate email or database conflicts roll back that creation, so an existing login is not
@@ -134,8 +140,11 @@ The customer signs in with the emailed temporary password and lands on `/change-
 They enter the temporary password, a different new password, and its confirmation. A mismatch
 or reuse of the temporary password is rejected. Successful change requests revocation of
 other sessions, clears `mustChangePassword`, removes the encrypted invitation payload, and
-opens `/portal`. Protected credential-based customer access is blocked before this step;
-the `/me` identity lookup remains available so login can route correctly.
+opens `/portal`. Protected credential-based customer access is blocked before this step:
+`/api/v1/portal/*` returns 403 and the portal pages bounce to `/change-password` while the
+temporary password is still in place. The `/me` identity lookup remains available so login
+can route correctly. Quote-scoped magic-link sessions are unaffected, because that path
+carries no credential account to change.
 
 ```mermaid
 flowchart TD
