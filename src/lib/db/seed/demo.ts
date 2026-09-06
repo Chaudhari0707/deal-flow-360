@@ -39,7 +39,6 @@ export async function seedDemo(database: Database) {
             historyDays: 90,
           },
         },
-        { id: "upsell", value: { minimumMarginBps: 2000 } },
         { id: "approvalChain", value: { manager: 1, finance: 2 } },
       ])
       .onConflictDoNothing();

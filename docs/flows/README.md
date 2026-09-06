@@ -129,10 +129,10 @@ implementation handoff; a test file's existence is not proof that a run passed.
 | Role navigation and forbidden deep links | Identity | [Role browser matrix](../../playwright/e2e/role-access.spec.ts) |
 | Customer login creation, first password change and mail retry | Identity | [Onboarding browser](../../playwright/e2e/customer-onboarding.spec.ts), [integration](../../test/integration/customer-onboarding.regression.test.ts) |
 | Customer tiers, contact edits and protected deletion | Identity | [Customer browser](../../playwright/e2e/customers.spec.ts), [lifecycle integration](../../test/integration/customer-lifecycle.regression.test.ts) |
-| Catalog products and variants | Identity | [Catalog browser](../../playwright/e2e/catalog.spec.ts) |
+| Catalog products, variants and five-item upsell configuration | Identity | [Catalog browser](../../playwright/e2e/catalog.spec.ts), [upsell integration](../../test/integration/catalog-upsells.regression.test.ts) |
 | Quotation builder, tier prices, discounts and totals | Quotations | [Quotation journey](../../playwright/e2e/quotation-journey.spec.ts), [pricing regression](../../test/unit/quote-rules.regression.test.ts) |
 | Raw numeric editing and invalid discount handling | Quotations | [Number-input browser](../../playwright/e2e/number-input.spec.ts) |
-| Purchase recommendations and add-to-quote | Quotations | [Recommendation browser](../../playwright/e2e/quote-recommendations.spec.ts) |
+| Catalog-configured upsell recommendations and add-to-quote | Quotations | [Recommendation browser](../../playwright/e2e/quote-recommendations.spec.ts), [allocator unit test](../../test/unit/upsell-recommendations.test.ts) |
 | Board transitions and revision conflicts | Quotations | [Board integration](../../test/integration/quote-board.regression.test.ts) |
 | Configured approval order and return routing | Quotations | [Approval integration](../../test/integration/approval-workflow.regression.test.ts) |
 | Quotation-link and confirmation-invoice mail intent, attachment, failure and retry identity | Quotations / Billing | [Email integration](../../test/integration/email.regression.test.ts) |

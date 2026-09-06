@@ -33,7 +33,7 @@ export const productBodyModel = t.Object(
     active: t.Optional(t.Boolean()),
     promoted: t.Optional(t.Boolean()),
     promotionBps: t.Optional(t.Integer({ minimum: 0, maximum: 10_000 })),
-    pairedProductIds: t.Optional(t.Array(id, { maxItems: 20 })),
+    pairedProductIds: t.Optional(t.Array(id, { maxItems: 5 })),
   },
   { additionalProperties: false },
 );

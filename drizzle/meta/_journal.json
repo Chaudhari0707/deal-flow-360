@@ -43,6 +43,13 @@
       "when": 1788668968200,
       "tag": "0005_aspiring_mole_man",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1788669984857,
+      "tag": "0006_product-upsell-limit",
+      "breakpoints": true
     }
   ]
 }

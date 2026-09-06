@@ -113,8 +113,8 @@ export function CatalogEditor({
   const [stockable, setStockable] = useState(product?.stockable ?? false);
   const [active, setActive] = useState(product?.active ?? true);
   const [promoted, setPromoted] = useState(product?.promoted ?? false);
-  const [pairedProductIds, setPairedProductIds] = useState(
-    () => product?.pairedProductIds.filter((id) => id !== product.id) ?? [],
+  const [pairedProductIds, setPairedProductIds] = useState(() =>
+    [...new Set(product?.pairedProductIds.filter((id) => id !== product.id) ?? [])].slice(0, 5),
   );
   const { data } = useWorkspace();
   const pairingChoices = data?.products.filter((candidate) => candidate.id !== product?.id) ?? [];
@@ -368,10 +368,10 @@ export function CatalogEditor({
                     </Field>
                   </div>
                   <FieldSet className="border-t border-border pt-7">
-                    <FieldLegend>Suggested pairings</FieldLegend>
+                    <FieldLegend>Upsell products</FieldLegend>
                     <FieldDescription className="max-w-[68ch]">
-                      When this item is on a quotation, these products appear as add-on suggestions.
-                      Choose up to 20.
+                      When this item is on a quotation, these products can appear as add-on
+                      recommendations. Choose up to 5.
                     </FieldDescription>
                     <FieldGroup className="max-h-56 gap-0 overflow-y-auto border-t border-border">
                       {pairingChoices.map((candidate) => {
@@ -385,7 +385,7 @@ export function CatalogEditor({
                             <Checkbox
                               id={`catalog-pair-${candidate.id}`}
                               checked={checked}
-                              disabled={!checked && pairedProductIds.length >= 20}
+                              disabled={!checked && pairedProductIds.length >= 5}
                               onCheckedChange={(selected) =>
                                 setPairedProductIds((current) =>
                                   selected

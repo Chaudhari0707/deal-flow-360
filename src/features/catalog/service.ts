@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 
 import type {
   CatalogCustomerInput,
@@ -21,21 +21,42 @@ export async function saveCatalogProduct(
   if (input.stockable && input.intervalMonths > 0)
     throw new DomainError("Recurring plans are not stockable");
   return db.transaction(async (tx) => {
+    const pairedProductIds = input.pairedProductIds ?? [];
+    if (new Set(pairedProductIds).size !== pairedProductIds.length)
+      throw new DomainError("Choose each upsell product only once");
+    if (productId && pairedProductIds.includes(productId))
+      throw new DomainError("A product cannot be its own upsell");
+    if (pairedProductIds.length) {
+      const matched = await tx
+        .select({ id: products.id })
+        .from(products)
+        .where(inArray(products.id, pairedProductIds));
+      if (matched.length !== pairedProductIds.length)
+        throw new DomainError("Choose upsell products from the catalog");
+    }
+    const productInput = { ...input, pairedProductIds };
     if (!productId) {
       const [product] = await tx
         .insert(products)
-        .values({ id: crypto.randomUUID(), ...input })
+        .values({ id: crypto.randomUUID(), ...productInput })
         .returning();
       await audit(tx, actor, product!.id, "PRODUCT_CREATED", "Catalog product created");
       return product;
     }
     const [product] = await tx
       .update(products)
-      .set(input)
+      .set(productInput)
       .where(eq(products.id, productId))
       .returning();
     if (!product) throw new DomainError("Product not found", 404);
-    await audit(tx, actor, product.id, "PRODUCT_UPDATED", "Catalog configuration changed", input);
+    await audit(
+      tx,
+      actor,
+      product.id,
+      "PRODUCT_UPDATED",
+      "Catalog configuration changed",
+      productInput,
+    );
     return product;
   });
 }
@@ -107,7 +128,6 @@ const allowedSettings: Record<string, string[]> = {
   ],
   health: ["staleDays", "approvalDays", "overdueDays", "anomalyBps", "historyDays"],
   pricelists: ["Bronze", "Silver", "Gold"],
-  upsell: ["minimumMarginBps"],
   approvalChain: ["manager", "finance"],
 };
 

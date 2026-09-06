@@ -42,11 +42,6 @@ export const quoteDetailModel = t.Object({
   messages: t.Array(messageModel),
 });
 
-export const recommendationsModel = t.Object({
-  source: t.Union([t.Literal("last_purchase"), t.Literal("best_sellers")]),
-  productIds: t.Array(t.String(), { maxItems: 5 }),
-});
-
 export const deliveryResultModel = t.Object({
   status: t.Union([t.Literal("SENT"), t.Literal("FAILED")]),
   deliveryId: t.String(),
@@ -89,7 +84,6 @@ export const quoteModels = {
   PortalDetail: portalDetailModel,
   PortalWorkspace: portalWorkspaceModel,
   PublicQuote: publicQuoteModel,
-  PurchaseRecommendations: recommendationsModel,
   QuoteDetail: quoteDetailModel,
   QuoteInput: quoteInputModel,
 } as const;

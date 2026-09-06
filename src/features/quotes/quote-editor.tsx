@@ -20,7 +20,7 @@ import type { LineInput } from "@/features/quotes/_types/quotes";
 import { PurchaseRecommendations } from "@/features/quotes/purchase-recommendations";
 import { eyebrowType, ruledControl, SectionHead } from "@/features/quotes/quote-editorial";
 import { QuoteLines } from "@/features/quotes/quote-lines";
-import { QuotePairings, QuoteTotals } from "@/features/quotes/quote-summary";
+import { QuoteTotals } from "@/features/quotes/quote-summary";
 import {
   calculateQuote,
   defaultDiscounts,
@@ -59,8 +59,7 @@ export function QuoteEditor({
     [date, setDate] = useState(quote?.promisedDate ?? "");
   const [productId, setProductId] = useState(data.products[0]?.id ?? ""),
     [pending, setPending] = useState(false),
-    [error, setError] = useState(""),
-    [dismissed, setDismissed] = useState<string[]>([]);
+    [error, setError] = useState("");
   const customer = data.customers.find((c) => c.id === customerId),
     limits = data.settings.find((s) => s.id === "discounts")?.value ?? defaultDiscounts;
   const pricelists = data.settings.find((setting) => setting.id === "pricelists")?.value;
@@ -129,35 +128,6 @@ export function QuoteEditor({
       setPending(false);
     }
   }
-  const suggestedIds = new Set(
-    lines.flatMap((l) => data.products.find((p) => p.id === l.productId)?.pairedProductIds ?? []),
-  );
-  const minMargin = data.settings.find((s) => s.id === "upsell")?.value.minimumMarginBps ?? 2000;
-  const suggestions = data.products
-    .filter(
-      (p) =>
-        !validation &&
-        p.active &&
-        suggestedIds.has(p.id) &&
-        !dismissed.includes(p.id) &&
-        !lines.some((l) => l.productId === p.id),
-    )
-    .map((p) => {
-      const amount = calculateQuote(
-        priceLines(
-          data.products,
-          customer?.tier ?? "Bronze",
-          [{ productId: p.id, quantity: 1, discountBps: p.promoted ? p.promotionBps : 0 }],
-          pricelists,
-        ),
-        orderDiscountBps,
-        customer?.tier ?? "Bronze",
-        limits,
-      ).lines[0]!;
-      return { product: p, line: amount, margin: amount.netCents - amount.costCents };
-    })
-    .filter((s) => s.line.netCents > 0 && (s.margin / s.line.netCents) * 10000 >= minMargin)
-    .sort((a, b) => Number(b.product.promoted) - Number(a.product.promoted) || b.margin - a.margin);
   return (
     <div className="grid items-start gap-x-14 gap-y-12 xl:grid-cols-[minmax(0,1fr)_320px]">
       <div className="min-w-0">
@@ -315,23 +285,16 @@ export function QuoteEditor({
       </div>
       <div className="space-y-12">
         <PurchaseRecommendations
-          key={customerId}
-          customerId={customerId}
           products={data.products}
-          existingIds={lines.map((line) => line.productId)}
+          selectedProductIds={lines.map((line) => line.productId)}
           disabled={pending || lines.length >= 100 || (lines.length > 0 && !!validation)}
           limits={limits}
           orderDiscountBps={orderDiscountBps}
-          onAdd={(id) => add(id)}
+          onAdd={(id) => add(id, true)}
           pricelists={pricelists}
           tier={customer?.tier ?? "Bronze"}
         />
         <QuoteTotals totals={totals} />
-        <QuotePairings
-          pairings={suggestions}
-          onAdd={(id) => add(id, true)}
-          onDismiss={(id) => setDismissed((current) => [...current, id])}
-        />
       </div>
     </div>
   );

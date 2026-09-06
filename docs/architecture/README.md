@@ -12,7 +12,7 @@ Linear phase contracts. Read them in this order:
 5. [Billing](billing.md): schedules, proration, invoice/payment/credit ledgers and reporting.
 6. [Native runtime compatibility](runtime.md): TypeScript PostCSS, Turbopack and Bun package loading.
 7. [Implemented data model](data-model.md): actual relationships, snapshots and integrity constraints.
-8. [Quotation recommendations](quotation-recommendations.md): last-purchase suggestions and best-seller fallback.
+8. [Quotation recommendations](quotation-recommendations.md): catalog-configured upsells and five-item allocation.
 9. [Customer management](customer-management.md): directory permissions, safe deletion, login email synchronization, and tier policy.
 10. [Workspace currency](currency.md): INR presentation, paise storage compatibility, and PDF/XLS labels.
 11. [Role access](role-access.md): shared permissions, page guards and workspace data boundaries.

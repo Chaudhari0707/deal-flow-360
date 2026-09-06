@@ -47,20 +47,6 @@ test("Eden quote actions preserve useful errors for HTML, empty and null respons
   expect(() => apiData(nested)).toThrow("Refresh the invoice first");
 });
 
-test("Eden uses relative same-origin URLs and encodes typed query values", async () => {
-  let requested = "";
-  mockResponse(
-    Response.json({ productIds: [], source: "last_purchase" }),
-    (input) => (requested = String(input)),
-  );
-  const result = await apiClient.api.v1.quotes.recommendations.get({
-    query: { customerId: "customer/a & b" },
-  });
-
-  expect(apiData(result)).toEqual({ productIds: [], source: "last_purchase" });
-  expect(requested).toBe("/api/v1/quotes/recommendations?customerId=customer%2Fa%20%26%20b");
-});
-
 test("HTTP 200 with FAILED status is treated as a failed board action", () => {
   expect(() =>
     assertQuoteAction({

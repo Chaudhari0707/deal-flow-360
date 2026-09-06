@@ -152,27 +152,29 @@ Source: [pricing rules](../../src/features/quotes/rules.ts),
 
 ## Recommendations and add-ons
 
-**Recommended products** uses the selected customer's latest order, taking up to five active products.
-If the customer has no orders, it uses up to five best sellers ranked by ordered quantity with stable
-ID tie-breaking. If the latest order's products are inactive, the result can be empty; it does not
-fall back to best sellers in that case. Selected products are excluded before limiting results.
-Adding a product fetches the next eligible suggestions; removing it makes it eligible again.
-Promoted products show only their promotion discount; others show only estimated one-unit margin
-(current tier and order discount). A 5% promoted care plan therefore shows its discount, not both metrics.
-Changing the customer or selected product IDs uses a different request key and does not retain stale suggestions. Loading,
-empty, error/retry, and invalid-order-discount states appear in the card.
+Catalog editors can configure up to five **Upsell products** for each catalog item. The database
+enforces that limit, and the API rejects duplicate, missing, or self-referencing product IDs. The
+catalog relationship is directional: configuring a care plan for a laptop does not configure the
+laptop for the care plan.
 
-**A better fit for this deal** uses catalog product pairings. It excludes inactive, dismissed, and
-already-added products, and applies the configured minimum margin (default 20%). Promoted products
-rank first, then absolute margin. Accepting adds a normal line with the promotion discount; rejecting
-a suggestion dismisses it in the current editor. Server pricing checks pairing provenance before
-retaining an upsell flag.
+**Upsell recommendations** replaces customer purchase history and global best sellers. It is driven
+only by products already on the quotation: inactive or already-selected products are excluded. With
+one selected product, its configured upsells are shown. With multiple selected products, the panel
+takes one candidate from each selected product before taking a second from any source. Every pass is
+ordered by current estimated sale value, then margin, promotion discount, and product ID; this keeps
+the maximum five recommendations commercially prioritized while dividing them across the selected
+products. Fewer eligible relationships produce fewer than five results.
 
-Example: a selected laptop can suggest its paired care plan if the plan meets the margin threshold.
-Adding the care plan creates a recurring line, not additional one-time revenue. Source:
-[recommendation query](../../src/features/quotes/recommendations.ts),
+The current customer tier, promotion, and order discount determine the displayed estimated price and
+margin. Adding an item records it as an upsell; saving the quotation independently verifies that an
+already-selected product configured that relationship. For example, selecting a laptop and a dock
+can interleave the laptop's care plan and mouse with the dock's monitoring add-on. A selected,
+inactive, or duplicate candidate is never shown.
+
+Sources: [catalog relationship editor](../../src/features/shell/catalog-editor.tsx),
+[recommendation allocator](../../src/features/quotes/upsell-recommendations.ts),
 [recommendation UI](../../src/features/quotes/purchase-recommendations.tsx), and
-[editor add-ons](../../src/features/quotes/quote-editor.tsx).
+[quotation pricing and provenance](../../src/features/quotes/rules.ts).
 
 ## Approval decisions and board movements
 

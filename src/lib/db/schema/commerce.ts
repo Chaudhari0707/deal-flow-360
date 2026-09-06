@@ -55,6 +55,10 @@ export const products = pgTable(
       "product_amounts",
       sql`${t.priceCents} >= 0 AND ${t.costCents} >= 0 AND ${t.taxBps} BETWEEN 0 AND 10000`,
     ),
+    check(
+      "product_upsell_limit",
+      sql`jsonb_typeof(${t.pairedProductIds}) = 'array' AND jsonb_array_length(${t.pairedProductIds}) <= 5`,
+    ),
   ],
 );
 
