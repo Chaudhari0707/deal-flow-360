@@ -1,18 +1,10 @@
 "use client";
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import useSWR from "swr";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardAction,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { DataTable } from "@/components/ui/data-table";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
@@ -24,13 +16,79 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { eyebrowType } from "@/features/billing/invoice-editorial";
 import { ReportExportActions } from "@/features/billing/report-export-actions";
-import { reportColumns, salesColumns } from "@/features/billing/table-columns";
+import { billingTableStyles, reportColumns, salesColumns } from "@/features/billing/table-columns";
 import { money } from "@/features/shell/format";
 import { PageHeader } from "@/features/shell/page-header";
 import { useWorkspace } from "@/features/shell/use-workspace";
 import { WorkspaceState } from "@/features/shell/workspace-state";
 import { apiClient, apiData } from "@/lib/api/client";
+import { cn } from "@/lib/utils";
+
+/**
+ * Section rule. Mirrors the shared table masthead so a hand-built section and a DataTable read
+ * as the same object: a quiet letterspaced kicker over one firm rule, with the note beneath it.
+ */
+function SectionHead({
+  actions,
+  note,
+  title,
+}: {
+  actions?: ReactNode;
+  note?: string;
+  title: string;
+}) {
+  return (
+    <div className="flex flex-wrap items-end justify-between gap-x-8 gap-y-3 border-b border-border-strong pb-3">
+      <div className="min-w-0">
+        <h2 className={cn(eyebrowType, "text-foreground")}>{title}</h2>
+        {note ? <p className="mt-2 text-sm text-muted-foreground">{note}</p> : null}
+      </div>
+      {actions ? <div className="flex shrink-0 items-center gap-3">{actions}</div> : null}
+    </div>
+  );
+}
+
+/**
+ * A summary figure in the report band.
+ *
+ * `reports.spec` reads every headline value through `[data-slot="card"]`, so the slot stays on
+ * the figure element — but the card box does not: the band's dividers, alignment and type scale
+ * group these numbers now. `scale` is explicit because two of the sales metrics are sentences,
+ * not figures, and prose set at figure size reads as a mistake.
+ */
+function Figure({
+  accent = false,
+  label,
+  scale = "figure",
+  value,
+}: {
+  accent?: boolean;
+  label: string;
+  scale?: "figure" | "text";
+  value: string;
+}) {
+  return (
+    <div data-slot="card" className="py-7 sm:px-8 sm:first:pl-0 sm:last:pr-0">
+      <span
+        aria-hidden
+        className={cn("mb-4 block h-0.5 w-7", accent ? "bg-ink-accent" : "bg-transparent")}
+      />
+      <dt className={cn(eyebrowType, "text-muted-foreground")}>{label}</dt>
+      <dd
+        className={cn(
+          "mt-3 font-medium text-foreground",
+          scale === "figure"
+            ? "text-[1.75rem] leading-none tracking-tight tabular-nums"
+            : "text-lg leading-snug",
+        )}
+      >
+        {value}
+      </dd>
+    </div>
+  );
+}
 
 function isApprovalStatus(
   value: string,
@@ -96,7 +154,7 @@ export function ReportWorkspace() {
       </Alert>
     );
   return (
-    <>
+    <div className="mx-auto w-full max-w-300 pb-6">
       <PageHeader
         title="Reports"
         description="Follow the complete sales journey, from quotations and approvals to confirmed orders, upsells and collected revenue."
@@ -108,15 +166,15 @@ export function ReportWorkspace() {
           />
         }
       />
-      <Card>
-        <CardHeader>
-          <CardTitle>Sales and financial report</CardTitle>
-          <CardDescription>
-            {parameters.size
+      <section className="mt-11">
+        <SectionHead
+          title="Sales and financial report"
+          note={
+            parameters.size
               ? `${parameters.size} active filter${parameters.size === 1 ? "" : "s"}`
-              : "All records · No filters applied"}
-          </CardDescription>
-          <CardAction>
+              : "All records · No filters applied"
+          }
+          actions={
             <Button
               type="button"
               variant="outline"
@@ -127,15 +185,15 @@ export function ReportWorkspace() {
               {filtersOpen ? <ChevronUp /> : <ChevronDown />}
               {filtersOpen ? "Hide filters" : "Show filters"}
             </Button>
-          </CardAction>
-        </CardHeader>
+          }
+        />
         <div id="report-filters" hidden={!filtersOpen}>
-          <CardContent className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-            <p className="text-muted-foreground sm:col-span-2 lg:col-span-5">
-              Dates use each quote/order creation date and each invoice/credit issue date in UTC.
-              Product/category select whole records with matching lines. Payment status only filters
-              financial records.
-            </p>
+          <p className="max-w-[92ch] pt-6 text-sm leading-relaxed text-muted-foreground">
+            Dates use each quote/order creation date and each invoice/credit issue date in UTC.
+            Product/category select whole records with matching lines. Payment status only filters
+            financial records.
+          </p>
+          <div className="grid gap-x-10 gap-y-6 pt-7 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
             <Field>
               <FieldLabel htmlFor="report-from">From</FieldLabel>
               <Input
@@ -280,17 +338,20 @@ export function ReportWorkspace() {
                 </Select>
               </Field>
             ))}
-          </CardContent>
+          </div>
         </div>
-      </Card>
+      </section>
       {invalid ? (
-        <Alert variant="destructive">
+        <Alert variant="destructive" className="mt-9">
           <AlertDescription>Start date must be before the end date.</AlertDescription>
         </Alert>
       ) : report.error || !report.data || report.isLoading ? (
-        <WorkspaceState error={report.error} retry={() => void report.mutate()} />
+        <div className="mt-9">
+          <WorkspaceState error={report.error} retry={() => void report.mutate()} />
+        </div>
       ) : (
         <Tabs
+          className="mt-12"
           value={reportTab}
           onValueChange={(value) => {
             if (value === "sales" || value === "financial") setReportTab(value);
@@ -300,78 +361,69 @@ export function ReportWorkspace() {
             <TabsTrigger value="sales">Sales report</TabsTrigger>
             <TabsTrigger value="financial">Financial report</TabsTrigger>
           </TabsList>
-          <TabsContent value="sales" className="space-y-4">
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              {[
-                { label: "Quotes created", value: String(report.data.sales.metrics.quotesCreated) },
-                {
-                  label: "Orders confirmed",
-                  value: String(report.data.sales.metrics.ordersConfirmed),
-                },
-                {
-                  label: "Average approval time",
-                  value:
-                    report.data.sales.metrics.averageApprovalHours === null
-                      ? "No completed cycles"
-                      : `${report.data.sales.metrics.averageApprovalHours.toFixed(2)} hours`,
-                },
-                {
-                  label: "Top upsold product",
-                  value: report.data.sales.metrics.topUpsoldProduct
+          <TabsContent value="sales">
+            <dl className="grid grid-cols-2 gap-x-10 sm:grid-cols-4 sm:gap-x-0 sm:divide-x sm:divide-border">
+              <Figure
+                accent
+                label="Quotes created"
+                value={String(report.data.sales.metrics.quotesCreated)}
+              />
+              <Figure
+                label="Orders confirmed"
+                value={String(report.data.sales.metrics.ordersConfirmed)}
+              />
+              <Figure
+                scale="text"
+                label="Average approval time"
+                value={
+                  report.data.sales.metrics.averageApprovalHours === null
+                    ? "No completed cycles"
+                    : `${report.data.sales.metrics.averageApprovalHours.toFixed(2)} hours`
+                }
+              />
+              <Figure
+                scale="text"
+                label="Top upsold product"
+                value={
+                  report.data.sales.metrics.topUpsoldProduct
                     ? `${report.data.sales.metrics.topUpsoldProduct.name} · ${report.data.sales.metrics.topUpsoldProduct.quantity} units`
-                    : "No confirmed upsells",
-                },
-              ].map((metric) => (
-                <Card key={metric.label}>
-                  <CardHeader>
-                    <CardDescription>{metric.label}</CardDescription>
-                    <CardTitle className="text-xl tabular-nums">{metric.value}</CardTitle>
-                  </CardHeader>
-                </Card>
-              ))}
+                    : "No confirmed upsells"
+                }
+              />
+            </dl>
+            <div className="mt-7">
+              <DataTable
+                title="Quotations and confirmed orders"
+                description={`Ordered value ${money(report.data.sales.metrics.orderedCents)}.`}
+                classNames={billingTableStyles}
+                columns={salesColumns}
+                data={[...report.data.sales.quotes, ...report.data.sales.orders]}
+                enableColumnResizing={false}
+                getRowId={(row) => `${row.kind}:${row.id}`}
+                emptyMessage="No sales records match these filters."
+              />
             </div>
-            <Card>
-              <CardContent>
-                <DataTable
-                  title="Quotations and confirmed orders"
-                  description={`Ordered value ${money(report.data.sales.metrics.orderedCents)}.`}
-                  columns={salesColumns}
-                  data={[...report.data.sales.quotes, ...report.data.sales.orders]}
-                  getRowId={(row) => `${row.kind}:${row.id}`}
-                  emptyMessage="No sales records match these filters."
-                />
-              </CardContent>
-            </Card>
           </TabsContent>
-          <TabsContent value="financial" className="space-y-4">
-            <div className="grid gap-4 sm:grid-cols-3">
-              {[
-                { label: "Net billed", value: report.data.totals.billedCents },
-                { label: "Payments collected", value: report.data.totals.paidCents },
-                { label: "Outstanding", value: report.data.totals.outstandingCents },
-              ].map((metric) => (
-                <Card key={metric.label}>
-                  <CardHeader>
-                    <CardDescription>{metric.label}</CardDescription>
-                    <CardTitle className="text-2xl tabular-nums">{money(metric.value)}</CardTitle>
-                  </CardHeader>
-                </Card>
-              ))}
+          <TabsContent value="financial">
+            <dl className="grid grid-cols-2 gap-x-10 sm:grid-cols-3 sm:gap-x-0 sm:divide-x sm:divide-border">
+              <Figure accent label="Net billed" value={money(report.data.totals.billedCents)} />
+              <Figure label="Payments collected" value={money(report.data.totals.paidCents)} />
+              <Figure label="Outstanding" value={money(report.data.totals.outstandingCents)} />
+            </dl>
+            <div className="mt-7">
+              <DataTable
+                title={`${report.data.rows.length} financial records`}
+                classNames={billingTableStyles}
+                columns={reportColumns}
+                data={report.data.rows}
+                enableColumnResizing={false}
+                getRowId={(row) => row.number}
+                emptyMessage="No records match these filters."
+              />
             </div>
-            <Card>
-              <CardContent>
-                <DataTable
-                  title={`${report.data.rows.length} financial records`}
-                  columns={reportColumns}
-                  data={report.data.rows}
-                  getRowId={(row) => row.number}
-                  emptyMessage="No records match these filters."
-                />
-              </CardContent>
-            </Card>
           </TabsContent>
         </Tabs>
       )}
-    </>
+    </div>
   );
 }

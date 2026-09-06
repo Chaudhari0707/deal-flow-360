@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 
+import { eyebrowType } from "@/components/editorial/editorial";
 import { cn } from "@/lib/utils";
 
 /**
@@ -10,7 +11,6 @@ import { cn } from "@/lib/utils";
  */
 
 /** Quiet, letterspaced label type. Labels always recede behind the value they describe. */
-export const eyebrowType = "text-[0.6875rem] font-medium tracking-[0.16em] uppercase";
 
 export function Eyebrow({ children, className }: { children: ReactNode; className?: string }) {
   return <span className={cn(eyebrowType, "text-muted-foreground", className)}>{children}</span>;
@@ -136,3 +136,5 @@ export function Note({
     </div>
   );
 }
+
+export { eyebrowType };

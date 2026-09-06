@@ -1,12 +1,10 @@
 "use client";
 
 import { type FormEvent, useState } from "react";
-import { Save, ShieldCheck } from "lucide-react";
 
+import { eyebrowType } from "@/components/editorial/editorial";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { NumberInput } from "@/components/ui/number-input";
 import { InventoryScreen } from "@/features/inventory/inventory-screen";
@@ -16,11 +14,45 @@ import { useWorkspace } from "@/features/shell/use-workspace";
 import { WorkspaceState } from "@/features/shell/workspace-state";
 import { apiClient, apiData, HttpResponseError } from "@/lib/api/client";
 import type { Workspace } from "@/lib/domain/_types/workspace";
+import { cn } from "@/lib/utils";
+
+/**
+ * Policies are ruled setting rows, not cards: a numbered section rule carries the rhythm, the
+ * label sits quietly on the left, and the value is a right-aligned tabular figure on its own
+ * hairline. Quiet ink comes from `--muted-foreground`, never from an opacity ladder.
+ */
+const valueInput =
+  "h-8 w-24 shrink-0 rounded-none border-0 border-b-2 border-border-strong bg-transparent px-0 text-right text-sm focus-visible:border-ink-accent dark:bg-transparent";
+
+function policyCopy(id: string) {
+  if (id === "pricelists")
+    return "Hardware price factors: 9,000 basis points means 90% of the catalog price. New and edited drafts use these prices.";
+  if (id === "approvalChain")
+    return "Approval ranks determine order: 1 is first. Use 0 to disable a role. HIGH-risk quotes use every enabled step; lower-risk quotes use the first.";
+  if (id === "health")
+    return "Day thresholds control follow-ups; the anomaly threshold uses basis points (100 = 1%).";
+  return "Percentage policies use basis points: 100 basis points = 1%.";
+}
+
+function fieldMin(settingId: string, key: string) {
+  if (settingId === "approvalChain") return 0;
+  return (settingId === "health" && key !== "anomalyBps") || key.startsWith("high") ? 1 : 0;
+}
+
+function fieldMax(settingId: string, key: string) {
+  if (settingId === "approvalChain") return 10;
+  if (settingId !== "health") return 10000;
+  if (key === "historyDays") return 365;
+  if (key === "staleDays") return 90;
+  return key === "approvalDays" || key === "overdueDays" ? 60 : 10000;
+}
 
 function PolicyForm({
+  index,
   setting,
   saved,
 }: {
+  index: string;
   setting: Workspace["settings"][number];
   saved: () => Promise<unknown>;
 }) {
@@ -51,75 +83,59 @@ function PolicyForm({
     }
   }
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{displayStatus(setting.id)}</CardTitle>
-        <CardDescription>
-          {setting.id === "pricelists"
-            ? "Hardware price factors: 9,000 basis points means 90% of the catalog price. New and edited drafts use these prices."
-            : setting.id === "approvalChain"
-              ? "Approval ranks determine order: 1 is first. Use 0 to disable a role. HIGH-risk quotes use every enabled step; lower-risk quotes use the first."
-              : setting.id === "health"
-                ? "Day thresholds control follow-ups; the anomaly threshold uses basis points (100 = 1%)."
-                : "Percentage policies use basis points: 100 basis points = 1%."}
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <form method="post" onSubmit={submit}>
-          <FieldGroup>
-            <div className="grid gap-4 sm:grid-cols-2">
-              {Object.entries(setting.value).map(([key, value]) => (
-                <Field key={key}>
-                  <FieldLabel htmlFor={`${setting.id}-${key}`}>{displayStatus(key)}</FieldLabel>
-                  <NumberInput
-                    id={`${setting.id}-${key}`}
-                    name={key}
-                    required
-                    min={
-                      setting.id === "approvalChain"
-                        ? 0
-                        : (setting.id === "health" && key !== "anomalyBps") ||
-                            key.startsWith("high")
-                          ? 1
-                          : 0
-                    }
-                    step="1"
-                    max={
-                      setting.id === "approvalChain"
-                        ? 10
-                        : setting.id === "health"
-                          ? key === "historyDays"
-                            ? 365
-                            : key === "staleDays"
-                              ? 90
-                              : key === "approvalDays" || key === "overdueDays"
-                                ? 60
-                                : 10000
-                          : 10000
-                    }
-                    defaultValue={value}
-                  />
-                </Field>
-              ))}
-            </div>
-            {error && (
-              <Alert variant="destructive">
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            )}
-            {notice && (
-              <Alert role="status">
-                <AlertDescription>{notice}</AlertDescription>
-              </Alert>
-            )}
-            <Button type="submit" disabled={pending} className="self-start">
-              <Save />
-              {pending ? "Saving…" : "Save policy"}
-            </Button>
-          </FieldGroup>
-        </form>
-      </CardContent>
-    </Card>
+    <section>
+      <h2 className="flex items-baseline gap-3 border-b border-border-strong pb-3">
+        <span className="text-sm font-medium text-foreground tabular-nums">{index}</span>
+        <span aria-hidden className="h-px w-6 self-center bg-border-strong" />
+        <span className={cn(eyebrowType, "text-muted-foreground")}>
+          {displayStatus(setting.id)}
+        </span>
+      </h2>
+      <p className="mt-4 max-w-[68ch] text-sm leading-relaxed text-muted-foreground">
+        {policyCopy(setting.id)}
+      </p>
+      <form method="post" onSubmit={submit} className="mt-6">
+        <FieldGroup className="gap-0">
+          {Object.entries(setting.value).map(([key, value]) => (
+            <Field
+              key={key}
+              orientation="horizontal"
+              className="items-center gap-6 border-b border-border py-2.5"
+            >
+              <FieldLabel
+                htmlFor={`${setting.id}-${key}`}
+                className="text-sm font-normal text-foreground"
+              >
+                {displayStatus(key)}
+              </FieldLabel>
+              <NumberInput
+                id={`${setting.id}-${key}`}
+                name={key}
+                required
+                min={fieldMin(setting.id, key)}
+                step="1"
+                max={fieldMax(setting.id, key)}
+                defaultValue={value}
+                className={valueInput}
+              />
+            </Field>
+          ))}
+        </FieldGroup>
+        {error && (
+          <Alert variant="destructive" className="mt-5">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+        {notice && (
+          <Alert role="status" className="mt-5">
+            <AlertDescription>{notice}</AlertDescription>
+          </Alert>
+        )}
+        <Button type="submit" disabled={pending} className="mt-6">
+          {pending ? "Saving…" : "Save policy"}
+        </Button>
+      </form>
+    </section>
   );
 }
 
@@ -142,15 +158,20 @@ export function Settings() {
         title="Workspace settings"
         description="Keep pricing guardrails and operational policies clear and consistent."
         actions={
-          <Badge variant="outline">
-            <ShieldCheck />
+          <span className={cn(eyebrowType, "flex items-center gap-2 text-muted-foreground")}>
+            <span aria-hidden className="size-1.5 bg-ink-accent" />
             Manager access
-          </Badge>
+          </span>
         }
       />
-      <div className="grid items-start gap-6 xl:grid-cols-2">
-        {data.settings.map((setting) => (
-          <PolicyForm key={setting.id} setting={setting} saved={mutate} />
+      <div className="grid items-start gap-x-16 gap-y-12 xl:grid-cols-2">
+        {data.settings.map((setting, position) => (
+          <PolicyForm
+            key={setting.id}
+            index={String(position + 1).padStart(2, "0")}
+            setting={setting}
+            saved={mutate}
+          />
         ))}
       </div>
       {data.actor.role === "admin" && <InventoryScreen />}

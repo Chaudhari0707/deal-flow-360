@@ -2,6 +2,14 @@ import { DownloadIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 
+/**
+ * Report export, rendered beside the masthead.
+ *
+ * Both formats share one quiet outline treatment: downloading a report is a secondary utility,
+ * so the accent fill stays reserved for the actions that change state. The unavailable state
+ * stays a real disabled button with no href — an anchor cannot be disabled, and
+ * `billing-review.regression` asserts exactly one button and no navigable link here.
+ */
 export function ReportExportActions({
   enabled,
   format,
@@ -13,15 +21,11 @@ export function ReportExportActions({
 }) {
   const item =
     format === "pdf"
-      ? { label: "Download PDF", name: "Download sales report PDF", variant: "outline" as const }
-      : {
-          label: "Download Excel",
-          name: "Download financial report Excel",
-          variant: "default" as const,
-        };
+      ? { label: "Download PDF", name: "Download sales report PDF" }
+      : { label: "Download Excel", name: "Download financial report Excel" };
   return enabled ? (
     <Button
-      variant={item.variant}
+      variant="outline"
       nativeButton={false}
       render={<a aria-label={item.name} href={`${url}&format=${format}`} />}
     >
@@ -29,7 +33,7 @@ export function ReportExportActions({
       {item.label}
     </Button>
   ) : (
-    <Button variant={item.variant} disabled aria-label={item.name}>
+    <Button variant="outline" disabled aria-label={item.name}>
       <DownloadIcon />
       {item.label}
     </Button>

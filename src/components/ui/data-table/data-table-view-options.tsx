@@ -2,6 +2,7 @@
 
 import { type RowData, type Table } from "@tanstack/react-table";
 
+import { eyebrowType } from "@/components/editorial/editorial";
 import type { DataTableFeatures } from "@/components/ui/_types/data-table";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,7 +17,6 @@ import {
 import { cn } from "@/lib/utils";
 
 /** Quiet label type: hierarchy from size, weight, case and letter-spacing, never from opacity. */
-const eyebrowType = "text-[0.6875rem] font-medium tracking-[0.16em] uppercase";
 
 export function DataTableViewOptions<TData extends RowData>({
   table,

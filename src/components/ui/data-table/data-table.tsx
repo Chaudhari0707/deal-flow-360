@@ -254,9 +254,7 @@ export function DataTable<TData extends RowData, TValue>({
           description={description}
         />
       )}
-      <div
-        className={cn("overflow-x-auto overflow-y-hidden rounded-md border", classNames?.container)}
-      >
+      <div className={cn("overflow-x-auto overflow-y-hidden", classNames?.container)}>
         <UITable
           className={classNames?.table}
           containerClassName={hasPinnedColumns ? "overflow-visible" : undefined}
@@ -321,7 +319,11 @@ export function DataTable<TData extends RowData, TValue>({
                 <TableRow
                   key={row.id}
                   data-state={row.getIsSelected() && "selected"}
-                  className={cn(onRowClick && "cursor-pointer", classNames?.row)}
+                  className={cn(
+                    onRowClick &&
+                      "cursor-pointer focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
+                    classNames?.row,
+                  )}
                   onClick={onRowClick ? () => onRowClick(row.original) : undefined}
                   onKeyDown={
                     onRowClick

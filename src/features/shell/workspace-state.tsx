@@ -42,7 +42,7 @@ export function WorkspaceState({ error, retry }: { error?: unknown; retry?: () =
     );
   }
   return (
-    <div className="w-full" role="status" aria-label="Loading workspace">
+    <div className="mx-auto w-full max-w-300" role="status" aria-label="Loading workspace">
       <div className="border-t-2 border-foreground pt-6">
         <span aria-hidden className="block h-0.5 w-7 bg-ink-accent" />
         <Skeleton className="mt-4 h-8 w-56 md:h-9 md:w-72" />

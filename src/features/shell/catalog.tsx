@@ -4,10 +4,8 @@ import { useMemo, useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
 import { Plus } from "lucide-react";
 
-import type { DataTableFeatures } from "@/components/ui/_types/data-table";
-import { Badge } from "@/components/ui/badge";
+import type { DataTableClassNames, DataTableFeatures } from "@/components/ui/_types/data-table";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { DataTable, DataTableDefaultToolbar } from "@/components/ui/data-table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CatalogEditor } from "@/features/shell/catalog-editor";
@@ -17,51 +15,100 @@ import { useWorkspace } from "@/features/shell/use-workspace";
 import { WorkspaceState } from "@/features/shell/workspace-state";
 import { HttpResponseError } from "@/lib/api/client";
 import type { Workspace } from "@/lib/domain/_types/workspace";
+import { cn } from "@/lib/utils";
 
 type Product = Workspace["products"][number];
 type Customer = Workspace["customers"][number];
+
+/**
+ * The register carries no outer box: the shared table primitive already supplies letterspaced
+ * headers over a rule and hairline rows, so the screen only removes the container chrome and
+ * pulls the first and last columns onto the page's own margin.
+ */
+const registerStyles: DataTableClassNames = {
+  cell: "px-0 pr-8 last:pr-0",
+  container: "rounded-none border-0",
+  emptyCell: "px-0 text-muted-foreground",
+  head: "px-0 pr-8 last:pr-0",
+};
+
+/** State is a square marker plus text, never a coloured pill. */
+function StatusMark({ label, live }: { label: string; live: boolean }) {
+  return (
+    <span className="inline-flex items-center gap-2 whitespace-nowrap">
+      <span
+        aria-hidden
+        className={cn("size-1.5 shrink-0", live ? "bg-ink-accent" : "bg-foreground/40")}
+      />
+      <span className={live ? "text-foreground" : "text-muted-foreground"}>{label}</span>
+    </span>
+  );
+}
+
 const productColumns: ColumnDef<DataTableFeatures, Product>[] = [
   {
     accessorKey: "name",
     header: "Product",
     cell: ({ row }) => (
-      <div>
-        <p className="font-medium">{row.original.name}</p>
-        <p className="text-xs text-muted-foreground">{row.original.variant}</p>
-      </div>
+      <span className="block">
+        <span className="block font-medium text-foreground">{row.original.name}</span>
+        <span className="mt-1 block text-xs text-muted-foreground">{row.original.variant}</span>
+      </span>
     ),
   },
-  { accessorKey: "category", header: "Category" },
+  {
+    accessorKey: "category",
+    header: "Category",
+    cell: ({ row }) => <span className="text-muted-foreground">{row.original.category}</span>,
+  },
   {
     accessorKey: "priceCents",
-    header: "Unit price",
-    cell: ({ row }) => money(row.original.priceCents),
+    header: () => <span className="block text-right">Unit price</span>,
+    cell: ({ row }) => (
+      <span className="block text-right font-medium text-foreground tabular-nums">
+        {money(row.original.priceCents)}
+      </span>
+    ),
   },
   {
     accessorKey: "intervalMonths",
     header: "Billing",
-    cell: ({ row }) =>
-      row.original.intervalMonths ? `Every ${row.original.intervalMonths} month(s)` : "One-time",
+    cell: ({ row }) => (
+      <span className="text-muted-foreground">
+        {row.original.intervalMonths ? `Every ${row.original.intervalMonths} month(s)` : "One-time"}
+      </span>
+    ),
   },
   {
     accessorKey: "active",
     header: "Status",
     cell: ({ row }) => (
-      <Badge variant={row.original.active ? "default" : "secondary"}>
-        {row.original.active ? "Active" : "Inactive"}
-      </Badge>
+      <StatusMark live={row.original.active} label={row.original.active ? "Active" : "Inactive"} />
     ),
   },
 ];
+
 const customerColumns: ColumnDef<DataTableFeatures, Customer>[] = [
-  { accessorKey: "name", header: "Customer" },
-  { accessorKey: "email", header: "Email" },
+  {
+    accessorKey: "name",
+    header: "Customer",
+    cell: ({ row }) => <span className="font-medium text-foreground">{row.original.name}</span>,
+  },
+  {
+    accessorKey: "email",
+    header: "Email",
+    cell: ({ row }) => <span className="text-muted-foreground">{row.original.email}</span>,
+  },
   {
     accessorKey: "tier",
     header: "Tier",
-    cell: ({ row }) => <Badge variant="outline">{row.original.tier}</Badge>,
+    cell: ({ row }) => <span className="text-foreground">{row.original.tier}</span>,
   },
-  { accessorKey: "team", header: "Team" },
+  {
+    accessorKey: "team",
+    header: "Team",
+    cell: ({ row }) => <span className="text-muted-foreground">{row.original.team}</span>,
+  },
 ];
 
 export function Catalog({ customersOnly = false }: { customersOnly?: boolean }) {
@@ -79,18 +126,21 @@ export function Catalog({ customersOnly = false }: { customersOnly?: boolean }) 
             ...customerColumns,
             {
               id: "actions",
-              header: "Actions",
+              header: () => <span className="block text-right">Actions</span>,
               cell: ({ row }) => (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    setEditor({ kind: "customer", customer: row.original });
-                  }}
-                >
-                  Edit customer
-                </Button>
+                <span className="flex justify-end">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-auto rounded-none px-0 py-1 text-xs text-muted-foreground underline decoration-border-strong underline-offset-4 hover:bg-transparent hover:text-foreground hover:decoration-foreground"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      setEditor({ kind: "customer", customer: row.original });
+                    }}
+                  >
+                    Edit customer
+                  </Button>
+                </span>
               ),
             },
           ]
@@ -119,7 +169,7 @@ export function Catalog({ customersOnly = false }: { customersOnly?: boolean }) 
             : "The products, services, and customers behind every great deal."
         }
       />
-      <Tabs defaultValue={customersOnly ? "customers" : "products"}>
+      <Tabs defaultValue={customersOnly ? "customers" : "products"} className="gap-8">
         {!customersOnly && (
           <TabsList>
             <TabsTrigger value="products">Products · {data.products.length}</TabsTrigger>
@@ -127,80 +177,70 @@ export function Catalog({ customersOnly = false }: { customersOnly?: boolean }) 
           </TabsList>
         )}
         <TabsContent value="products">
-          <Card>
-            <CardContent>
-              <DataTable
-                toolbar={(table, extras) => (
-                  <DataTableDefaultToolbar
-                    table={table}
-                    title="Products & services"
-                    description={
-                      canEdit
-                        ? "Select a row to edit its pricing and availability."
-                        : "Your current product and service price book."
-                    }
-                    searchColumn="name"
-                    searchPlaceholder="Search products…"
-                    actions={
-                      <>
-                        {extras.bulkRemove}
-                        {canEdit ? (
-                          <Button onClick={() => setEditor({ kind: "product" })}>
-                            <Plus />
-                            Add product
-                          </Button>
-                        ) : null}
-                      </>
-                    }
-                  />
-                )}
-                columns={productColumns}
-                data={data.products}
-                getRowId={(row) => row.id}
-                onRowClick={
-                  canEdit ? (product) => setEditor({ kind: "product", product }) : undefined
+          <DataTable
+            classNames={registerStyles}
+            toolbar={(table, extras) => (
+              <DataTableDefaultToolbar
+                table={table}
+                title="Products & services"
+                description={
+                  canEdit
+                    ? "Select a row to edit its pricing and availability."
+                    : "Your current product and service price book."
                 }
-                emptyMessage="No products yet. Add your first product to start quoting."
+                searchColumn="name"
+                searchPlaceholder="Search products…"
+                actions={
+                  <>
+                    {extras.bulkRemove}
+                    {canEdit ? (
+                      <Button onClick={() => setEditor({ kind: "product" })}>
+                        <Plus />
+                        Add product
+                      </Button>
+                    ) : null}
+                  </>
+                }
               />
-            </CardContent>
-          </Card>
+            )}
+            columns={productColumns}
+            data={data.products}
+            getRowId={(row) => row.id}
+            onRowClick={canEdit ? (product) => setEditor({ kind: "product", product }) : undefined}
+            emptyMessage="No products yet. Add your first product to start quoting."
+          />
         </TabsContent>
         <TabsContent value="customers">
-          <Card>
-            <CardContent>
-              <DataTable
-                toolbar={(table, extras) => (
-                  <DataTableDefaultToolbar
-                    table={table}
-                    title="Customer directory"
-                    description="Customer tiers guide your discount policy."
-                    searchColumn="name"
-                    searchPlaceholder="Search customers…"
-                    actions={
-                      <>
-                        {extras.bulkRemove}
-                        {["admin", "manager", "rep"].includes(data.actor.role) ? (
-                          <Button onClick={() => setEditor({ kind: "customer" })}>
-                            <Plus />
-                            Add customer
-                          </Button>
-                        ) : null}
-                      </>
-                    }
-                  />
-                )}
-                columns={directoryColumns}
-                data={data.customers}
-                getRowId={(row) => row.id}
-                onRowClick={
-                  canEditCustomer
-                    ? (customer) => setEditor({ kind: "customer", customer })
-                    : undefined
+          <DataTable
+            classNames={registerStyles}
+            toolbar={(table, extras) => (
+              <DataTableDefaultToolbar
+                table={table}
+                title="Customer directory"
+                description="Customer tiers guide your discount policy."
+                searchColumn="name"
+                searchPlaceholder="Search customers…"
+                actions={
+                  <>
+                    {extras.bulkRemove}
+                    {["admin", "manager", "rep"].includes(data.actor.role) ? (
+                      <Button onClick={() => setEditor({ kind: "customer" })}>
+                        <Plus />
+                        Add customer
+                      </Button>
+                    ) : null}
+                  </>
                 }
-                emptyMessage="No customers yet."
               />
-            </CardContent>
-          </Card>
+            )}
+            columns={directoryColumns}
+            data={data.customers}
+            getRowId={(row) => row.id}
+            onRowClick={
+              canEditCustomer ? (customer) => setEditor({ kind: "customer", customer }) : undefined
+            }
+            emptyMessage="No customers yet."
+          />
         </TabsContent>
       </Tabs>
       {editor && <CatalogEditor {...editor} close={() => setEditor(null)} saved={mutate} />}

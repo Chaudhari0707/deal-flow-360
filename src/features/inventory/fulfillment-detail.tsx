@@ -2,14 +2,12 @@
 
 import { useMemo, useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
-import { ArrowLeft, Check, PackageCheck, Truck } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import useSWR, { useSWRConfig } from "swr";
 
 import type { DataTableFeatures } from "@/components/ui/_types/data-table";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { DataTable } from "@/components/ui/data-table";
 import {
   Dialog,
@@ -20,9 +18,17 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Table,
+  TableBody,
+  TableCaption,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import type { FulfillmentDetail as Detail } from "@/features/inventory/_types/ui";
 import {
-  displayFulfillmentStatus,
   fulfillmentActions,
   fulfillmentNextStep,
   NO_STOCK_AVAILABLE,
@@ -31,11 +37,29 @@ import {
   stillNeededLine,
   warehouseAvailability,
 } from "@/features/inventory/fulfillment-copy";
+import {
+  compactCell,
+  compactHead,
+  FigureBand,
+  figureValue,
+  numericCell,
+  operationalTable,
+  SectionHead,
+  StatusMark,
+} from "@/features/inventory/inventory-editorial";
 import { OverrideForm } from "@/features/inventory/override-form";
 import { PageHeader } from "@/features/shell/page-header";
 import { useWorkspace } from "@/features/shell/use-workspace";
 import { WorkspaceState } from "@/features/shell/workspace-state";
 import { apiClient, apiData } from "@/lib/api/client";
+import { cn } from "@/lib/utils";
+
+/**
+ * A dispatch dossier, not a stack of cards. Counts sit in a hairline-divided figure band, every
+ * warehouse line is a ruled register row with right-aligned tabular numerals, and state reads as
+ * a square marker plus an AAA ink. The same body serves the route and the dialog; only density
+ * and heading level change.
+ */
 
 export function FulfillmentDetail({
   id,
@@ -103,14 +127,40 @@ export function FulfillmentDetail({
   }
   const columns = useMemo<ColumnDef<DataTableFeatures, Detail["allocations"][number]>[]>(
     () => [
-      { accessorKey: "product", header: "Product" },
-      { accessorKey: "warehouse", header: "Warehouse" },
-      { accessorKey: "quantity", header: "Allocated" },
-      { accessorKey: "shipped", header: "Shipped" },
+      {
+        accessorKey: "product",
+        header: "Product",
+        cell: ({ row }) => (
+          <span className="font-medium text-foreground">{row.original.product}</span>
+        ),
+      },
+      {
+        accessorKey: "warehouse",
+        header: "Warehouse",
+        cell: ({ row }) => <span className="text-muted-foreground">{row.original.warehouse}</span>,
+      },
+      {
+        accessorKey: "quantity",
+        header: () => <span className="block text-right">Allocated</span>,
+        cell: ({ row }) => (
+          <span className={cn(numericCell, "text-foreground")}>{row.original.quantity}</span>
+        ),
+      },
+      {
+        accessorKey: "shipped",
+        header: () => <span className="block text-right">Shipped</span>,
+        cell: ({ row }) => (
+          <span className={cn(numericCell, "text-muted-foreground")}>{row.original.shipped}</span>
+        ),
+      },
       {
         id: "pending",
-        header: "Ready to ship",
-        cell: ({ row }) => row.original.quantity - row.original.shipped,
+        header: () => <span className="block text-right">Ready to ship</span>,
+        cell: ({ row }) => (
+          <span className={cn(numericCell, "font-medium text-foreground")}>
+            {row.original.quantity - row.original.shipped}
+          </span>
+        ),
       },
     ],
     [],
@@ -144,11 +194,41 @@ export function FulfillmentDetail({
     unshipped,
   });
   const nextStep = fulfillmentNextStep(data.order.fulfillmentStatus, actions);
+  const level = compact ? "h3" : "h2";
+  const statusFigure = <StatusMark prominent status={data.order.fulfillmentStatus} />;
+  const figures = compact
+    ? [
+        { label: "Status", value: statusFigure },
+        { label: "Still needed", value: <span className={figureValue}>{remainingUnits}</span> },
+        {
+          label: "Pending shipments",
+          value: <span className={figureValue}>{data.shipmentCount}</span>,
+        },
+      ]
+    : [
+        {
+          label: "Status",
+          note: data.order.acceptedAt
+            ? "Shipment accepted by operations"
+            : "Awaiting operations acceptance",
+          value: statusFigure,
+        },
+        {
+          label: "Pending shipments",
+          note: "Grouped by warehouse",
+          value: <span className={figureValue}>{data.shipmentCount}</span>,
+        },
+        {
+          label: "Shipping score",
+          note: "A comparison score, not a charge",
+          value: <span className={figureValue}>{data.shippingScore.toFixed(1)}</span>,
+        },
+      ];
+  const hasShipmentActions = canOperate && (actions.accept || actions.override);
   const shipmentActions = canOperate ? (
     <>
       {actions.accept && (
         <Button disabled={pending} onClick={() => void action("accept")}>
-          <Check />
           Accept shipment
         </Button>
       )}
@@ -163,64 +243,13 @@ export function FulfillmentDetail({
     </>
   ) : null;
   const body = (
-    <div className={compact ? "grid gap-3" : "grid gap-4"}>
-      {nextStep && <p className="text-sm text-muted-foreground">{nextStep}</p>}
-      {compact ? (
-        <dl className="grid grid-cols-3 gap-2 rounded-lg border px-3 py-2">
-          <div>
-            <dt className="text-xs text-muted-foreground">Status</dt>
-            <dd className="mt-1">
-              <Badge variant={data.backorders.length ? "destructive" : "secondary"}>
-                {displayFulfillmentStatus(data.order.fulfillmentStatus)}
-              </Badge>
-            </dd>
-          </div>
-          <div>
-            <dt className="text-xs text-muted-foreground">Still needed</dt>
-            <dd className="mt-1 font-medium">{remainingUnits}</dd>
-          </div>
-          <div>
-            <dt className="text-xs text-muted-foreground">Pending shipments</dt>
-            <dd className="mt-1 font-medium">{data.shipmentCount}</dd>
-          </div>
-        </dl>
-      ) : (
-        <div className="grid gap-4 sm:grid-cols-3">
-          <Card>
-            <CardHeader>
-              <CardDescription>Status</CardDescription>
-              <CardTitle>
-                <Badge variant={data.backorders.length ? "destructive" : "secondary"}>
-                  {displayFulfillmentStatus(data.order.fulfillmentStatus)}
-                </Badge>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="text-sm text-muted-foreground">
-              {data.order.acceptedAt
-                ? "Shipment accepted by operations"
-                : "Awaiting operations acceptance"}
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader>
-              <CardDescription>Pending shipments</CardDescription>
-              <CardTitle className="text-3xl">{data.shipmentCount}</CardTitle>
-            </CardHeader>
-            <CardContent className="text-sm text-muted-foreground">
-              Grouped by warehouse
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader>
-              <CardDescription>Shipping score</CardDescription>
-              <CardTitle className="text-3xl">{data.shippingScore.toFixed(1)}</CardTitle>
-            </CardHeader>
-            <CardContent className="text-sm text-muted-foreground">
-              A comparison score, not a charge
-            </CardContent>
-          </Card>
-        </div>
-      )}
+    <div className={compact ? "grid gap-6" : "grid gap-10"}>
+      <div className="grid gap-6">
+        {nextStep && (
+          <p className="max-w-[68ch] text-sm leading-relaxed text-muted-foreground">{nextStep}</p>
+        )}
+        <FigureBand compact={compact} items={figures} />
+      </div>
       {notice && (
         <Alert variant={failed ? "destructive" : "default"}>
           <AlertDescription>{notice}</AlertDescription>
@@ -228,14 +257,13 @@ export function FulfillmentDetail({
       )}
       {data.backorders.length > 0 && (
         <Alert>
-          <PackageCheck />
           <AlertTitle>{stillNeededLabel(remainingUnits)}</AlertTitle>
           <AlertDescription>
-            <div className="space-y-3">
-              <p>
-                Consolidate remaining backorder reserves leftover units from available stock at each
-                warehouse. Receive stock on Inventory first. This does not ship.
-              </p>
+            <p className="max-w-[68ch] leading-relaxed">
+              Consolidate remaining backorder reserves leftover units from available stock at each
+              warehouse. Receive stock on Inventory first. This does not ship.
+            </p>
+            <dl>
               {data.backorders.map((line) => {
                 const ordered = data.order.lines
                   .filter((orderLine) => orderLine.productId === line.productId)
@@ -246,93 +274,116 @@ export function FulfillmentDetail({
                   workspaceData.stocks,
                 );
                 return (
-                  <div key={line.productId} className="space-y-1">
-                    <p>{stillNeededLine(line.product, line.quantity, ordered)}</p>
+                  <div key={line.productId} className="border-t border-border py-3">
+                    <dt className="flex items-baseline gap-2.5 text-sm text-ink-risk">
+                      <span aria-hidden className="size-1.5 shrink-0 translate-y-1 bg-ink-risk" />
+                      {stillNeededLine(line.product, line.quantity, ordered)}
+                    </dt>
                     {locations.length === 0 ? (
-                      <p className="text-sm">{NO_STOCK_AVAILABLE}</p>
+                      <dd className="mt-1.5 pl-4 text-xs text-muted-foreground">
+                        {NO_STOCK_AVAILABLE}
+                      </dd>
                     ) : (
-                      <ul className="text-sm">
-                        {locations.map((location) => (
-                          <li key={location.warehouseId}>
-                            {location.name}: {location.available} available
-                          </li>
-                        ))}
-                      </ul>
+                      locations.map((location) => (
+                        <dd
+                          key={location.warehouseId}
+                          className="mt-1.5 pl-4 text-xs text-muted-foreground tabular-nums"
+                        >
+                          {location.name}: {location.available} available
+                        </dd>
+                      ))
                     )}
                   </div>
                 );
               })}
-              {canConsolidate && actions.consolidate && (
-                <Button disabled={pending} onClick={() => void action("consolidate")}>
-                  Consolidate remaining backorder
-                </Button>
-              )}
-            </div>
+            </dl>
+            {canConsolidate && actions.consolidate && (
+              <Button
+                className="mt-5"
+                disabled={pending}
+                onClick={() => void action("consolidate")}
+              >
+                Consolidate remaining backorder
+              </Button>
+            )}
           </AlertDescription>
         </Alert>
       )}
-      <Card>
-        <CardHeader>
-          <CardTitle>Reserved stock</CardTitle>
-          <CardDescription>
-            Confirmation holds stock. Accept shipment, then Ship. Override is only after accept, and
-            never after fulfilled.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {compact ? (
-            <table className="w-full text-sm">
-              <caption className="sr-only">Reserved stock</caption>
-              <thead>
-                <tr className="border-b text-left text-muted-foreground">
-                  <th className="py-1.5 font-medium">Product</th>
-                  <th className="py-1.5 font-medium">Warehouse</th>
-                  <th className="py-1.5 text-right font-medium">Allocated</th>
-                  <th className="py-1.5 text-right font-medium">Shipped</th>
-                  <th className="py-1.5 text-right font-medium">Ready</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.allocations.length === 0 ? (
-                  <tr>
-                    <td colSpan={5} className="py-3 text-muted-foreground">
-                      No stock reserved yet. Receive stock, then fill the remaining backorder.
-                    </td>
-                  </tr>
-                ) : (
-                  data.allocations.map((row) => (
-                    <tr key={row.id} className="border-b last:border-0">
-                      <td className="py-1.5">{row.product}</td>
-                      <td className="py-1.5">{row.warehouse}</td>
-                      <td className="py-1.5 text-right">{row.quantity}</td>
-                      <td className="py-1.5 text-right">{row.shipped}</td>
-                      <td className="py-1.5 text-right">{row.quantity - row.shipped}</td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          ) : (
+      <section>
+        <SectionHead
+          level={level}
+          title="Reserved stock"
+          description="Confirmation holds stock. Accept shipment, then Ship. Override is only after accept, and never after fulfilled."
+        />
+        {compact ? (
+          <Table className="mt-5 text-[0.8125rem]">
+            <TableCaption className="sr-only">Reserved stock</TableCaption>
+            <TableHeader>
+              <TableRow>
+                <TableHead className={compactHead}>Product</TableHead>
+                <TableHead className={compactHead}>Warehouse</TableHead>
+                <TableHead className={cn(compactHead, "text-right")}>Allocated</TableHead>
+                <TableHead className={cn(compactHead, "text-right")}>Shipped</TableHead>
+                <TableHead className={cn(compactHead, "text-right")}>Ready</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {data.allocations.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={5} className={cn(compactCell, "text-muted-foreground")}>
+                    No stock reserved yet. Receive stock, then fill the remaining backorder.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                data.allocations.map((row) => (
+                  <TableRow key={row.id}>
+                    <TableCell className={cn(compactCell, "font-medium text-foreground")}>
+                      {row.product}
+                    </TableCell>
+                    <TableCell className={cn(compactCell, "text-muted-foreground")}>
+                      {row.warehouse}
+                    </TableCell>
+                    <TableCell className={cn(compactCell, "text-right text-foreground")}>
+                      {row.quantity}
+                    </TableCell>
+                    <TableCell className={cn(compactCell, "text-right text-muted-foreground")}>
+                      {row.shipped}
+                    </TableCell>
+                    <TableCell
+                      className={cn(compactCell, "text-right font-medium text-foreground")}
+                    >
+                      {row.quantity - row.shipped}
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        ) : (
+          <div className="mt-5">
             <DataTable
+              classNames={operationalTable}
               columns={columns}
               data={data.allocations}
+              enableColumnResizing={false}
               getRowId={(row) => row.id}
               pageSize={20}
               emptyMessage="No stock reserved yet. Receive stock, then fill the remaining backorder."
             />
-          )}
-          {!compact && <div className="flex flex-wrap gap-2">{shipmentActions}</div>}
-        </CardContent>
-      </Card>
+          </div>
+        )}
+        {!compact && hasShipmentActions && (
+          <div className="mt-6 flex flex-wrap gap-3">{shipmentActions}</div>
+        )}
+      </section>
       {canOperate && actions.ship && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Dispatch reserved units</CardTitle>
-            <CardDescription>
-              Each action ships the remaining allocation. Repeated requests cannot dispatch twice.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-wrap gap-3">
+        <section>
+          <SectionHead
+            level={level}
+            title="Dispatch reserved units"
+            description="Each action ships the remaining allocation. Repeated requests cannot dispatch twice."
+          />
+          <div className="mt-5 flex flex-wrap gap-3">
             {data.allocations
               .filter((a) => a.quantity > a.shipped)
               .map((allocation) => (
@@ -352,19 +403,18 @@ export function FulfillmentDetail({
                     });
                   }}
                 >
-                  <Truck />
                   Ship {allocation.quantity - allocation.shipped} {allocation.product} ·{" "}
                   {allocation.warehouse}
                 </Button>
               ))}
-          </CardContent>
-        </Card>
+          </div>
+        </section>
       )}
     </div>
   );
   if (!compact)
     return (
-      <>
+      <div className="w-full">
         <PageHeader
           title={data.order.number}
           description="Review reserved stock, ship units, and fill backorders when stock arrives."
@@ -375,8 +425,8 @@ export function FulfillmentDetail({
             </Button>
           }
         />
-        {body}
-      </>
+        <div className="mt-10">{body}</div>
+      </div>
     );
   return (
     <>

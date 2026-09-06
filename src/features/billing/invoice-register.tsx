@@ -24,7 +24,6 @@ const lenses = [
  */
 const registerStyles: DataTableClassNames = {
   cell: "border-b border-foreground/10 px-0 py-4 pr-8 align-top last:pr-0",
-  container: "rounded-none border-0",
   emptyCell: "border-b border-foreground/10 px-0 text-foreground",
   head: "h-auto border-b border-foreground/30 px-0 pt-0 pr-8 pb-3 text-[0.6875rem] font-medium tracking-[0.16em] text-muted-foreground uppercase last:pr-0",
   pagination: cn(

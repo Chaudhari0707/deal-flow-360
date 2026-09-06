@@ -3,6 +3,7 @@
 import * as React from "react";
 import { type RowData, type Table } from "@tanstack/react-table";
 
+import { eyebrowType } from "@/components/editorial/editorial";
 import type { DataTableFeatures } from "@/components/ui/_types/data-table";
 import { Button } from "@/components/ui/button";
 import { DataTableViewOptions } from "@/components/ui/data-table/data-table-view-options";
@@ -13,7 +14,6 @@ import { cn } from "@/lib/utils";
  * Quiet label type for the shared table chrome. Labels recede through size, weight, case and
  * letter-spacing — never through transparency, which cannot hold AAA in the light theme.
  */
-const eyebrowType = "text-[0.6875rem] font-medium tracking-[0.16em] uppercase";
 
 interface DataTableDefaultToolbarProps<TData extends RowData> {
   table: Table<DataTableFeatures, TData>;

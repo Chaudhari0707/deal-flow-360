@@ -35,6 +35,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { FulfillmentDetail } from "@/features/inventory/_types/ui";
+import { fieldLabel } from "@/features/inventory/inventory-editorial";
 import {
   allocatedQuantity,
   clampOverrideQuantity,
@@ -50,6 +51,13 @@ import {
 } from "@/features/inventory/override-form-state";
 import { apiClient, apiData } from "@/lib/api/client";
 import type { Workspace } from "@/lib/domain/_types/workspace";
+import { cn } from "@/lib/utils";
+
+/**
+ * An audited re-plan, laid out as a ledger: the running demand/allocated/remaining counts sit
+ * tabular under a rule so they compare line to line, and every extra warehouse row sits under
+ * its own hairline instead of inside a nested card.
+ */
 
 export function OverrideForm({
   detail,
@@ -128,7 +136,10 @@ export function OverrideForm({
                 return (
                   <FieldSet key={product.productId}>
                     <FieldLegend>{product.name}</FieldLegend>
-                    <FieldDescription aria-live="polite">
+                    <FieldDescription
+                      aria-live="polite"
+                      className="border-b border-border pb-3 tabular-nums"
+                    >
                       Demanded {product.quantity} · Allocated {allocated} · Remaining {remaining}
                       {shipped > 0 ? ` · ${shipped} shipped stay in place` : ""}
                     </FieldDescription>
@@ -193,10 +204,19 @@ export function OverrideForm({
                         },
                       });
                       return (
-                        <div key={field.id} className="grid gap-2">
+                        <div
+                          key={field.id}
+                          className={cn(
+                            "grid gap-2",
+                            rowNumber > 0 && "border-t border-border pt-4",
+                          )}
+                        >
                           <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_8rem_auto] sm:items-end">
                             <Field data-invalid={Boolean(warehouseError) || undefined}>
-                              <FieldLabel htmlFor={`override-warehouse-${field.id}`}>
+                              <FieldLabel
+                                htmlFor={`override-warehouse-${field.id}`}
+                                className={fieldLabel}
+                              >
                                 Warehouse
                               </FieldLabel>
                               <Select
@@ -258,7 +278,10 @@ export function OverrideForm({
                             </Field>
                             {warehouseId ? (
                               <Field data-invalid={Boolean(quantityError) || undefined}>
-                                <FieldLabel htmlFor={`override-qty-${field.id}`}>
+                                <FieldLabel
+                                  htmlFor={`override-qty-${field.id}`}
+                                  className={fieldLabel}
+                                >
                                   Quantity
                                 </FieldLabel>
                                 <NumberInput
@@ -300,7 +323,7 @@ export function OverrideForm({
                             </Button>
                           </div>
                           {warehouseId ? (
-                            <FieldDescription aria-live="polite">
+                            <FieldDescription aria-live="polite" className="tabular-nums">
                               Available {available} at {warehouseName}
                             </FieldDescription>
                           ) : null}
@@ -328,8 +351,10 @@ export function OverrideForm({
                   </FieldSet>
                 );
               })}
-              <Field>
-                <FieldLabel htmlFor="override-reason">Why is this change needed?</FieldLabel>
+              <Field className="border-t border-border-strong pt-4">
+                <FieldLabel htmlFor="override-reason" className={fieldLabel}>
+                  Why is this change needed?
+                </FieldLabel>
                 <Input
                   id="override-reason"
                   {...form.register("reason", {

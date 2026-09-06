@@ -32,11 +32,24 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { CustomerInvitationStatus } from "@/features/catalog/customer-invitation-status";
 import { CustomerDelete } from "@/features/shell/customer-delete";
 import { useWorkspace } from "@/features/shell/use-workspace";
 import { apiClient, apiData, HttpResponseError } from "@/lib/api/client";
 import type { Workspace } from "@/lib/domain/_types/workspace";
+
+/**
+ * Editorial record editor. Grouping comes from hairline rules and column rhythm rather than
+ * nested boxes: labels recede to quiet letterspaced kickers and every control is a value sitting
+ * on its own rule, so the data the user is typing stays the loudest thing in the dialog.
+ */
+const labelType = "text-[0.6875rem] font-medium tracking-[0.16em] text-muted-foreground uppercase";
+const ruledInput =
+  "h-9 rounded-none border-0 border-b-2 border-border-strong bg-transparent px-0 text-sm focus-visible:border-ink-accent dark:bg-transparent";
+const ruledArea =
+  "min-h-20 rounded-none border-0 border-b-2 border-border-strong bg-transparent px-0 py-2 text-sm focus-visible:border-ink-accent dark:bg-transparent";
+const ruledSelect =
+  "w-full rounded-none border-0 border-b-2 border-border-strong bg-transparent px-0 hover:bg-transparent focus-visible:border-ink-accent data-[size=default]:h-9";
+const twoUp = "grid gap-x-8 gap-y-6 sm:grid-cols-2";
 
 function productCategory(value: string): "Hardware" | "Services" | "Subscription" {
   if (value === "Hardware" || value === "Services" || value === "Subscription") return value;
@@ -51,6 +64,33 @@ function intervalMonths(value: number): 0 | 1 | 3 | 12 {
 function customerTier(value: string): "Bronze" | "Gold" | "Silver" {
   if (value === "Bronze" || value === "Silver" || value === "Gold") return value;
   throw new Error("Choose a valid customer tier");
+}
+
+function priceFields(product?: Workspace["products"][number]) {
+  return [
+    {
+      name: "price",
+      label: "Unit price ($)",
+      value: (product?.priceCents ?? 0) / 100,
+      step: "0.01",
+      max: 100000,
+    },
+    {
+      name: "cost",
+      label: "Unit cost ($)",
+      value: (product?.costCents ?? 0) / 100,
+      step: "0.01",
+      max: 100000,
+    },
+    { name: "tax", label: "Tax (%)", value: (product?.taxBps ?? 0) / 100, step: "0.01", max: 100 },
+    {
+      name: "promotion",
+      label: "Promotion discount (%)",
+      value: (product?.promotionBps ?? 0) / 100,
+      step: "0.01",
+      max: 100,
+    },
+  ];
 }
 
 export function CatalogEditor({
@@ -149,12 +189,13 @@ export function CatalogEditor({
         if (!open && !pending) close();
       }}
     >
-      <DialogContent className="sm:max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>
+      <DialogContent className="border-t-2 border-t-foreground sm:max-w-2xl">
+        <DialogHeader className="border-b border-border-strong pb-4">
+          <span aria-hidden className="block h-0.5 w-7 bg-ink-accent" />
+          <DialogTitle className="mt-2 text-2xl leading-tight font-semibold tracking-tight text-foreground">
             {existing ? "Edit" : "Add"} {kind}
           </DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="max-w-[68ch] leading-relaxed">
             {kind === "product"
               ? "Each variant is a separate SKU with its own final unit price. Catalog changes apply to new quotation lines; existing quotes keep their pricing snapshots."
               : "New customers receive a portal login and a temporary password by email. Existing customers keep their password when details change; changing their login email signs them out."}
@@ -162,21 +203,26 @@ export function CatalogEditor({
         </DialogHeader>
         <form method="post" onSubmit={submit}>
           <DialogBody>
-            <FieldGroup>
+            <FieldGroup className="gap-7">
               <Field>
-                <FieldLabel htmlFor="catalog-name">Name</FieldLabel>
+                <FieldLabel htmlFor="catalog-name" className={labelType}>
+                  Name
+                </FieldLabel>
                 <Input
                   id="catalog-name"
                   name="name"
                   required
                   maxLength={120}
                   defaultValue={existing?.name}
+                  className={ruledInput}
                 />
               </Field>
               {kind === "customer" ? (
                 <>
                   <Field>
-                    <FieldLabel htmlFor="catalog-email">Customer email</FieldLabel>
+                    <FieldLabel htmlFor="catalog-email" className={labelType}>
+                      Customer email
+                    </FieldLabel>
                     <Input
                       id="catalog-email"
                       name="email"
@@ -184,13 +230,16 @@ export function CatalogEditor({
                       required
                       maxLength={254}
                       defaultValue={customer?.email}
+                      className={ruledInput}
                     />
                   </Field>
-                  <div className="grid gap-4 sm:grid-cols-2">
+                  <div className={twoUp}>
                     <Field>
-                      <FieldLabel htmlFor="catalog-tier">Tier</FieldLabel>
+                      <FieldLabel htmlFor="catalog-tier" className={labelType}>
+                        Tier
+                      </FieldLabel>
                       <Select name="tier" defaultValue={customer?.tier ?? "Bronze"}>
-                        <SelectTrigger id="catalog-tier" className="w-full">
+                        <SelectTrigger id="catalog-tier" className={ruledSelect}>
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -203,24 +252,29 @@ export function CatalogEditor({
                       </Select>
                     </Field>
                     <Field>
-                      <FieldLabel htmlFor="catalog-team">Sales team</FieldLabel>
+                      <FieldLabel htmlFor="catalog-team" className={labelType}>
+                        Sales team
+                      </FieldLabel>
                       <Input
                         id="catalog-team"
                         name="team"
                         required
                         maxLength={100}
                         defaultValue={customer?.team ?? "Enterprise"}
+                        className={ruledInput}
                       />
                     </Field>
                   </div>
                 </>
               ) : (
                 <>
-                  <div className="grid gap-4 sm:grid-cols-2">
+                  <div className={twoUp}>
                     <Field>
-                      <FieldLabel htmlFor="catalog-category">Category</FieldLabel>
+                      <FieldLabel htmlFor="catalog-category" className={labelType}>
+                        Category
+                      </FieldLabel>
                       <Select name="category" defaultValue={product?.category ?? "Hardware"}>
-                        <SelectTrigger id="catalog-category" className="w-full">
+                        <SelectTrigger id="catalog-category" className={ruledSelect}>
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -233,58 +287,37 @@ export function CatalogEditor({
                       </Select>
                     </Field>
                     <Field>
-                      <FieldLabel htmlFor="catalog-variant">Variant</FieldLabel>
+                      <FieldLabel htmlFor="catalog-variant" className={labelType}>
+                        Variant
+                      </FieldLabel>
                       <Input
                         id="catalog-variant"
                         name="variant"
                         required
                         maxLength={100}
                         defaultValue={product?.variant ?? "Standard"}
+                        className={ruledInput}
                       />
                     </Field>
                   </div>
                   <Field>
-                    <FieldLabel htmlFor="catalog-description">Description</FieldLabel>
+                    <FieldLabel htmlFor="catalog-description" className={labelType}>
+                      Description
+                    </FieldLabel>
                     <Textarea
                       id="catalog-description"
                       name="description"
                       maxLength={2000}
                       defaultValue={product?.description}
+                      className={ruledArea}
                     />
                   </Field>
-                  <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-                    {[
-                      {
-                        name: "price",
-                        label: "Unit price ($)",
-                        value: (product?.priceCents ?? 0) / 100,
-                        step: "0.01",
-                        max: 100000,
-                      },
-                      {
-                        name: "cost",
-                        label: "Unit cost ($)",
-                        value: (product?.costCents ?? 0) / 100,
-                        step: "0.01",
-                        max: 100000,
-                      },
-                      {
-                        name: "tax",
-                        label: "Tax (%)",
-                        value: (product?.taxBps ?? 0) / 100,
-                        step: "0.01",
-                        max: 100,
-                      },
-                      {
-                        name: "promotion",
-                        label: "Promotion discount (%)",
-                        value: (product?.promotionBps ?? 0) / 100,
-                        step: "0.01",
-                        max: 100,
-                      },
-                    ].map((field) => (
+                  <div className="grid grid-cols-2 gap-x-8 gap-y-6 border-t border-border pt-7 sm:grid-cols-3">
+                    {priceFields(product).map((field) => (
                       <Field key={field.name}>
-                        <FieldLabel htmlFor={`catalog-${field.name}`}>{field.label}</FieldLabel>
+                        <FieldLabel htmlFor={`catalog-${field.name}`} className={labelType}>
+                          {field.label}
+                        </FieldLabel>
                         <NumberInput
                           id={`catalog-${field.name}`}
                           name={field.name}
@@ -293,13 +326,16 @@ export function CatalogEditor({
                           max={field.max}
                           step={field.step}
                           defaultValue={field.value}
+                          className={ruledInput}
                         />
                       </Field>
                     ))}
                     <Field>
-                      <FieldLabel htmlFor="catalog-interval">Billing interval</FieldLabel>
+                      <FieldLabel htmlFor="catalog-interval" className={labelType}>
+                        Billing interval
+                      </FieldLabel>
                       <Select name="interval" defaultValue={String(product?.intervalMonths ?? 0)}>
-                        <SelectTrigger id="catalog-interval" className="w-full">
+                        <SelectTrigger id="catalog-interval" className={ruledSelect}>
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -317,27 +353,34 @@ export function CatalogEditor({
                       </Select>
                     </Field>
                     <Field>
-                      <FieldLabel htmlFor="catalog-unit">Unit</FieldLabel>
+                      <FieldLabel htmlFor="catalog-unit" className={labelType}>
+                        Unit
+                      </FieldLabel>
                       <Input
                         id="catalog-unit"
                         name="unit"
                         required
                         maxLength={50}
                         defaultValue={product?.unit ?? "unit"}
+                        className={ruledInput}
                       />
                     </Field>
                   </div>
-                  <FieldSet>
+                  <FieldSet className="border-t border-border pt-7">
                     <FieldLegend>Suggested pairings</FieldLegend>
-                    <FieldDescription>
+                    <FieldDescription className="max-w-[68ch]">
                       When this item is on a quotation, these products appear as add-on suggestions.
                       Choose up to 20.
                     </FieldDescription>
-                    <FieldGroup className="max-h-48 gap-3 overflow-y-auto rounded-lg border p-3">
+                    <FieldGroup className="max-h-56 gap-0 overflow-y-auto border-t border-border">
                       {pairingChoices.map((candidate) => {
                         const checked = pairedProductIds.includes(candidate.id);
                         return (
-                          <Field key={candidate.id} orientation="horizontal">
+                          <Field
+                            key={candidate.id}
+                            orientation="horizontal"
+                            className="border-b border-border py-2.5"
+                          >
                             <Checkbox
                               id={`catalog-pair-${candidate.id}`}
                               checked={checked}
@@ -352,7 +395,10 @@ export function CatalogEditor({
                                 )
                               }
                             />
-                            <FieldLabel htmlFor={`catalog-pair-${candidate.id}`}>
+                            <FieldLabel
+                              htmlFor={`catalog-pair-${candidate.id}`}
+                              className="text-sm font-normal text-foreground"
+                            >
                               {candidate.name} · {candidate.variant}
                               {candidate.active ? "" : " (inactive)"}
                             </FieldLabel>
@@ -360,20 +406,25 @@ export function CatalogEditor({
                         );
                       })}
                       {!pairingChoices.length && (
-                        <FieldDescription>
+                        <FieldDescription className="py-2.5">
                           No other products are available to pair yet.
                         </FieldDescription>
                       )}
                     </FieldGroup>
                   </FieldSet>
-                  <div className="flex flex-wrap gap-6">
+                  <div className="flex flex-wrap gap-x-8 gap-y-4 border-t border-border pt-6">
                     <Field orientation="horizontal">
                       <Checkbox
                         id="catalog-stockable"
                         checked={stockable}
                         onCheckedChange={(value) => setStockable(Boolean(value))}
                       />
-                      <FieldLabel htmlFor="catalog-stockable">Track inventory</FieldLabel>
+                      <FieldLabel
+                        htmlFor="catalog-stockable"
+                        className="text-sm font-normal text-foreground"
+                      >
+                        Track inventory
+                      </FieldLabel>
                     </Field>
                     <Field orientation="horizontal">
                       <Checkbox
@@ -381,7 +432,12 @@ export function CatalogEditor({
                         checked={active}
                         onCheckedChange={(value) => setActive(Boolean(value))}
                       />
-                      <FieldLabel htmlFor="catalog-active">Active</FieldLabel>
+                      <FieldLabel
+                        htmlFor="catalog-active"
+                        className="text-sm font-normal text-foreground"
+                      >
+                        Active
+                      </FieldLabel>
                     </Field>
                     <Field orientation="horizontal">
                       <Checkbox
@@ -389,7 +445,12 @@ export function CatalogEditor({
                         checked={promoted}
                         onCheckedChange={(value) => setPromoted(Boolean(value))}
                       />
-                      <FieldLabel htmlFor="catalog-promoted">Promoted</FieldLabel>
+                      <FieldLabel
+                        htmlFor="catalog-promoted"
+                        className="text-sm font-normal text-foreground"
+                      >
+                        Promoted
+                      </FieldLabel>
                     </Field>
                   </div>
                 </>

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { RowData, Table } from "@tanstack/react-table";
 
+import { eyebrowType } from "@/components/editorial/editorial";
 import type { DataTableBulkRemoveCopy, DataTableFeatures } from "@/components/ui/_types/data-table";
 import {
   AlertDialog,
@@ -18,7 +19,6 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 /** Quiet label type: hierarchy from size, weight, case and letter-spacing, never from opacity. */
-const eyebrowType = "text-[0.6875rem] font-medium tracking-[0.16em] uppercase";
 
 type DataTableBulkRemoveProps<TData extends RowData> = {
   bulkRemovePending?: boolean;

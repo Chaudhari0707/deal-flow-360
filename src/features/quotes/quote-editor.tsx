@@ -2,12 +2,9 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Trash2 } from "lucide-react";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { NumberInput } from "@/components/ui/number-input";
@@ -18,10 +15,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import type { LineInput } from "@/features/quotes/_types/quotes";
 import { PurchaseRecommendations } from "@/features/quotes/purchase-recommendations";
+import { eyebrowType, ruledControl, SectionHead } from "@/features/quotes/quote-editorial";
+import { QuoteLines } from "@/features/quotes/quote-lines";
+import { QuotePairings, QuoteTotals } from "@/features/quotes/quote-summary";
 import {
   calculateQuote,
   defaultDiscounts,
@@ -31,6 +30,9 @@ import {
 } from "@/features/quotes/rules";
 import { apiClient, apiData } from "@/lib/api/client";
 import type { Workspace } from "@/lib/domain/_types/workspace";
+import { cn } from "@/lib/utils";
+
+const labelType = cn(eyebrowType, "text-muted-foreground");
 
 export function QuoteEditor({
   data,
@@ -157,24 +159,21 @@ export function QuoteEditor({
     .filter((s) => s.line.netCents > 0 && (s.margin / s.line.netCents) * 10000 >= minMargin)
     .sort((a, b) => Number(b.product.promoted) - Number(a.product.promoted) || b.margin - a.margin);
   return (
-    <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
-      <div className="space-y-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Commercial terms</CardTitle>
-            <CardDescription>
-              Tier pricing and category limits are applied automatically.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="grid gap-4 sm:grid-cols-2">
+    <div className="grid items-start gap-x-14 gap-y-12 xl:grid-cols-[minmax(0,1fr)_320px]">
+      <div className="min-w-0">
+        <section>
+          <SectionHead index="01" title="Commercial terms">
+            Tier pricing and category limits are applied automatically.
+          </SectionHead>
+          <div className="grid gap-x-10 gap-y-7 pt-6 sm:grid-cols-2">
             <Field>
-              <FieldLabel>Customer</FieldLabel>
+              <FieldLabel className={labelType}>Customer</FieldLabel>
               <Select
                 value={customerId}
                 onValueChange={(v) => v && setCustomerId(v)}
                 items={data.customers.map((c) => ({ value: c.id, label: `${c.name} · ${c.tier}` }))}
               >
-                <SelectTrigger aria-label="Customer">
+                <SelectTrigger aria-label="Customer" className={cn(ruledControl, "w-full")}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -186,7 +185,10 @@ export function QuoteEditor({
                 </SelectContent>
               </Select>
               {customer && (
-                <p className="text-xs text-muted-foreground" role="note">
+                <p
+                  className="max-w-[60ch] text-xs leading-relaxed text-muted-foreground"
+                  role="note"
+                >
                   {customer.tier} tier: up to {(limits[customer.tier] ?? 0) / 100}% discount without
                   approval. Hardware tier pricing:{" "}
                   {(10000 -
@@ -198,191 +200,120 @@ export function QuoteEditor({
               )}
             </Field>
             <Field>
-              <FieldLabel htmlFor="promise-date">Promised delivery</FieldLabel>
+              <FieldLabel htmlFor="promise-date" className={labelType}>
+                Promised delivery
+              </FieldLabel>
               <Input
                 id="promise-date"
                 type="date"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
+                className={ruledControl}
               />
             </Field>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Quotation lines</CardTitle>
-            <CardDescription>
-              Prices in INR. Discounts update line status, totals and margin immediately.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex gap-2">
-              <Select
-                value={productId}
-                onValueChange={(v) => v && setProductId(v)}
-                items={data.products
+          </div>
+        </section>
+        <section className="mt-14">
+          <SectionHead index="02" title="Quotation lines">
+            Prices in INR. Discounts update line status, totals and margin immediately.
+          </SectionHead>
+          <div className="flex flex-wrap items-end gap-x-6 gap-y-3 py-6">
+            <Select
+              value={productId}
+              onValueChange={(v) => v && setProductId(v)}
+              items={data.products
+                .filter((p) => p.active)
+                .map((p) => ({ value: p.id, label: `${p.name} · ${money(p.priceCents)}` }))}
+            >
+              <SelectTrigger
+                aria-label="Product to add"
+                className={cn(ruledControl, "min-w-0 flex-1")}
+              >
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {data.products
                   .filter((p) => p.active)
-                  .map((p) => ({ value: p.id, label: `${p.name} · ${money(p.priceCents)}` }))}
-              >
-                <SelectTrigger aria-label="Product to add" className="flex-1">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {data.products
-                    .filter((p) => p.active)
-                    .map((p) => (
-                      <SelectItem key={p.id} value={p.id}>
-                        {p.name} · {money(p.priceCents)}
-                      </SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
-              <Button
-                variant="outline"
-                disabled={lines.length >= 100}
-                onClick={() => add(productId)}
-              >
-                <Plus />
-                Add product
-              </Button>
-            </div>
-            {lines.map((line, index) => {
-              const product = data.products.find((p) => p.id === line.productId),
-                priced = totals?.lines[index];
-              const ceiling = Math.min(
-                limits[customer?.tier ?? "Bronze"] ?? 0,
-                limits[product?.category ?? ""] ?? 0,
-              );
-              const effective =
-                10000 - ((10000 - line.discountBps) * (10000 - orderDiscountBps)) / 10000;
-              return (
-                <Card key={line.id} className="shadow-none">
-                  <CardContent className="space-y-3">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="font-medium">{product?.name}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {product?.category} · {product?.variant}
-                          {product?.intervalMonths
-                            ? ` · every ${product.intervalMonths} month(s)`
-                            : ""}
-                        </p>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="icon-sm"
-                        aria-label={`Remove ${product?.name}`}
-                        onClick={() => setLines((current) => current.filter((_, i) => i !== index))}
-                      >
-                        <Trash2 />
-                      </Button>
-                    </div>
-                    <div className="grid grid-cols-2 items-end gap-3 sm:grid-cols-4">
-                      <Field>
-                        <FieldLabel htmlFor={`qty-${line.id}`}>Quantity</FieldLabel>
-                        <NumberInput
-                          id={`qty-${line.id}`}
-                          aria-label={`${product?.name} quantity`}
-                          min={1}
-                          max={10000}
-                          value={line.quantity}
-                          onValueChange={(value) =>
-                            update(index, { quantity: value ?? Number.NaN })
-                          }
-                        />
-                      </Field>
-                      <Field>
-                        <FieldLabel htmlFor={`discount-${line.id}`}>Discount %</FieldLabel>
-                        <NumberInput
-                          id={`discount-${line.id}`}
-                          aria-label={`${product?.name} discount`}
-                          min={0}
-                          max={100}
-                          step="0.01"
-                          value={line.discountBps / 100}
-                          onValueChange={(value) =>
-                            update(index, {
-                              discountBps:
-                                value === undefined ? Number.NaN : Math.round(value * 100),
-                            })
-                          }
-                        />
-                      </Field>
-                      <div className="space-y-1">
-                        <p className="text-xs text-muted-foreground">Ceiling {ceiling / 100}%</p>
-                        <Badge variant={effective > ceiling ? "destructive" : "secondary"}>
-                          {effective > ceiling
-                            ? `OVER +${((effective - ceiling) / 100).toFixed(2)}pt`
-                            : "OK"}
-                        </Badge>
-                      </div>
-                      <p className="text-right font-semibold tabular-nums">
-                        {money(priced?.totalCents ?? 0)}
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
-            {!lines.length && (
-              <p className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
-                Add your first product to start building this quotation.
-              </p>
-            )}
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Field>
-                <FieldLabel htmlFor="order-discount">Order discount %</FieldLabel>
-                <NumberInput
-                  id="order-discount"
-                  min={0}
-                  max={100}
-                  step="0.01"
-                  value={orderDiscountBps / 100}
-                  onValueChange={(value) =>
-                    setOrderDiscount(value === undefined ? Number.NaN : Math.round(value * 100))
-                  }
-                />
-              </Field>
-              <Field>
-                <FieldLabel htmlFor="quote-notes">Internal justification</FieldLabel>
-                <Textarea
-                  id="quote-notes"
-                  maxLength={2000}
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  placeholder="Context for your approver"
-                />
-              </Field>
-            </div>
-            {validation && lines.length > 0 && (
-              <Alert variant="destructive">
-                <AlertDescription>{validation}</AlertDescription>
-              </Alert>
-            )}
-            {error && (
-              <Alert variant="destructive">
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            )}
-            <div className="flex flex-wrap gap-2">
-              <Button
-                variant="outline"
-                disabled={pending || !!validation || !customerId}
-                onClick={() => void save(false)}
-              >
-                {pending ? "Saving…" : "Save draft"}
-              </Button>
-              <Button
-                disabled={pending || !!validation || !customerId}
-                onClick={() => void save(true)}
-              >
-                {pending ? "Working…" : "Save and submit"}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+                  .map((p) => (
+                    <SelectItem key={p.id} value={p.id}>
+                      {p.name} · {money(p.priceCents)}
+                    </SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
+            <Button variant="outline" disabled={lines.length >= 100} onClick={() => add(productId)}>
+              Add product
+            </Button>
+          </div>
+          <QuoteLines
+            limits={limits}
+            lines={lines}
+            orderDiscountBps={orderDiscountBps}
+            priced={totals?.lines}
+            products={data.products}
+            tier={customer?.tier ?? "Bronze"}
+            onRemove={(index) => setLines((current) => current.filter((_, i) => i !== index))}
+            onUpdate={update}
+          />
+          <div className="grid gap-x-10 gap-y-7 pt-10 sm:grid-cols-2">
+            <Field>
+              <FieldLabel htmlFor="order-discount" className={labelType}>
+                Order discount %
+              </FieldLabel>
+              <NumberInput
+                id="order-discount"
+                min={0}
+                max={100}
+                step="0.01"
+                value={orderDiscountBps / 100}
+                onValueChange={(value) =>
+                  setOrderDiscount(value === undefined ? Number.NaN : Math.round(value * 100))
+                }
+                className={ruledControl}
+              />
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="quote-notes" className={labelType}>
+                Internal justification
+              </FieldLabel>
+              <Textarea
+                id="quote-notes"
+                maxLength={2000}
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="Context for your approver"
+                className={ruledControl}
+              />
+            </Field>
+          </div>
+          {validation && lines.length > 0 && (
+            <Alert variant="destructive" className="mt-8">
+              <AlertDescription>{validation}</AlertDescription>
+            </Alert>
+          )}
+          {error && (
+            <Alert variant="destructive" className="mt-8">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+          <div className="mt-10 flex flex-wrap items-center gap-5 border-t border-border-strong pt-6">
+            <Button
+              variant="outline"
+              disabled={pending || !!validation || !customerId}
+              onClick={() => void save(false)}
+            >
+              {pending ? "Saving…" : "Save draft"}
+            </Button>
+            <Button
+              disabled={pending || !!validation || !customerId}
+              onClick={() => void save(true)}
+            >
+              {pending ? "Working…" : "Save and submit"}
+            </Button>
+          </div>
+        </section>
       </div>
-      <div className="space-y-4">
+      <div className="space-y-12">
         <PurchaseRecommendations
           key={customerId}
           customerId={customerId}
@@ -395,99 +326,12 @@ export function QuoteEditor({
           pricelists={pricelists}
           tier={customer?.tier ?? "Bronze"}
         />
-        <Card>
-          <CardHeader>
-            <CardDescription>One-time total</CardDescription>
-            <CardTitle className="text-3xl tabular-nums">
-              {money(totals?.totalCents ?? 0)}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3 text-sm">
-            <div className="flex justify-between">
-              <span>Subtotal</span>
-              <span>{money(totals?.subtotalCents ?? 0)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span>Tax</span>
-              <span>{money(totals?.taxCents ?? 0)}</span>
-            </div>
-            <Separator />
-            <div className="flex justify-between">
-              <span>One-time margin</span>
-              <span>{money(totals?.marginCents ?? 0)}</span>
-            </div>
-            {totals?.lines
-              .filter((l) => l.intervalMonths > 0)
-              .map((l) => (
-                <div key={l.id} className="flex justify-between gap-2">
-                  <span>{l.name}</span>
-                  <span>
-                    {money(l.totalCents)} / {l.intervalMonths}mo
-                  </span>
-                </div>
-              ))}
-            <Separator />
-            <div className="flex items-center justify-between">
-              <span>Approval route</span>
-              <Badge variant={totals?.risk === "HIGH" ? "destructive" : "secondary"}>
-                {totals?.risk ?? "—"}
-              </Badge>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              {totals?.risk === "HIGH"
-                ? "Manager → Finance"
-                : totals?.risk === "MEDIUM"
-                  ? "Sales Manager"
-                  : "Within policy · automatic approval"}
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Suggested pairings</CardTitle>
-            <CardDescription>
-              Add-ons linked to products already on this quote. Add one to include it in the
-              quotation.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {suggestions.map((s) => (
-              <div key={s.product.id} className="space-y-2">
-                <div className="flex items-center justify-between gap-2">
-                  <p className="text-sm font-medium">{s.product.name}</p>
-                  {s.product.promoted && <Badge variant="outline">Promotion</Badge>}
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  +{money(s.margin)} margin
-                  {s.product.intervalMonths ? ` / ${s.product.intervalMonths}mo` : ""}
-                </p>
-                <div className="flex gap-2">
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    aria-label={`Add ${s.product.name} to quote`}
-                    onClick={() => add(s.product.id, true)}
-                  >
-                    Add to quote
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    aria-label={`Dismiss ${s.product.name} suggestion`}
-                    onClick={() => setDismissed((current) => [...current, s.product.id])}
-                  >
-                    Dismiss
-                  </Button>
-                </div>
-              </div>
-            ))}
-            {!suggestions.length && (
-              <p className="text-sm text-muted-foreground">
-                Pairings appear here after you add a product that has suggested add-ons.
-              </p>
-            )}
-          </CardContent>
-        </Card>
+        <QuoteTotals totals={totals} />
+        <QuotePairings
+          pairings={suggestions}
+          onAdd={(id) => add(id, true)}
+          onDismiss={(id) => setDismissed((current) => [...current, id])}
+        />
       </div>
     </div>
   );

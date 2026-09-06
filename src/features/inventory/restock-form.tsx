@@ -26,9 +26,16 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { StockRow } from "@/features/inventory/_types/ui";
+import { fieldLabel } from "@/features/inventory/inventory-editorial";
 import { restockLocations } from "@/features/inventory/restock-locations";
 import { apiClient, apiData } from "@/lib/api/client";
 import type { Workspace } from "@/lib/domain/_types/workspace";
+
+/**
+ * Receipts are operational, so the dialog stays dense: quiet letterspaced labels, tabular
+ * balances that line up wherever they appear, and the primitives' own scrolling body and sticky
+ * footer rather than a second layout invented here.
+ */
 
 export function RestockDialog({
   stock,
@@ -62,7 +69,7 @@ export function RestockDialog({
           <DialogTitle>
             Restock {current.name} at {current.warehouse}
           </DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="tabular-nums">
             On hand {current.onHand}, reserved {current.reserved}, available {current.available}.
             {current.available === 0
               ? " Sold-out SKUs can still be received."
@@ -101,7 +108,9 @@ export function RestockDialog({
             >
               {options.length > 1 ? (
                 <Field>
-                  <FieldLabel htmlFor="restock-warehouse">Warehouse</FieldLabel>
+                  <FieldLabel htmlFor="restock-warehouse" className={fieldLabel}>
+                    Warehouse
+                  </FieldLabel>
                   <Select
                     value={current.warehouseId}
                     onValueChange={(value) => {
@@ -115,7 +124,11 @@ export function RestockDialog({
                     </SelectTrigger>
                     <SelectContent>
                       {options.map((row) => (
-                        <SelectItem key={row.warehouseId} value={row.warehouseId}>
+                        <SelectItem
+                          key={row.warehouseId}
+                          value={row.warehouseId}
+                          className="tabular-nums"
+                        >
                           {row.warehouse} · on hand {row.onHand} · available {row.available}
                         </SelectItem>
                       ))}
@@ -124,12 +137,16 @@ export function RestockDialog({
                 </Field>
               ) : (
                 <Field>
-                  <FieldLabel htmlFor="restock-warehouse">Warehouse</FieldLabel>
+                  <FieldLabel htmlFor="restock-warehouse" className={fieldLabel}>
+                    Warehouse
+                  </FieldLabel>
                   <Input id="restock-warehouse" readOnly value={current.warehouse} />
                 </Field>
               )}
               <Field>
-                <FieldLabel htmlFor="restock-quantity">Quantity received</FieldLabel>
+                <FieldLabel htmlFor="restock-quantity" className={fieldLabel}>
+                  Quantity received
+                </FieldLabel>
                 <NumberInput
                   id="restock-quantity"
                   min={1}
@@ -145,7 +162,9 @@ export function RestockDialog({
                 <FieldError>{form.formState.errors.quantity?.message}</FieldError>
               </Field>
               <Field>
-                <FieldLabel htmlFor="restock-reason">Receipt note</FieldLabel>
+                <FieldLabel htmlFor="restock-reason" className={fieldLabel}>
+                  Receipt note
+                </FieldLabel>
                 <Input
                   id="restock-reason"
                   {...form.register("reason", {
@@ -189,7 +208,11 @@ export function BackorderRestock({
   const locations = restockLocations(workspace, productId);
   const stock = locations[0];
   if (!stock)
-    return <p className="text-sm">Configure {product} at a warehouse before receiving stock.</p>;
+    return (
+      <p className="text-sm text-muted-foreground">
+        Configure {product} at a warehouse before receiving stock.
+      </p>
+    );
   return (
     <>
       <Button size="sm" variant="outline" onClick={() => setOpen(true)}>

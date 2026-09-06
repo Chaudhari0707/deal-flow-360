@@ -21,11 +21,17 @@ import { Input } from "@/components/ui/input";
 import { NumberInput } from "@/components/ui/number-input";
 import { integerFieldMessage } from "@/components/ui/number-input-utils";
 import type { WarehouseRow } from "@/features/inventory/_types/ui";
+import { fieldLabel } from "@/features/inventory/inventory-editorial";
 import {
   ACTIVE_WAREHOUSE_LIMIT_MESSAGE,
   wouldExceedActiveWarehouseLimit,
 } from "@/features/inventory/warehouse-limits";
 import { apiClient, apiData } from "@/lib/api/client";
+
+/**
+ * Warehouse policy is configuration, not a card: quiet letterspaced labels over the primitives'
+ * own square controls, a scrolling body and the shared sticky footer.
+ */
 
 export function WarehouseSettings({
   warehouse = { id: "", name: "", active: false, replenishmentThreshold: 5, shippingWeight: 100 },
@@ -94,7 +100,9 @@ export function WarehouseSettings({
           <DialogBody>
             <FieldGroup>
               <Field>
-                <FieldLabel htmlFor={`name-${warehouse.id}`}>Warehouse name</FieldLabel>
+                <FieldLabel htmlFor={`name-${warehouse.id}`} className={fieldLabel}>
+                  Warehouse name
+                </FieldLabel>
                 <Input
                   id={`name-${warehouse.id}`}
                   {...form.register("name", { required: "Enter a name", maxLength: 100 })}
@@ -102,7 +110,9 @@ export function WarehouseSettings({
                 <FieldError>{form.formState.errors.name?.message}</FieldError>
               </Field>
               <Field>
-                <FieldLabel htmlFor={`weight-${warehouse.id}`}>Shipping score</FieldLabel>
+                <FieldLabel htmlFor={`weight-${warehouse.id}`} className={fieldLabel}>
+                  Shipping score
+                </FieldLabel>
                 <FieldDescription>
                   Used when stock is split across warehouses. Higher scores ship later.
                 </FieldDescription>
@@ -121,7 +131,7 @@ export function WarehouseSettings({
                 <FieldError>{form.formState.errors.shippingWeight?.message}</FieldError>
               </Field>
               <Field>
-                <FieldLabel htmlFor={`threshold-${warehouse.id}`}>
+                <FieldLabel htmlFor={`threshold-${warehouse.id}`} className={fieldLabel}>
                   Low-stock alert threshold
                 </FieldLabel>
                 <NumberInput
@@ -147,7 +157,7 @@ export function WarehouseSettings({
                     form.setValue("active", Boolean(value), { shouldDirty: true })
                   }
                 />
-                <FieldLabel htmlFor={`active-${warehouse.id}`}>
+                <FieldLabel htmlFor={`active-${warehouse.id}`} className="text-sm">
                   Available for new allocations
                 </FieldLabel>
               </Field>

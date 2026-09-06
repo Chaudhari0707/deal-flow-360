@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 
+import { eyebrowType } from "@/components/editorial/editorial";
 import { cn } from "@/lib/utils";
 
 /**
@@ -9,7 +10,6 @@ import { cn } from "@/lib/utils";
  * title and a lede held to a readable measure — never from a card, a shadow or faded ink. The
  * scale steps up one notch from the previous header so operational registers still breathe.
  */
-const eyebrowType = "text-[0.6875rem] font-medium tracking-[0.16em] uppercase";
 
 export function PageHeader({
   title,
