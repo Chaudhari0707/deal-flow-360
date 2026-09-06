@@ -2,6 +2,7 @@
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import type { DataTableClassNames } from "@/components/ui/data-table";
 import { DataTable } from "@/components/ui/data-table";
 import { Input } from "@/components/ui/input";
 import type { InvoiceRegisterRow } from "@/features/billing/_types/tables";
@@ -21,9 +22,10 @@ const lenses = [
  * The shared DataTable keeps sorting, pagination and keyboard-accessible rows; every piece of
  * its default chrome is replaced with editorial rules, alignment and letterspaced labels.
  */
-const registerStyles = {
+const registerStyles: DataTableClassNames = {
   cell: "border-b border-foreground/10 px-0 py-4 pr-8 align-top last:pr-0",
   container: "rounded-none border-0",
+  emptyCell: "border-b border-foreground/10 px-0 text-foreground",
   head: "h-auto border-b border-foreground/30 px-0 pt-0 pr-8 pb-3 text-[0.6875rem] font-medium tracking-[0.16em] text-foreground/45 uppercase last:pr-0",
   pagination: cn(
     "mt-7 border-t border-foreground/15 px-0 pt-4",
@@ -65,7 +67,7 @@ export function InvoiceRegister({
       <div className="flex flex-col gap-5 py-6 md:flex-row md:items-end md:justify-between md:gap-10">
         <Input
           type="search"
-          aria-label="Search invoices"
+          aria-label="Search invoice or customer"
           placeholder="Search invoice or customer"
           value={search}
           onChange={(event) => setSearch(event.target.value)}

@@ -16,6 +16,8 @@ interface DataTableDefaultToolbarProps<TData extends RowData> {
    * Omit or set undefined to hide the search input entirely.
    */
   searchColumn?: string;
+  /** Accessible name for the search input. Defaults to `searchPlaceholder`. */
+  searchLabel?: string;
   /** Placeholder shown inside the search input. Defaults to "Search…" */
   searchPlaceholder?: string;
   /** Optional external search value for server-backed filtering. */
@@ -46,6 +48,7 @@ interface DataTableDefaultToolbarProps<TData extends RowData> {
 export function DataTableDefaultToolbar<TData extends RowData>({
   table,
   searchColumn,
+  searchLabel,
   searchPlaceholder = "Search…",
   searchValue,
   onSearchValueChange,
@@ -79,7 +82,7 @@ export function DataTableDefaultToolbar<TData extends RowData>({
           <div className="flex flex-wrap items-center gap-2">
             {(columnSearchId || onSearchValueChange) && (
               <Input
-                aria-label={searchPlaceholder}
+                aria-label={searchLabel ?? searchPlaceholder}
                 placeholder={searchPlaceholder}
                 value={resolvedSearchValue}
                 onChange={(e) => {

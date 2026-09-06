@@ -403,7 +403,7 @@ export function DataTable<TData extends RowData, TValue>({
               <TableRow>
                 <TableCell
                   colSpan={resolvedColumns.length}
-                  className={cn(classNames?.cell, "h-24 text-center")}
+                  className={cn("h-24 text-center", classNames?.emptyCell ?? classNames?.cell)}
                 >
                   {emptyMessage}
                 </TableCell>

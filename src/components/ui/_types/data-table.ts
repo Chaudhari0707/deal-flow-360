@@ -42,6 +42,8 @@ export type DataTableClassNames = {
   cell?: string;
   /** Wrapper around the horizontally scrolling table (default: bordered, rounded box). */
   container?: string;
+  /** The single `<td>` rendered for the empty state (falls back to `cell`). */
+  emptyCell?: string;
   /** Every header `<th>`. */
   head?: string;
   /** The header `<tr>`. */

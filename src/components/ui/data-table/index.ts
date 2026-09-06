@@ -3,6 +3,7 @@ export type {
   DataTableApplyCellToAllRowsArgs,
   DataTableBulkRemoveCopy,
   DataTableBulkRemoveImpactRow,
+  DataTableClassNames,
   DataTableColumnApplyToAllMeta,
   DataTableToolbarExtras,
 } from "@/components/ui/_types/data-table";

@@ -102,6 +102,7 @@ export function SubscriptionWorkspace() {
                 description="Monthly, quarterly, and yearly plans."
                 searchValue={search}
                 onSearchValueChange={setSearch}
+                searchLabel="Search subscriptions"
                 searchPlaceholder="Search plan, customer or order"
                 actions={extras.bulkRemove}
               />
