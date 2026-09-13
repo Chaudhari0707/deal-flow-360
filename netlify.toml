@@ -1,0 +1,6 @@
+[build]
+  command = "bun run build"
+  publish = ".next"
+
+[build.environment]
+  BUN_VERSION = "1.4.2"
