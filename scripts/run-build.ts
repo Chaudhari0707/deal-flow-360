@@ -5,7 +5,10 @@ const pagesEntry = Bun.file(`${ROOT}/src/pages/_app.tsx`);
 if (!(await appEntry.exists()) && !(await pagesEntry.exists())) {
   console.log("build: skipped until a Next.js app entry exists");
 } else {
-  const child = Bun.spawn(["bun", "--bun", "next", "build", "--webpack"], {
+  const command = Bun.env.NETLIFY
+    ? ["node", `${ROOT}/node_modules/next/dist/bin/next`, "build", "--webpack"]
+    : ["bun", "--bun", "next", "build", "--webpack"];
+  const child = Bun.spawn(command, {
     cwd: ROOT,
     stderr: "inherit",
     stdin: "inherit",
