@@ -82,6 +82,7 @@
     "zod": "^4.5.2"
   },
   "devDependencies": {
+    "@netlify/plugin-nextjs": "^5.15.13",
     "@playwright/test": "^1.62.1",
     "@tailwindcss/postcss": "^4.3.3",
     "@types/bun": "^1.4.0",
