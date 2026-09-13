@@ -5,6 +5,7 @@ import { forbidden, redirect } from "next/navigation";
 import { WorkspaceState } from "@/features/shell/workspace-state";
 import type { Permission } from "@/lib/domain/_types/permissions";
 import { can } from "@/lib/domain/permissions";
+import { env } from "@/lib/env";
 import { requireActor } from "@/server/access";
 import { DomainError } from "@/server/errors";
 
@@ -18,7 +19,7 @@ async function AuthorizedSurface({
   let actor;
   try {
     actor = await requireActor(
-      new Request(`${Bun.env.BETTER_AUTH_URL}/`, { headers: await headers() }),
+      new Request(`${env.BETTER_AUTH_URL}/`, { headers: await headers() }),
     );
   } catch (error) {
     if (error instanceof DomainError && error.status === 401) redirect("/login");

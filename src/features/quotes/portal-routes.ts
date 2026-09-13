@@ -14,6 +14,7 @@ import {
 import { confirmQuote, counterQuote } from "@/features/quotes/service";
 import { db } from "@/lib/db/connection";
 import { customers, messages, quoteAccess, quotes } from "@/lib/db/schema";
+import { env } from "@/lib/env";
 import { requireMutationOrigin } from "@/server/access";
 import { DomainError } from "@/server/errors";
 import { apiErrorResponses, messageModel } from "@/server/models";
@@ -30,7 +31,7 @@ export const portalRoutes = new Elysia({ name: "portal", tags: ["Portal"] })
     async ({ body, set }) => {
       const result = await redeemAccess(body.token);
       set.headers["set-cookie"] =
-        `dealflow_portal=${result.session}; HttpOnly; SameSite=Lax; Path=/; Max-Age=28800${Bun.env.BETTER_AUTH_URL?.startsWith("https:") ? "; Secure" : ""}`;
+        `dealflow_portal=${result.session}; HttpOnly; SameSite=Lax; Path=/; Max-Age=28800${env.BETTER_AUTH_URL?.startsWith("https:") ? "; Secure" : ""}`;
       return { quoteId: result.quoteId };
     },
     {

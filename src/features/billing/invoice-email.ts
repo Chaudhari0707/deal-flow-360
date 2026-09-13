@@ -8,6 +8,7 @@ import { db } from "@/lib/db/connection";
 import { invoiceDeliveries, invoices } from "@/lib/db/schema/billing";
 import { customers, orders, quotes } from "@/lib/db/schema/commerce";
 import type { Actor } from "@/lib/domain/_types/domain";
+import { env } from "@/lib/env";
 import { audit } from "@/server/audit";
 import { DomainError } from "@/server/errors";
 
@@ -89,17 +90,14 @@ export async function sendOrderInvoiceEmail(orderId: string, actor: Actor) {
 
   let error: string | null = null;
   let providerId: string | null = null;
-  if (
-    Bun.env.EMAIL_TRANSPORT === "test" &&
-    new URL(Bun.env.DATABASE_URL!).pathname.endsWith("_test")
-  ) {
+  if (env.EMAIL_TRANSPORT === "test" && new URL(env.DATABASE_URL!).pathname.endsWith("_test")) {
     providerId = `test-${intent.delivery.id}`;
-  } else if (!Bun.env.RESEND_API_KEY) {
+  } else if (!env.RESEND_API_KEY) {
     error = "Resend is not configured. Configure RESEND_API_KEY and retry.";
   } else if (!EMAIL_ADDRESS.test(intent.delivery.recipient)) {
     error = "Customer invoice email address is invalid. Update the customer contact and retry.";
   } else {
-    const override = Bun.env.EMAIL_TEST_RECIPIENT;
+    const override = env.EMAIL_TEST_RECIPIENT;
     if (override && !RESEND_TEST_RECIPIENT.test(override))
       error = "EMAIL_TEST_RECIPIENT must be a supported Resend test sink.";
     else {
@@ -108,10 +106,10 @@ export async function sendOrderInvoiceEmail(orderId: string, actor: Actor) {
         const invoicesLabel =
           intent.records.length === 1 ? "invoice PDF" : `${intent.records.length} invoice PDFs`;
         const order = intent.records[0]!.order;
-        const result = await new Resend(Bun.env.RESEND_API_KEY).emails.send(
+        const result = await new Resend(env.RESEND_API_KEY).emails.send(
           {
             attachments,
-            from: senderAddress(Bun.env.EMAIL_FROM ?? "DealFlow360 <onboarding@resend.dev>"),
+            from: senderAddress(env.EMAIL_FROM ?? "DealFlow360 <onboarding@resend.dev>"),
             subject:
               intent.records.length === 1
                 ? `${intent.records[0]!.invoice.number} — your invoice`

@@ -2,9 +2,10 @@ import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 
 import * as schema from "@/lib/db/schema";
+import { env } from "@/lib/env";
 
 function databaseUrl() {
-  const value = Bun.env.DATABASE_URL;
+  const value = env.DATABASE_URL;
   if (!value) throw new Error("DATABASE_URL is required");
   return value;
 }
@@ -24,10 +25,10 @@ const client =
     max: 5,
     max_lifetime: 1_800,
     onnotice: () => {},
-    prepare: Bun.env.POSTGRES_PREPARE !== "false",
+    prepare: env.POSTGRES_PREPARE !== "false",
   });
 
-if (Bun.env.NODE_ENV === "development") databaseGlobal.dealFlowSql = client;
+if (env.NODE_ENV === "development") databaseGlobal.dealFlowSql = client;
 
 export const db = drizzle(client, { schema });
 

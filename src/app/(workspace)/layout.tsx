@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 
 import { WorkspaceShell } from "@/features/shell/workspace-shell";
 import { WorkspaceState } from "@/features/shell/workspace-state";
+import { env } from "@/lib/env";
 import { requireActor } from "@/server/access";
 import { DomainError } from "@/server/errors";
 
@@ -12,7 +13,7 @@ async function AuthenticatedWorkspace({ children }: { children: ReactNode }) {
   let actor;
   try {
     actor = await requireActor(
-      new Request(`${Bun.env.BETTER_AUTH_URL}/dashboard`, { headers: requestHeaders }),
+      new Request(`${env.BETTER_AUTH_URL}/dashboard`, { headers: requestHeaders }),
     );
   } catch (error) {
     if (error instanceof DomainError && error.status === 401) redirect("/login");

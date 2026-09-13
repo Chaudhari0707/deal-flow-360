@@ -6,6 +6,7 @@ import { eq } from "drizzle-orm";
 
 import type { AuthDatabase } from "@/lib/auth/_types/database";
 import * as schema from "@/lib/db/schema";
+import { env } from "@/lib/env";
 
 export function trustedOrigins(baseURL: string): string[] {
   const configured = new URL(baseURL);
@@ -71,8 +72,8 @@ export function createAuth(database: AuthDatabase, provisioning = false) {
   const existing = provisioning ? undefined : authInstances.get(database);
   if (existing) return existing;
 
-  const baseURL = Bun.env.BETTER_AUTH_URL;
-  const secret = Bun.env.BETTER_AUTH_SECRET;
+  const baseURL = env.BETTER_AUTH_URL;
+  const secret = env.BETTER_AUTH_SECRET;
 
   if (!baseURL) throw new Error("BETTER_AUTH_URL is required");
   if (!secret || secret.length < 32) {

@@ -12,6 +12,7 @@ import { customerInvitations, customers, profiles, user } from "@/lib/db/schema"
 import type { Actor } from "@/lib/domain/_types/domain";
 import { can } from "@/lib/domain/permissions";
 import { open, seal } from "@/lib/email/sealed-payload";
+import { env } from "@/lib/env";
 import { audit } from "@/server/audit";
 import { DomainError } from "@/server/errors";
 
@@ -63,14 +64,14 @@ export async function sendCustomerInvitation(customerId: string, actor: Actor) {
   let error: string | null = null;
   let providerId: string | null = null;
   try {
-    if (!Bun.env.RESEND_API_KEY) throw { name: "missing_api_key" };
+    if (!env.RESEND_API_KEY) throw { name: "missing_api_key" };
     const envelope = JSON.parse(await open(invitation.encryptedPayload)) as {
       from: string;
       to: string;
       subject: string;
       text: string;
     };
-    const result = await new Resend(Bun.env.RESEND_API_KEY).emails.send(envelope, {
+    const result = await new Resend(env.RESEND_API_KEY).emails.send(envelope, {
       idempotencyKey: `customer-invitation-${invitation.id}`,
     });
     if (result.error) throw result.error;
@@ -111,10 +112,10 @@ export async function createCustomerWithLogin(input: CatalogCustomerInput, actor
   input = { ...input, name: input.name.trim(), email: input.email.trim().toLowerCase() };
   const password = customerPassword();
   const envelope = {
-    from: senderAddress(Bun.env.EMAIL_FROM ?? "DealFlow360 <onboarding@resend.dev>"),
+    from: senderAddress(env.EMAIL_FROM ?? "DealFlow360 <onboarding@resend.dev>"),
     to: input.email,
     subject: "Your DealFlow360 customer portal login",
-    text: `Hello ${input.name},\n\nYour customer portal account is ready.\nSign in: ${new URL("/login", Bun.env.BETTER_AUTH_URL!).href}\nEmail: ${input.email}\nTemporary password: ${password}\n\nYou must choose a new password before opening your customer portal. Do not share this password.\n\nDealFlow360`,
+    text: `Hello ${input.name},\n\nYour customer portal account is ready.\nSign in: ${new URL("/login", env.BETTER_AUTH_URL!).href}\nEmail: ${input.email}\nTemporary password: ${password}\n\nYou must choose a new password before opening your customer portal. Do not share this password.\n\nDealFlow360`,
   };
   const encryptedPayload = await seal(JSON.stringify(envelope));
   let customer;

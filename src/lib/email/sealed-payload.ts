@@ -1,11 +1,12 @@
+import { env } from "@/lib/env";
 import { DomainError } from "@/server/errors";
 
 async function payloadKey() {
-  if (!Bun.env.BETTER_AUTH_SECRET || Bun.env.BETTER_AUTH_SECRET.length < 32)
+  if (!env.BETTER_AUTH_SECRET || env.BETTER_AUTH_SECRET.length < 32)
     throw new DomainError("Email access requires configured authentication", 503);
   const key = await crypto.subtle.digest(
     "SHA-256",
-    new TextEncoder().encode(Bun.env.BETTER_AUTH_SECRET!),
+    new TextEncoder().encode(env.BETTER_AUTH_SECRET),
   );
   return crypto.subtle.importKey("raw", key, "AES-GCM", false, ["encrypt", "decrypt"]);
 }

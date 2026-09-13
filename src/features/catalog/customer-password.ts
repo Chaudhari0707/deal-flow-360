@@ -1,6 +1,8 @@
 // "l", "o", "0" and "1" are excluded so a customer can retype the password from the welcome
 // email without guessing which glyph was sent. The remaining 32 characters divide 256 evenly,
 // so byte-modulo selection stays unbiased.
+import { env } from "@/lib/env";
+
 const ALPHABET = "abcdefghijkmnpqrstuvwxyz23456789";
 const DEMO_PASSWORD = "test1234";
 
@@ -18,6 +20,6 @@ export function randomCustomerPassword() {
  * random password instead of failing customer creation.
  */
 export function customerPassword() {
-  const configured = Bun.env.CUSTOMER_TEMP_PASSWORD ?? DEMO_PASSWORD;
+  const configured = env.CUSTOMER_TEMP_PASSWORD ?? DEMO_PASSWORD;
   return configured.length >= CUSTOMER_PASSWORD_LENGTH ? configured : randomCustomerPassword();
 }
